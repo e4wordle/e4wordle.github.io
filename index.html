@@ -1,0 +1,3355 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<link rel="icon" href="/favicon.png" type="image/png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+<style id="main-styles">
+    :root {
+        --main-background-color: #f7f7f7;
+    }
+    b {
+        font-weight: 600;
+    }
+    .no-wrap {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    body,
+    button,
+    input {
+        font-family:
+            "Libre Franklin",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            "Roboto",
+            "Helvetica Neue",
+            sans-serif;
+        font-size: 14px;
+    }
+    input {
+        border: 1px solid #bbb;
+        outline: none;
+        flex: 1;
+        padding: 2px;
+    }
+    input::placeholder {
+        color: #00000080;
+    }
+    button {
+        cursor: pointer;
+    }
+    button .material-symbols-outlined {
+        font-size: 14px;
+    }
+    .divider {
+        height: 1px;
+        width: 100%;
+        background: #00000080;
+    }
+    th,
+    td {
+        padding: 0 4px;
+        text-align: center;
+    }
+    body {
+        background: var(--main-background-color);
+        margin: 0;
+        overflow: hidden;
+    }
+    #main {
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        outline: none;
+    }
+    #game-keyboard-container {
+        width: 384px;
+        height: 100%;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    #game {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-top: 32px;
+        padding: 0 4px;
+    }
+    @keyframes Pop {
+        0%,
+        100% {
+            transform: scale(1);
+            filter: unset;
+        }
+        50% {
+            transform: scale(1.125);
+            filter: drop-shadow(0 2px 4px #00000010);
+        }
+    }
+    @keyframes Flip {
+        0%,
+        100% {
+            transform: rotateX(0);
+        }
+        50% {
+            transform: rotateX(-90deg);
+        }
+    }
+    @keyframes Bounce {
+        0%,
+        20% {
+            transform: translateY(0);
+            filter: unset;
+        }
+        40% {
+            transform: translateY(-50%);
+            filter: drop-shadow(0 -4px 8px #00000020);
+        }
+        50% {
+            transform: translateY(8.3%);
+            filter: unset;
+        }
+        60% {
+            transform: translateY(-25%);
+            filter: drop-shadow(0 -2px 4px #00000010);
+        }
+        80% {
+            transform: translateY(0.2%);
+            filter: unset;
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
+    @keyframes Shake {
+        10%,
+        90% {
+            transform: translateX(-1px);
+        }
+        20%,
+        80% {
+            transform: translateX(2px);
+        }
+        30%,
+        50%,
+        70% {
+            transform: translateX(-4px);
+        }
+        40%,
+        60% {
+            transform: translateX(4px);
+        }
+    }
+    @keyframes ShakeFast {
+        33% {
+            transform: translateX(-5px);
+        }
+        67% {
+            transform: translateX(5px);
+        }
+    }
+    @keyframes Fade {
+        0%,
+        40% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0.5;
+        }
+    }
+    #board {
+        margin: auto;
+    }
+    .guess {
+        display: flex;
+    }
+    .guess.shaking {
+        animation: 667ms Shake;
+    }
+    .guess.shaking.fast {
+        animation: 250ms ShakeFast;
+    }
+    .guess.failed {
+        animation: 1667s Fade;
+    }
+    .letter {
+        opacity: 0.375;
+        margin: 2px;
+        border: 2px solid #a2a2a2;
+        width: 48px;
+        height: 48px;
+        font-size: 26px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+    }
+    .letter.nonempty {
+        opacity: 1;
+    }
+    .letter.typed {
+        animation: 83ms Pop ease-out;
+    }
+    :root {
+        --flipping-duration: calc(500ms);
+        --flipping-delay: calc(var(--flipping-duration) / 2);
+        --flipping-function: ease-in;
+        --bouncing-duration: 1s;
+        --bouncing-delay: calc(1s / 12);
+        --bouncing-function: ease;
+    }
+    .letter.flipping:nth-child(1) {
+        animation: var(--flipping-duration) Flip var(--flipping-function);
+    }
+    .letter.flipping:nth-child(2) {
+        animation: var(--flipping-duration) Flip calc(var(--flipping-delay)) var(--flipping-function);
+    }
+    .letter.flipping:nth-child(3) {
+        animation: var(--flipping-duration) Flip calc(2 * var(--flipping-delay)) var(--flipping-function);
+    }
+    .letter.flipping:nth-child(4) {
+        animation: var(--flipping-duration) Flip calc(3 * var(--flipping-delay)) var(--flipping-function);
+    }
+    .letter.flipping:nth-child(5) {
+        animation: var(--flipping-duration) Flip calc(4 * var(--flipping-delay)) var(--flipping-function);
+    }
+    .letter.flipping.fast {
+        animation: calc(var(--flipping-duration) / 3) Flip var(--flipping-function);
+    }
+    .letter.bouncing:nth-child(1) {
+        animation: var(--bouncing-duration) Bounce var(--bouncing-function);
+    }
+    .letter.bouncing:nth-child(2) {
+        animation: var(--bouncing-duration) Bounce calc(var(--bouncing-delay)) var(--bouncing-function);
+    }
+    .letter.bouncing:nth-child(3) {
+        animation: var(--bouncing-duration) Bounce calc(2 * var(--bouncing-delay)) var(--bouncing-function);
+    }
+    .letter.bouncing:nth-child(4) {
+        animation: var(--bouncing-duration) Bounce calc(3 * var(--bouncing-delay)) var(--bouncing-function);
+    }
+    .letter.bouncing:nth-child(5) {
+        animation: var(--bouncing-duration) Bounce calc(4 * var(--bouncing-delay)) var(--bouncing-function);
+    }
+    @keyframes BoardPass {
+        0%,
+        100% {
+            transform: translateX(0);
+            opacity: unset;
+        }
+        50% {
+            transform: translateX(4.2%);
+            opacity: 0;
+        }
+        50.0001% {
+            transform: translateX(-4.2%);
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        @keyframes BoardPass {
+            0%,
+            100% {
+                opacity: unset;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+    }
+    #board.passing {
+        animation: BoardPass 167ms;
+    }
+    #banner {
+        min-height: 24px;
+        margin: 4px 0;
+        opacity: 0.583;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2px;
+    }
+    .banner-section {
+        display: flex;
+        align-items: center;
+    }
+    .banner-icon {
+        font-size: 19px;
+        margin: 0 4px;
+    }
+    #keyboard {
+        padding-bottom: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        touch-action: pan-y;
+    }
+    .row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+    .row:nth-child(2) {
+        width: calc(90% + 8px);
+    }
+    .key {
+        flex: 1;
+        min-height: 30px;
+        margin: 2px;
+        border: 2px solid transparent;
+        background: #ddd;
+        font-size: 14px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+        appearance: none;
+        -webkit-appearance: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        position: relative;
+    }
+    .key::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        bottom: -4px;
+        left: -4px;
+        z-index: 1;
+        cursor: pointer;
+    }
+    .key-a::before {
+        left: calc(-50% - 3px);
+    }
+    .key-l::before {
+        right: calc(-50% - 3px);
+    }
+    .key:active {
+        transform: scale(1.167);
+        filter: drop-shadow(0 0 2px #00000080);
+        z-index: 1;
+    }
+    .key.wide {
+        flex: 1.5 1;
+        .material-symbols-outlined {
+            font-size: 20px;
+        }
+    }
+    .black {
+        border-color: transparent;
+        background: #888;
+        color: #fff;
+    }
+    .yellow {
+        border-style: dashed;
+        border-color: #a59a00;
+        background: #dcbb01;
+        color: #fff;
+    }
+    .green {
+        border-style: solid;
+        border-color: #397752;
+        background: #57ac78;
+        color: #fff;
+    }
+    .letter.mini {
+        width: 14px;
+        height: 14px;
+        border-width: 1px;
+        font-size: 10px;
+        font-weight: normal;
+        margin: 0;
+    }
+    .letter.mini.black,
+    .letter.mini.yellow,
+    .letter.mini.green {
+        font-weight: bold;
+    }
+    @keyframes FadeOut {
+        0%,
+        88.9% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
+    }
+    #alert {
+        position: absolute;
+        top: max(48px, 8.3%);
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 8px 12px;
+        background: #333;
+        color: #fff;
+        text-wrap: nowrap;
+        user-select: none;
+        opacity: 0;
+        z-index: 5;
+    }
+    #alert.visible {
+        animation: FadeOut 2.25s;
+    }
+    :root {
+        --info-section-gap: 12px;
+    }
+    .info-section {
+        position: fixed;
+        padding: 8px;
+        opacity: 0.583;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: var(--info-section-gap);
+    }
+    #info-section-0 {
+        left: 0;
+        bottom: 0;
+        width: min(calc((100vw - 432px) / 2), 288px);
+    }
+    #event-info {
+        display: flex;
+        gap: 6px;
+    }
+    #event-logo {
+        font-size: 40px;
+    }
+    #event-text-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+    }
+    #event-name-container {
+        display: flex;
+    }
+    #event-name {
+        font-size: 18px;
+        font-weight: bold;
+        flex: 1;
+    }
+    #event-description {
+        font-size: 12px;
+    }
+    #event-description-button {
+        cursor: pointer;
+        user-select: none;
+        .material-symbols-outlined {
+            font-size: 18px;
+            opacity: 0.5;
+        }
+    }
+    .mobile-button-container {
+        display: none;
+    }
+    #chat-input:not(:focus)::placeholder {
+        opacity: 0;
+    }
+    #chat {
+        position: relative;
+    }
+    .auto-blur-section .blurry-top {
+        position: absolute;
+        top: -4px;
+        left: 0;
+        right: 0;
+        height: 48px;
+        background: linear-gradient(to bottom, var(--main-background-color), var(--main-background-color) 33.3%, transparent);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1;
+        pointer-events: none;
+    }
+    .auto-blur-section .expand-button {
+        opacity: 0;
+        cursor: pointer;
+        user-select: none;
+        pointer-events: initial;
+    }
+    .auto-blur-section .expand-button:hover {
+        opacity: 0.5;
+        background: #00000040;
+    }
+    .player-join-message {
+        color: #0a7734;
+    }
+    .player-leave-message {
+        color: #6a2609;
+    }
+    .player-won-message {
+        color: #776608;
+    }
+    #info-section-1 {
+        right: 0;
+        bottom: 0;
+        width: min(calc((100vw - 412px) / 2), 288px);
+    }
+    #widget-container-1 {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    #mini-leaderboard-container {
+        margin-bottom: calc(-1 * var(--info-section-gap));
+    }
+    #mini-leaderboard {
+        padding-bottom: var(--info-section-gap);
+    }
+    .mini-leaderboard-item {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 2px;
+    }
+    .mini-leaderboard-item-rank-info {
+        width: 12px;
+        display: flex;
+        justify-content: space-between;
+        .material-symbols-outlined {
+            font-size: 14px;
+        }
+    }
+    .mini-leaderboard-item:not(.me) {
+        .material-symbols-outlined {
+            visibility: hidden;
+        }
+    }
+    .mini-leaderboard-item.hidden {
+        .mini-leaderboard-item-rank-info {
+            display: none;
+        }
+    }
+    .mini-leaderboard-item.hidden:not(.me) {
+        display: none;
+    }
+    .mini-leaderboard-item-player {
+        flex: 1;
+    }
+    .mini-leaderboard-item-guess-count {
+        text-align: center;
+        margin-left: -4px;
+        font-size: 12px;
+        width: 1ch;
+    }
+    #progress-bar-background {
+        height: 2px;
+        background: #00000040;
+        position: relative;
+    }
+    #progress-bar-foreground {
+        height: 100%;
+        background: black;
+        position: absolute;
+    }
+    #panel {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, calc(-50% - 60px));
+        max-width: calc(100vw - 56px);
+        padding: 16px 28px;
+        background: var(--main-background-color);
+        filter: drop-shadow(0 8px 12px #00000060);
+        z-index: 3;
+        display: none;
+    }
+    .glow-green {
+        filter: drop-shadow(0 0 4px #67e898c0);
+    }
+    body.showing-panel {
+        #panel {
+            display: unset;
+        }
+        #game-keyboard-container {
+            opacity: 0.417;
+            pointer-events: none;
+        }
+    }
+    #help {
+        position: absolute;
+        left: 8px;
+        bottom: 64px;
+        padding: 4px 16px;
+        background: var(--main-background-color);
+        filter: drop-shadow(0 8px 12px #00000060);
+        z-index: 4;
+        width: 288px;
+        max-height: calc(100vh - 88px);
+        overflow: auto;
+        display: none;
+        padding-bottom: 12px;
+    }
+    #help-container {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        max-height: inherit;
+        gap: 12px;
+        margin-top: -4px;
+    }
+    #settings {
+        position: absolute;
+        right: 8px;
+        bottom: 40px;
+        padding: 16px;
+        background: var(--main-background-color);
+        filter: drop-shadow(0 8px 12px #00000060);
+        z-index: 5;
+        width: 288px;
+        max-height: calc(100vh - 88px);
+        overflow: auto;
+        display: none;
+    }
+    #help-contents {
+        flex: 1;
+        opacity: 0.667;
+        overflow: auto;
+        margin-bottom: -12px;
+        padding-bottom: 12px;
+    }
+    body.showing-help {
+        #help {
+            display: unset;
+        }
+    }
+    body.showing-settings {
+        #settings {
+            display: unset;
+        }
+    }
+    .settings-row {
+        display: flex;
+        align-items: center;
+    }
+    .settings-label {
+        flex: 1;
+        opacity: 0.667;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .settings-description {
+        font-size: 10px;
+    }
+    .settings-toggle-container {
+        display: flex;
+    }
+    .settings-toggle {
+        width: 48px;
+        height: 12px;
+        font-weight: normal;
+    }
+    #settings-ok-button {
+        margin-top: 12px;
+        width: 100%;
+    }
+    .final-leaderboard-top-item {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        margin: 4px;
+        border: 2px solid;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 2px;
+        overflow: hidden;
+        > :nth-child(1) {
+            font-size: 14px;
+            font-weight: bold;
+            max-height: 36px;
+            overflow: hidden;
+            span {
+                font-size: 14px;
+            }
+        }
+        > .material-symbols-outlined {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 14px;
+        }
+    }
+    .final-leaderboard-top-item.empty {
+        opacity: 0.5;
+    }
+    .final-leaderboard-top-item.smaller-text {
+        * {
+            font-size: 11px;
+        }
+        > :nth-child(1) {
+            max-height: 68px;
+        }
+    }
+    .final-leaderboard-top-item.rank-1 {
+        border-color: #948011;
+        background: #e9c915;
+    }
+    .final-leaderboard-top-item.rank-2 {
+        border-color: #9c9c9c;
+        background: #d2d2d2;
+    }
+    .final-leaderboard-top-item.rank-3 {
+        border-color: #957759;
+        background: #d9ad82;
+    }
+    #final-leaderboard-hard-mode-description {
+        font-size: 12px;
+        text-align: left;
+        width: 100%;
+        opacity: 0.667;
+    }
+    @media (max-width: 864px) {
+        body {
+            overflow: unset;
+            margin-bottom: 52px;
+        }
+        button .material-symbols-outlined {
+            font-size: 18px;
+        }
+        #main {
+            overflow: unset;
+            height: unset;
+            min-height: 100%;
+        }
+        #game-keyboard-container {
+            width: unset;
+            height: unset;
+            min-height: 100%;
+        }
+        #keyboard {
+            padding: 0 4px 12px;
+        }
+        .key {
+            min-height: 48px;
+            font-size: 16px;
+        }
+        .key.wide .material-symbols-outlined {
+            font-size: 24px;
+        }
+        .info-section {
+            position: unset;
+        }
+        #info-section-0,
+        #info-section-1 {
+            flex-direction: column;
+            width: unset;
+        }
+        #event-description-button {
+            display: none;
+        }
+        .mobile-button-container {
+            display: flex;
+            margin-top: 2px;
+            gap: 2px;
+            max-height: 48px;
+        }
+        .mobile-button {
+            padding: 8px;
+        }
+        #chat {
+            width: unset;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-height: 48px;
+        }
+        #chat-expand-button {
+            display: none;
+        }
+        #widget-container-1 {
+            display: none;
+        }
+        #mini-leaderboard {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: fit-content;
+            min-width: 264px;
+            max-width: 100%;
+        }
+        .mini-leaderboard-item.hidden {
+            .mini-leaderboard-item-rank-info {
+                display: unset;
+            }
+        }
+        #help,
+        #settings {
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(384px, calc(100vw - 56px));
+            height: fit-content;
+        }
+        body.showing-help {
+            #panel {
+                display: unset;
+            }
+            #game-keyboard-container {
+                opacity: 0.417;
+                pointer-events: none;
+            }
+        }
+    }
+    /* Not implemented yet */
+    #chat-expand-button,
+    #hint-button,
+    #hint-button-2 {
+        display: none !important;
+    }
+</style>
+<style id="auto-theme-styles">
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --main-background-color: #111;
+        }
+        button {
+            background: #444;
+            color: #fff;
+        }
+        input {
+            background: #333;
+            color: #fff;
+            border-color: #555;
+        }
+        input::placeholder {
+            color: #ffffff80;
+        }
+        .divider {
+            background: #ffffff80;
+        }
+        body {
+            background: var(--main-background-color);
+            color: #fff;
+        }
+        .letter {
+            border-color: #494949;
+        }
+        .key {
+            background: #555;
+        }
+        .key:active {
+            filter: drop-shadow(0 0 8px #000);
+        }
+        .black {
+            border-color: transparent;
+            background: #333;
+        }
+        .key.black {
+            color: #888;
+        }
+        .yellow {
+            border-color: #d2b200;
+            background: #9c9101;
+        }
+        .green {
+            border-color: #57ac78;
+            background: #3d885b;
+        }
+        .key.yellow,
+        .key.green {
+            color: #fff;
+        }
+        #banner,
+        .info-section {
+            opacity: 0.5;
+        }
+        #alert {
+            filter: drop-shadow(0 0 8px #000);
+        }
+        #chat-input {
+            border: 1px solid #777;
+        }
+        #chat-expand-button:hover {
+            background: #ffffff20;
+        }
+        .player-join-message {
+            color: #67e898;
+        }
+        .player-leave-message {
+            color: #e89673;
+        }
+        .player-won-message {
+            color: #e2c418;
+        }
+        #progress-bar-background {
+            background: #ffffff40;
+        }
+        #progress-bar-foreground {
+            height: 100%;
+            background: white;
+            position: absolute;
+        }
+        #panel,
+        #help,
+        #settings {
+            filter: drop-shadow(0 8px 32px #000);
+            background: #222;
+        }
+        .glow-green {
+            filter: drop-shadow(0 0 2px #67e898);
+        }
+        .final-leaderboard-top-item.rank-1 {
+            border-color: #d3b716;
+            background: #9a850d;
+        }
+        .final-leaderboard-top-item.rank-2 {
+            border-color: #c8c8c8;
+            background: #7b7b7b;
+        }
+        .final-leaderboard-top-item.rank-3 {
+            border-color: #cca37a;
+            background: #896d52;
+        }
+    }
+</style>
+<style id="dark-theme-styles"></style>
+<title>e4! Wordle</title>
+<div id="main" tabindex="0">
+    <div id="game-keyboard-container">
+        <div id="game">
+            <div id="board"></div>
+            <div id="banner">
+                <div class="banner-section">
+                    <b id="banner-left-text"></b>
+                    <span class="material-symbols-outlined banner-icon" id="banner-left-icon"></span>
+                    <div id="banner-left-inner-text"></div>
+                </div>
+                <div class="banner-section">
+                    <span class="material-symbols-outlined banner-icon" id="banner-right-icon"></span>
+                    <b id="banner-right-text"></b>
+                </div>
+            </div>
+        </div>
+        <div id="keyboard"></div>
+    </div>
+</div>
+<div id="info-container">
+    <div class="info-section" id="info-section-0">
+        <div id="event-info">
+            <span class="material-symbols-outlined" id="event-logo">waving_hand</span>
+            <!-- sports_score sprint sports_golf group conveyor_belt -->
+            <div id="event-text-container">
+                <div id="event-name-container">
+                    <div id="event-name">Welcome</div>
+                    <div id="event-description-button" title="Show rule details">
+                        <span class="material-symbols-outlined">info</span>
+                    </div>
+                </div>
+                <div id="event-description">Start a random Wordle challenge!</div>
+                <!-- <div id="event-description">Take a guess, then pass it along!</div> -->
+                <!-- <div id="event-description">Nine Wordles. Fewest guesses wins!</div> -->
+            </div>
+            <div class="mobile-button-container">
+                <button class="mobile-button" id="event-description-button-2" title="Rules">
+                    <span class="material-symbols-outlined">info_i</span>
+                </button>
+                <button class="mobile-button" id="settings-button-2" title="Settings">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+                <!-- <button id="hint-button-2" title="Hint">
+                <span class="material-symbols-outlined">lightbulb</span>
+            </button> -->
+                <button class="mobile-button" id="leaderboard-button-2" title="Toggle full leaderboard">
+                    <span class="material-symbols-outlined">leaderboard</span>
+                </button>
+            </div>
+        </div>
+        <div id="chat" style="display: flex; flex-direction: column; font-size: 14px">
+            <div class="auto-blur-section" id="chat-section" style="max-height: 37.5vh; overflow: auto; padding: 48px 0 12px">
+                <div class="blurry-top">
+                    <div class="expand-button" id="chat-expand-button" style="width: 100%; text-align: center">
+                        <span class="material-symbols-outlined" style="font-size: 24px">arrow_drop_up</span>
+                    </div>
+                </div>
+                <div id="chat-message-container" style="display: flex; flex-direction: column; gap: 8px; padding-right: 4px"></div>
+            </div>
+            <div style="display: flex; gap: 2px">
+                <button id="hide-chat-button" title="Hide Chat">
+                    <span class="material-symbols-outlined">chat_bubble</span>
+                </button>
+                <button id="show-chat-button" title="Show Chat" style="display: none">
+                    <span class="material-symbols-outlined">chat_bubble_off</span>
+                </button>
+                <input id="chat-input" placeholder="Join a game before chatting" maxlength="144" />
+                <button id="send-chat-button" title="Send">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="info-section" id="info-section-1">
+        <div id="widget-container-1">
+            <button id="settings-button" title="Settings">
+                <span class="material-symbols-outlined">settings</span>
+            </button>
+            <button id="leaderboard-button" title="Toggle full leaderboard">
+                <span class="material-symbols-outlined">leaderboard</span>
+            </button>
+            <button id="full-screen-button" title="Toggle full-screen">
+                <span class="material-symbols-outlined">crop_free</span>
+            </button>
+        </div>
+        <div id="progress-bar-background">
+            <div id="progress-bar-foreground" style="width: 100%"></div>
+        </div>
+        <div id="mini-leaderboard-container">
+            <div class="auto-blur-section" style="max-height: 50vh; overflow: auto; padding: 48px 0 0">
+                <div class="blurry-top"></div>
+                <div id="mini-leaderboard" style="display: flex; flex-direction: column; gap: 2px; padding-right: 4px"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="alert">Phew</div>
+<div id="panel">
+    <div id="start-panel" style="width: 228px; /* display: none */">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+            <div style="font-size: 20px; font-weight: 600"><span class="glow-green">e4! Wordle</span></div>
+            <div style="opacity: 0.5"><em>Battle with other avid Wordlers in rotating challenges</em></div>
+            <div style="height: 4px"></div>
+            <input id="nickname-input" style="font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
+            <button id="play-button" style="font-size: 16px; padding: 4px; min-width: 88px" disabled>Loading...</button>
+        </div>
+    </div>
+    <div id="between-games-panel" style="display: none">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+            <h3 style="font-weight: normal">Leaderboard <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Game <span id="between-games-panel-round-id">0</span></h3>
+            <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding-left: 10px"></div>
+            <div class="divider"></div>
+            <div id="leaderboard-your-place" style="font-size: 16px">
+                You are in <b>3<sup>rd</sup></b> place
+            </div>
+            <div id="leaderboard-delta">(42 points behind <b>EAS</b>)</div>
+            <p id="next-round-countdown"><span>Next</span> game starts in <b>10</b></p>
+        </div>
+    </div>
+    <div id="between-events-panel" style="display: none">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
+            <div class="glow-green" id="between-events-panel-title" style="font-weight: bold; font-size: 16px">So-and-so Won!</div>
+            <div id="between-events-panel-description" style="opacity: 0.5">"SWIFT" Sprint</div>
+            <div style="display: flex">
+                <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px">
+                    <div>EAS</div>
+                    <div>
+                        1:13
+                        <div style="font-size: 11px">9/9 solved</div>
+                    </div>
+                </div>
+                <div class="final-leaderboard-top-item rank-1">
+                    <div>lorem ipsum lorem ipsum</div>
+                    <div>144 pts</div>
+                    <span class="material-symbols-outlined">asterisk</span>
+                </div>
+                <div class="final-leaderboard-top-item rank-3" style="margin-top: 24px">
+                    <div>e4 e5 Ke2 1-0</div>
+                    <div>
+                        32 guesses
+                        <div style="font-size: 11px">9/9 solved</div>
+                    </div>
+                </div>
+            </div>
+            <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
+            <div class="divider"></div>
+            <div style="opacity: 0.667; display: flex; flex-direction: column; width: 100%">
+                <div id="next-event-countdown">Next up in <b>20</b></div>
+                <div id="next-event-info" style="display: flex; align-items: center; gap: 6px; align-self: center">
+                    <span class="material-symbols-outlined">sports_golf</span>
+                    <b>"SWIFT" Golf</b>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="help">
+    <div id="help-container">
+        <div id="help-contents"></div>
+        <button id="help-ok-button">OK</button>
+    </div>
+</div>
+<div id="settings">
+    <div id="settings-container">
+        <div class="settings-row">
+            <div class="settings-label">
+                <div>Always on <em>Hard Mode</em></div>
+                <div class="settings-description">Applied to you only</div>
+            </div>
+            <div class="settings-toggle-container" id="settings-item-always-hard-mode">
+                <div class="key settings-toggle">No</div>
+                <div class="key settings-toggle">Yes</div>
+            </div>
+        </div>
+        <hr />
+        <div class="settings-row">
+            <div class="settings-label">Theme</div>
+            <div class="settings-toggle-container" id="settings-item-theme">
+                <div class="key settings-toggle">Light</div>
+                <div class="key settings-toggle">Auto</div>
+                <div class="key settings-toggle">Dark</div>
+            </div>
+        </div>
+        <hr />
+        <div class="settings-row">
+            <div class="settings-label">Sound effects</div>
+            <div class="settings-toggle-container" id="settings-item-mute">
+                <div class="key settings-toggle">Off</div>
+                <div class="key settings-toggle">On</div>
+            </div>
+        </div>
+        <button id="settings-ok-button">OK</button>
+    </div>
+</div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@4.2.1/tsparticles.confetti.bundle.min.js"></script>
+<script src="./itty-sockets.js"></script>
+<script src="./targets.js"></script>
+<script src="./allowedGuesses.js"></script>
+<script>
+    {
+        let isDev = location.href.includes("localhost") || location.href.includes("192.168");
+        let FORCED_EVENT_PARAMS;
+        // FORCED_EVENT_PARAMS = isDev && { mode: "circuit", opener: "SWIFT" };
+        let log = (...args) => {
+            let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
+            let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
+            let replacer = (k, v) => (v instanceof Set || v instanceof Map ? [...v] : v);
+            console.assert(0, "#=#", time, site, "\n", JSON.stringify(args, replacer));
+        };
+        let urlParams = new URLSearchParams(location.search);
+        const DEFAULT_NUM_GAMES = 9;
+        let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
+        let numGames = () => (totalUsers - ignoredUids.size === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
+
+        let settings;
+        const SETTINGS_VERSION = 1;
+        let initializeSettings = () => {
+            try {
+                settings = JSON.parse(localStorage.getItem("settings"));
+            } catch {}
+            if (!(settings?.version >= SETTINGS_VERSION)) {
+                localStorage.removeItem("settings");
+                settings = {
+                    version: SETTINGS_VERSION,
+                    theme: "auto",
+                    alwaysHardMode: false,
+                    mute: false,
+                };
+            }
+            let toggleSettings = () => {
+                document.body.classList.toggle("showing-settings");
+            };
+            document.querySelector("#settings-button").addEventListener("click", toggleSettings);
+            document.querySelector("#settings-ok-button").addEventListener("click", toggleSettings);
+            document.querySelector("#settings-button-2").addEventListener("click", () => {
+                document.body.classList.remove("showing-help");
+                toggleSettings();
+            });
+            let setButtonColor = (el, isGreen) => {
+                el.classList.toggle("green", isGreen);
+            };
+
+            let alwaysHardModeEl = document.querySelector("#settings-item-always-hard-mode");
+            let toggleAlwaysHardMode = (value) => () => {
+                settings.alwaysHardMode = value;
+                localStorage.setItem("settings", JSON.stringify(settings));
+                setButtonColor(alwaysHardModeEl.children[0], !value);
+                setButtonColor(alwaysHardModeEl.children[1], value);
+            };
+            toggleAlwaysHardMode(settings.alwaysHardMode)();
+            alwaysHardModeEl.children[0].addEventListener("click", toggleAlwaysHardMode(false));
+            alwaysHardModeEl.children[1].addEventListener("click", toggleAlwaysHardMode(true));
+
+            let initializeThemeSupport = () => {
+                document.querySelector("#dark-theme-styles").sheet.insertRule(document.querySelector("#auto-theme-styles").sheet.cssRules[0].cssText.replace("(prefers-color-scheme: dark)", "all"));
+            };
+            initializeThemeSupport();
+            let themeEl = document.querySelector("#settings-item-theme");
+            let toggleTheme = (value) => () => {
+                settings.theme = value;
+                localStorage.setItem("settings", JSON.stringify(settings));
+                setButtonColor(themeEl.children[0], value === "light");
+                setButtonColor(themeEl.children[1], value === "auto");
+                setButtonColor(themeEl.children[2], value === "dark");
+                document.querySelector("#auto-theme-styles").sheet.disabled = value !== "auto";
+                document.querySelector("#dark-theme-styles").sheet.disabled = value !== "dark";
+                document.documentElement.style.colorScheme = value === "auto" ? "light dark" : value;
+            };
+            toggleTheme(settings.theme)();
+            themeEl.children[0].addEventListener("click", toggleTheme("light"));
+            themeEl.children[1].addEventListener("click", toggleTheme("auto"));
+            themeEl.children[2].addEventListener("click", toggleTheme("dark"));
+
+            let muteEl = document.querySelector("#settings-item-mute");
+            let toggleMute = (value) => () => {
+                settings.mute = value;
+                localStorage.setItem("settings", JSON.stringify(settings));
+                setButtonColor(muteEl.children[0], value);
+                setButtonColor(muteEl.children[1], !value);
+            };
+            toggleMute(settings.mute)();
+            muteEl.children[0].addEventListener("click", toggleMute(true));
+            muteEl.children[1].addEventListener("click", () => {
+                toggleMute(false)();
+                playAudio("score");
+            });
+        };
+        initializeSettings();
+
+        let playAudio = (() => {
+            let audio = {
+                "event-start": new Audio("/start.mp3"),
+                "score": new Audio("/step_in.mp3"),
+                "event-end": new Audio("/win.mp3"),
+            };
+            for (let a of Object.values(audio)) {
+                a.preload = "auto";
+            }
+            return (name) => {
+                if (settings.mute) {
+                    return;
+                }
+                let a = audio[name];
+                a.currentTime = 0;
+                a.play();
+            };
+        })();
+
+        /** @type {Map<string, number>} */
+        let indexByTarget = new Map(targets.map((t, i) => [t, i]));
+
+        let currentEvent;
+        let upcomingEvent;
+        let currentGameIndex;
+        let currentEventStartTime;
+        let currentPlayerStartTime; // For Sprint event where players are timed against themselves
+        let upcomingEventStartTime;
+        let currentScore;
+        let initialScore = () => {
+            return {
+                "factory": [0, 0], // [solved, -time]
+                "duo": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
+                "circuit": [0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, playedOnHardMode]
+                "sprint": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
+                "golf": [0, 0, 0, 0, 1], // [solved, played, -guesses, -time, playedOnHardMode]
+            };
+        };
+        const PAIRED_GUESS_TIME_LIMIT = 30000;
+        let initialEventTimeLimit = () => (currentEvent.mode === "circuit" ? 120000 : 900000);
+        let initialBoardState = (t) => (currentEvent?.opener ? [[currentEvent.opener, judge(currentEvent.opener, t || target)]] : []);
+        let currentPlayerDone = false;
+        let currentPlayerWaitingForOthers = false;
+        let currentEventSuggestedEnded = false;
+        let currentEventEnded = false;
+        let upcomingEventSuggestedStarted = false;
+        let currentTeammate;
+        let isCurrentPlayersTurn;
+        let playerTurnDueTime;
+        let currentPairing;
+        let suggestedToKickTeammate;
+        let currentUnownedFactoryGame;
+        let factoryGameToShowAfterAnimation;
+        let waitingForScoreAfterGuessInFactory;
+        let waitingForScoreAfterGuessInFactoryTimeoutHandle;
+        let gameParams = () => ({ guessLimit: 6, fastAnimation: ["duo", "sprint"].includes(currentEvent?.mode), hardMode: !!currentEvent?.opener });
+        let formatShortScoreDescription = (mode, score) => {
+            switch (mode) {
+                case "factory": {
+                    let [solved, time] = score;
+                    time *= -1;
+                    return "in " + formatTime(time, true);
+                }
+                case "duo": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    return "in " + formatTime(time, true);
+                }
+                case "circuit": {
+                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return `with ${eventScore.toString()} points`;
+                }
+                case "sprint": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    return "in " + formatTime(time, true);
+                }
+                case "golf": {
+                    let [solved, played, guesses, time, playedOnHardMode] = score;
+                    guesses *= -1;
+                    time *= -1;
+                    return `in ${guesses} guesses`;
+                }
+            }
+            console.assert(false, mode, score);
+            return JSON.stringify(score);
+        };
+        let formatScore = (mode, score) => {
+            switch (mode) {
+                case "factory": {
+                    let [solved, time] = score;
+                    time *= -1;
+                    return `${solved}`;
+                }
+                case "duo": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    if (played === numGames()) {
+                        return `${formatTime(time)} • ${solved}/${played}`;
+                    }
+                    return `${solved}/${played}`;
+                }
+                case "circuit": {
+                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return eventScore.toString();
+                    break;
+                }
+                case "sprint": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    return `${formatTime(time)} (${solved}/${played})`;
+                }
+                case "golf": {
+                    let [solved, played, guesses, time, playedOnHardMode] = score;
+                    guesses *= -1;
+                    time *= -1;
+                    return `${guesses} (${solved}/${played})`;
+                }
+            }
+            console.assert(false, mode, score);
+            return JSON.stringify(score);
+        };
+        let judge = (guess, target) => {
+            let counts = {};
+            for (let c of guess) {
+                counts[c] = target.split(c).length - 1;
+            }
+            let verdict = Array(5).fill("B");
+            for (let i = 0; i < 5; ++i) {
+                if (guess.charAt(i) === target.charAt(i)) {
+                    --counts[guess.charAt(i)];
+                    verdict[i] = "G";
+                }
+            }
+            for (let i = 0; i < 5; ++i) {
+                if (verdict[i] !== "G" && counts[guess.charAt(i)]) {
+                    --counts[guess.charAt(i)];
+                    verdict[i] = "Y";
+                }
+            }
+            return verdict.join("");
+        };
+        /** @type {string} */
+        let target = "STYLE";
+        for (let t of targets) {
+            allowedGuesses.add(t);
+        }
+        let currentBoardState = [];
+        let currentGuess = "";
+
+        let animatingRows = new Set();
+        let isBoardAnimating = () => animatingRows.size > 0;
+        let boardEl = document.querySelector("#board");
+        let setBoardSize = (size) => {
+            boardEl.innerHTML = "";
+            for (let i = 0; i < size; ++i) {
+                let guessEl = boardEl.appendChild(document.createElement("div"));
+                guessEl.classList.add("guess");
+                guessEl.id = `guess-${i}`;
+                for (let j = 0; j < 5; ++j) {
+                    guessEl.innerHTML += `<div class="letter" id="letter-${i}-${j}"></div>`;
+                }
+            }
+            animatingRows.clear();
+        };
+        let initializeKeyboard = () => {
+            /** @type {Map<number, [string, boolean]>} */
+            let currentPressedKeyByPointer = new Map();
+            let currentPressedKeyCount = 0;
+            let keyboardEl = document.querySelector("#keyboard");
+            keyboardEl.addEventListener("pointerdown", () => {});
+            // spell-checker: disable-next-line
+            for (let row of ["QWERTYUIOP", "ASDFGHJKL", ENTER_KEY + "ZXCVBNM" + BACKSPACE_KEY]) {
+                let rowEl = keyboardEl.appendChild(document.createElement("div"));
+                rowEl.classList.add("row");
+                for (let key of row) {
+                    let keyEl = rowEl.appendChild(document.createElement("div"));
+                    keyEl.classList.add("key");
+                    keyEl.id = `key-${key}`;
+                    if (key === ENTER_KEY) {
+                        keyEl.innerHTML = '<span class="material-symbols-outlined">check</span>';
+                    } else if (key === BACKSPACE_KEY) {
+                        keyEl.innerHTML = '<span class="material-symbols-outlined">backspace</span>';
+                    } else {
+                        keyEl.textContent = key;
+                    }
+                    keyEl.classList.toggle("key-a", key === "A");
+                    keyEl.classList.toggle("key-l", key === "L");
+                    let isSpecial = [ENTER_KEY, BACKSPACE_KEY].includes(key);
+                    keyEl.classList.toggle("wide", isSpecial);
+                    keyEl.addEventListener("pointerdown", (e) => {
+                        for (let value of currentPressedKeyByPointer.values()) {
+                            if (value[1]) {
+                                value[1] = false;
+                                inputKey(value[0]);
+                            }
+                        }
+                        currentPressedKeyByPointer.set(e.pointerId, [key, true]);
+                    });
+                    keyEl.addEventListener("pointerup", (e) => {
+                        let value = currentPressedKeyByPointer.get(e.pointerId);
+                        if (value?.at(0) === key && value?.at(1)) {
+                            inputKey(value[0]);
+                        }
+                    });
+                }
+            }
+            addEventListener("pointerdown", () => {
+                ++currentPressedKeyCount;
+            });
+            addEventListener("pointerup", (e) => {
+                --currentPressedKeyCount;
+                currentPressedKeyByPointer.delete(e.pointerId);
+            });
+            addEventListener("touchend", () => currentPressedKeyByPointer.clear());
+
+            document.addEventListener("keydown", (e) => {
+                let activeEl = document.activeElement;
+                if (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement || activeEl?.isContentEditable) {
+                    return;
+                }
+                if (e.ctrlKey || e.altKey || e.metaKey) {
+                    return;
+                }
+                let input = (key) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    inputKey(key);
+                };
+                switch (e.code) {
+                    case "Backspace": {
+                        input(BACKSPACE_KEY);
+                        return;
+                    }
+                    case "Escape":
+                    case "Tab": {
+                        // Delete whole guess
+                        for (let i = 0; i < 5; ++i) {
+                            input(BACKSPACE_KEY);
+                        }
+                        return;
+                    }
+                    case "Enter":
+                    case "Space": {
+                        input(ENTER_KEY);
+                        return;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+                let isAlpha = e.key.length === 1 && e.key.toUpperCase() !== e.key.toLowerCase();
+                if (isAlpha) {
+                    input(e.key.toUpperCase());
+                }
+            });
+
+            // spell-checker: ignore gesturestart gesturechange gestureend
+            document.addEventListener("gesturestart", (e) => e.preventDefault());
+            document.addEventListener("gesturechange", (e) => e.preventDefault());
+            document.addEventListener("gestureend", (e) => e.preventDefault());
+        };
+        /** @type {HTMLElement} */
+        let bannerEl = document.querySelector("#banner");
+        let formatTime = (ms, asScore = false) => {
+            if (isNaN(ms)) {
+                return "";
+            }
+            ms = Math.max(ms, 0);
+            if (asScore && !ms) {
+                return "--";
+            }
+            let m = Math.floor(ms / 60000);
+            let s = Math.floor((ms % 60000) / 1000);
+            if (!asScore) {
+                return m + ":" + `${s}`.padStart(2, "0");
+            }
+            let t = `${Math.floor((ms % 60000) / 100)}`.padStart(3, "0");
+            return m + ":" + t.slice(0, -1) + (ms >= 10000 ? "" : "." + t.slice(-1));
+        };
+        let bannerLeftTextEl = bannerEl.querySelector("#banner-left-text");
+        let bannerLeftIconEl = bannerEl.querySelector("#banner-left-icon");
+        let bannerLeftInnerTextEl = bannerEl.querySelector("#banner-left-inner-text");
+        let bannerRightIconEl = bannerEl.querySelector("#banner-right-icon");
+        let bannerRightTextEl = bannerEl.querySelector("#banner-right-text");
+        let updateBanner = () => {
+            if (!playerByUid.has(currentUid)) {
+                return;
+            }
+            bannerLeftTextEl.textContent = currentEvent.mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
+            let leftIcon = currentPlayerWaitingForOthers ? (currentEvent.mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
+            bannerLeftIconEl.textContent = leftIcon;
+            bannerLeftInnerTextEl.innerHTML = leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !currentPlayerDone ? `•&ensp;Wait for&nbsp;<b>${currentTeammate || BOT_NAME}</b>` : "";
+            let rightText =
+                currentEvent.mode === "golf"
+                    ? -currentScore[2]
+                    : currentEvent.mode === "sprint"
+                      ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
+                      : currentEvent.mode === "duo"
+                        ? (() => {
+                              let time = currentEvent.endTime - Date.now();
+                              let time2 = currentPlayerDone ? Infinity : playerTurnDueTime - Date.now();
+                              let t = Math.min(time, time2);
+                              return currentEventEnded || t >= 60000 ? "" : formatTime(t + 999);
+                          })()
+                        : (() => {
+                              let time = currentEvent.endTime - Date.now();
+                              return time >= (currentEvent.mode === "circuit" ? 30000 : 60000) ? "" : formatTime(time + 999);
+                          })();
+            rightText = `${rightText}`;
+            bannerRightTextEl.innerHTML = rightText;
+            bannerRightIconEl.textContent = rightText ? (currentEvent.mode === "golf" ? "edit_square" : "timer") : "";
+        };
+        let lastProgressBarWidth = 100;
+        let lastProgressBarUpdateTime = Date.now();
+        let progressBar = document.querySelector("#progress-bar-foreground");
+        let updateProgressBar = () => {
+            if (!currentEvent?.endTime || currentEventEnded || !lastProgressBarUpdateTime) {
+                lastProgressBarUpdateTime = Date.now();
+                lastProgressBarWidth = 100;
+                return;
+            }
+            if (Date.now() >= currentEvent.endTime) {
+                if (currentEventSuggestedEnded) {
+                    return;
+                }
+                currentEventSuggestedEnded = true;
+                connection.send({ type: "event-end", eventId: currentEvent.id });
+                progressBar.style.width = "0";
+                updateBanner();
+                return;
+            }
+            let newWidth = (lastProgressBarWidth * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - lastProgressBarUpdateTime);
+            progressBar.style.width = `${newWidth}%`;
+            lastProgressBarWidth = newWidth;
+            lastProgressBarUpdateTime = Date.now();
+            updateBanner();
+        };
+        setInterval(updateProgressBar, 83);
+        let checkPairedModeAutoGuess = () => {
+            if (currentPlayerDone || currentEvent?.mode !== "duo" || !playerIds.has(currentPlayer) || currentBoardState.length === gameParams().guessLimit || currentBoardState.at(-1)?.at(1) === "GGGGG") {
+                return;
+            }
+            let playAndSend = (guess) => {
+                currentGuess = "";
+                let g = guess || botPlay();
+                let v = judge(g, target);
+                let h = checkHardMode(g);
+                currentBoardState.push([g, v]);
+                loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                updateCurrentScore(v, h);
+                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+            };
+            if (isCurrentPlayersTurn === false) {
+                let d = Date.now();
+                if (!currentTeammate) {
+                    let guessesMade = currentBoardState.length || 4; // Make the first guess also faster
+                    if (d >= playerTurnDueTime - (PAIRED_GUESS_TIME_LIMIT - 2500) && (playerIds.size <= 1 || d >= playerTurnDueTime - (PAIRED_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
+                        isCurrentPlayersTurn = true;
+                        playAndSend(undefined);
+                    }
+                } else {
+                    if (d >= playerTurnDueTime + 2000 && !suggestedToKickTeammate) {
+                        suggestedToKickTeammate = true;
+                        connection.send({ type: "kick", player: currentTeammate });
+                    }
+                }
+                return;
+            }
+            if (isCurrentPlayersTurn === true && Date.now() >= playerTurnDueTime) {
+                let g = currentBoardState.length && currentBoardState.at(-1)[0];
+                playAndSend(g);
+                isCurrentPlayersTurn = false;
+                return;
+            }
+        };
+        setInterval(checkPairedModeAutoGuess, 500);
+        let setEventToEndIn = (remaining) => {
+            currentEvent.endTime = Math.min(currentEvent.endTime || Infinity, Date.now() + remaining);
+            lastProgressBarUpdateTime = Date.now();
+        };
+        /** @type {HTMLElement} */
+        let alertEl = document.querySelector("#alert");
+        let showAlert = (text) => {
+            alertEl.classList.remove("visible");
+            void alertEl.offsetWidth;
+            alertEl.classList.add("visible");
+            alertEl.textContent = text;
+        };
+        // Returns a description for why the guess didn't fit Hard Mode
+        let checkHardMode = (nextGuess) => {
+            for (let [pastGuess, verdict] of currentBoardState) {
+                let pastCounts = {};
+                for (let i = 0; i < 5; ++i) {
+                    let letter = pastGuess.charAt(i);
+                    if (verdict.charAt(i) === "G" && nextGuess.charAt(i) !== letter) {
+                        return `${["First", "Second", "Third", "Fourth", "Last"][i]} letter must be "${letter}"`;
+                    }
+                    if (verdict.charAt(i) !== "B") {
+                        pastCounts[letter] = (pastCounts[letter] || 0) + 1;
+                    }
+                }
+                for (let [letter, pastCount] of Object.entries(pastCounts)) {
+                    let currentCount = nextGuess.split(letter).length - 1;
+                    if (currentCount < pastCount) {
+                        return `Guess must contain ${pastCount > 1 ? `at least ${["", "", "two", "three"][pastCount]} "${letter}"s` : `"${letter}"`}`;
+                    }
+                }
+            }
+            return undefined;
+        };
+        let updateCurrentScore = (verdict, stillHardMode, shouldPlayAudio = true) => {
+            if (shouldPlayAudio) {
+                playAudio("score");
+            }
+            currentPlayerDone = (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) && (currentEvent.mode === "circuit" || (currentEvent.mode === "factory" ? currentScore[0] + (verdict === "GGGGG") : currentGameIndex) === numGames() - (currentEvent.mode !== "factory"));
+            if (0) {
+                initialScore(); // For F12 jumping convenience
+            }
+            switch (currentEvent.mode) {
+                case "factory": {
+                    currentScore[0] += verdict === "GGGGG";
+                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                        currentScore[1] = -(Date.now() - currentEventStartTime);
+                    }
+                    break;
+                }
+                case "duo": {
+                    currentScore[0] += verdict === "GGGGG";
+                    currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
+                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                        currentScore[2] = -(Date.now() - currentEventStartTime);
+                    }
+                    currentScore[3] &&= stillHardMode;
+                    break;
+                }
+                case "circuit": {
+                    let roundScore = verdict === "GGGGG" && 3 * (gameParams().guessLimit + 1 - currentBoardState.length);
+                    // Speed component needs to wait until Score event to be added, in case of a race
+                    currentScore[0] += roundScore;
+                    currentScore[4] = -roundScore;
+                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                        currentScore[5] = -(Date.now() - currentEventStartTime);
+                        currentScore[2] += currentScore[5];
+                        ++currentScore[3];
+                        currentScore[1] = currentScore[2] / currentScore[3];
+                    }
+                    currentScore[6] &&= stillHardMode;
+                    break;
+                }
+                case "sprint": {
+                    currentScore[0] += verdict === "GGGGG";
+                    currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
+                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                        currentScore[2] = -(Date.now() - currentPlayerStartTime);
+                        console.assert(!isNaN(currentScore[2]), currentScore, playerLeaderboardData);
+                    }
+                    currentScore[3] &&= stillHardMode;
+                    break;
+                }
+                case "golf": {
+                    currentScore[0] += verdict === "GGGGG";
+                    currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
+                    --currentScore[2];
+                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                        currentScore[3] = -(Date.now() - currentEventStartTime);
+                    }
+                    currentScore[4] &&= stillHardMode;
+                    break;
+                }
+            }
+            updateBanner();
+            let message = {
+                type: "score",
+                eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
+                score: structuredClone(currentScore),
+                scoreText: formatScore(currentEvent.mode, currentScore),
+                verdict,
+                numGuesses: currentBoardState.length,
+                done: currentPlayerDone,
+                game: currentGameIndex,
+                guess: currentBoardState.at(-1)[0],
+                hard: stillHardMode,
+            };
+            if (currentEvent.mode === "factory") {
+                message.newUnownedGame = verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit ? { ...createUnownedFactoryGame(false), lastGuesser: currentEvent.opener ? undefined : currentPlayer } : { target, board: currentBoardState, lastGuesser: currentPlayer };
+            }
+            loadBoardState(currentBoardState, {
+                fastAnimation: gameParams().fastAnimation,
+                leaderboardOverride: verdict !== "GGGGG" ? { score: message.score, scoreText: message.scoreText, verdict: message.verdict, numGuesses: message.numGuesses } : undefined,
+            });
+            if (!(currentEvent.mode === "factory" && currentEvent.opener && currentBoardState.length === 1)) {
+                connection.send(message);
+            }
+        };
+        const ENTER_KEY = "0";
+        const BACKSPACE_KEY = "1";
+        let inputKey = (key) => {
+            if (document.body.classList.contains("showing-panel")) {
+                return;
+            }
+            if (currentEventEnded || isCurrentPlayersTurn === false || waitingForScoreAfterGuessInFactory === true || factoryGameToShowAfterAnimation || waitingForScoreAfterGuessInFactoryTimeoutHandle) {
+                return;
+            }
+            if (isNaN(currentPlayerStartTime)) {
+                currentPlayerStartTime = Date.now();
+            }
+            if (key === ENTER_KEY) {
+                if (currentBoardState.length === gameParams().guessLimit || (currentBoardState.length && currentBoardState.at(-1)[1] === "GGGGG")) {
+                    return;
+                }
+                let hardModeErrorText;
+                if (currentGuess.length !== 5 || !allowedGuesses.has(currentGuess) || ((hardModeErrorText = checkHardMode(currentGuess)) && (settings.alwaysHardMode || gameParams().hardMode))) {
+                    let guessEl = document.querySelector(`#guess-${currentBoardState.length}`);
+                    guessEl.classList.remove("shaking");
+                    void guessEl.offsetWidth;
+                    guessEl.classList.toggle("fast", gameParams().fastAnimation);
+                    guessEl.classList.add("shaking");
+                    if (hardModeErrorText) {
+                        showAlert(hardModeErrorText);
+                    }
+                    return;
+                }
+                if (isCurrentPlayersTurn === true) {
+                    playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                    isCurrentPlayersTurn = false;
+                }
+                if (currentEvent.mode === "factory") {
+                    waitingForScoreAfterGuessInFactory = !currentPlayerDone;
+                }
+                let verdict = judge(currentGuess, target);
+                currentBoardState.push([currentGuess, verdict]);
+                currentGuess = "";
+                updateCurrentScore(verdict, !hardModeErrorText);
+                if (currentEvent.mode === "factory") {
+                    waitingForScoreAfterGuessInFactoryTimeoutHandle = setTimeout(() => {
+                        waitingForScoreAfterGuessInFactoryTimeoutHandle = undefined;
+                        if (!currentEventEnded && verdict !== "GGGGG" && !isBoardAnimating() && factoryGameToShowAfterAnimation && !waitingForScoreAfterGuessInFactory) {
+                            loadUnownedFactoryGameState();
+                        } else if (currentPlayerDone) {
+                            checkEventEndOrAcceleration();
+                        }
+                    }, 2333);
+                }
+                return;
+            }
+            if (currentBoardState.length === gameParams().guessLimit || (currentBoardState.length && currentBoardState.at(-1)[1] === "GGGGG")) {
+                return;
+            }
+            alertEl.classList.remove("visible");
+            currentGuess = key === BACKSPACE_KEY ? currentGuess.slice(0, -1) : (currentGuess + key).slice(0, 5);
+            loadBoardState(currentBoardState.concat([[currentGuess, ""]]));
+        };
+        const VERDICT_COLORS = { "B": "black", "Y": "yellow", "G": "green" };
+        let colorKeyboard = (guesses, state = undefined) => {
+            state ||= currentBoardState;
+            for (let key of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+                for (let color of Object.values(VERDICT_COLORS)) {
+                    document.querySelector(`#key-${key}`).classList.remove(color);
+                }
+            }
+            for (let i = 0; i < Math.min(guesses, state.length); ++i) {
+                let [guess, verdict] = state[i];
+                for (let j = 0; j < 5; ++j) {
+                    let letter = guess.charAt(j);
+                    let color = verdict.charAt(j);
+                    document.querySelector(`#key-${letter}`).classList.add(VERDICT_COLORS[color]);
+                }
+            }
+        };
+        let loadUnownedFactoryGameState = () => {
+            if (!factoryGameToShowAfterAnimation) {
+                console.assert(false);
+                factoryGameToShowAfterAnimation = createUnownedFactoryGame();
+            }
+            target = factoryGameToShowAfterAnimation.target;
+            currentBoardState = factoryGameToShowAfterAnimation.board;
+            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer && (playerIds.size === 1 || Math.random() < 0.5)) {
+                // Make a bot guess sometimes so the player doesn't get bored from only solving Wordles passed to themselves
+                let g;
+                if (currentBoardState.length < gameParams().guessLimit - 1 && ((g = botPlay()), g !== target)) {
+                    currentBoardState.push([g, judge(g, target)]);
+                }
+            }
+            loadBoardState(currentBoardState, { boardPassAnimation: true });
+        };
+        let postGameDelayTimeout; // A delay after a completed game to prevent the transition panel popping up too quickly
+        let loadedState = [];
+        let loadBoardState = (
+            state,
+            options = {
+                fastAnimation: false,
+                noAnimation: false,
+                keyboardColorState: undefined,
+                boardPassAnimation: false,
+                leaderboardOverride: undefined,
+            },
+        ) => {
+            state = structuredClone(state);
+            loadedState = structuredClone(state);
+            let { fastAnimation, noAnimation, keyboardColorState, boardPassAnimation } = options;
+            if (boardPassAnimation) {
+                boardEl.classList.remove("passing");
+                void boardEl.offsetWidth;
+                boardEl.classList.add("passing");
+                let check = () => {
+                    let animation = boardEl.getAnimations().find((a) => a.animationName === "BoardPass");
+                    if (animation && animation.effect.getComputedTiming().progress <= 0.5) {
+                        requestAnimationFrame(check);
+                        return;
+                    }
+                    // Pass animation is at midpoint
+                    loadBoardState(state, { noAnimation: true, keyboardColorState });
+                    factoryGameToShowAfterAnimation = undefined;
+                };
+                boardEl.addEventListener("animationstart", check, { once: true });
+                return;
+            }
+            let { guessLimit } = gameParams();
+            console.assert(state.length <= guessLimit);
+            for (let i = 0; i < guessLimit; ++i) {
+                let handleRowFlipEnd = () => {
+                    if (JSON.stringify(loadedState[i]) !== JSON.stringify(state[i])) {
+                        return;
+                    }
+                    animatingRows.delete(i);
+                    if (currentEvent.mode === "factory" && !isBoardAnimating() && verdict !== "GGGGG" && !waitingForScoreAfterGuessInFactoryTimeoutHandle) {
+                        if (!waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
+                            loadUnownedFactoryGameState();
+                            return;
+                        }
+                    }
+
+                    if (!fastAnimation) {
+                        colorKeyboard(i + 1, keyboardColorState || state);
+                    }
+                    // Fast animation colors at flip midpoint
+
+                    let gameDone = false;
+                    if (currentBoardState.length > i && currentBoardState[i][1] === "GGGGG") {
+                        if (currentEvent.mode === "factory") {
+                            ++currentGameIndex;
+                            updateBanner();
+                        }
+                        if (!fastAnimation) {
+                            for (let j = 0; j < 5; ++j) {
+                                let letterEl = document.querySelector(`#letter-${i}-${j}`);
+                                letterEl.classList.remove("bouncing");
+                                void letterEl.offsetWidth;
+                                letterEl.classList.add("bouncing");
+                                letterEl.addEventListener("animationend", () => letterEl.classList.remove("bouncing"), { once: true });
+                            }
+                        }
+                        gameDone = true;
+                    } else if (currentBoardState.length === guessLimit && i === guessLimit - 1) {
+                        showAlert(`"${target}"`);
+                        gameDone = true;
+                    }
+                    sortMiniLeaderboard(options.leaderboardOverride);
+
+                    if (!gameDone) {
+                        return;
+                    }
+                    postGameDelayTimeout = setTimeout(
+                        () => {
+                            postGameDelayTimeout = undefined;
+                            if (JSON.stringify(loadedState) !== JSON.stringify(state)) {
+                                return;
+                            }
+                            if (currentEventEnded) {
+                                if (document.querySelector("#between-events-panel").style.display === "none") {
+                                    showEventTransitionPanel();
+                                }
+                                return;
+                            }
+                            if (currentEvent.mode === "circuit" || (currentEvent.mode === "factory" ? currentPlayerDone : currentGameIndex === numGames() - 1)) {
+                                currentPlayerWaitingForOthers = true;
+                                updateBanner();
+                                return;
+                            }
+
+                            let loadNextGame = () => {
+                                if (currentEvent.mode === "factory" && !isBoardAnimating()) {
+                                    if (!waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
+                                        requestAnimationFrame(() => {
+                                            loadUnownedFactoryGameState();
+                                        });
+                                    }
+                                    return;
+                                }
+
+                                ++currentGameIndex;
+                                console.assert(currentGameIndex < numGames());
+                                colorKeyboard(0, state);
+                                if (["duo", "sprint", "golf"].includes(currentEvent.mode)) {
+                                    target = currentEvent.targets[currentGameIndex];
+                                }
+                                currentBoardState = [];
+                                if (currentEvent.opener) {
+                                    let v = judge(currentEvent.opener, target);
+                                    currentBoardState.push([currentEvent.opener, v]);
+                                    loadBoardState([], { fastAnimation: true, keyboardColorState: fastAnimation ? currentBoardState : undefined, leaderboardOverride: playerLeaderboardData.get(currentPlayer) });
+                                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                                    updateCurrentScore(v, true);
+                                } else {
+                                    loadBoardState(currentBoardState, { fastAnimation: true });
+                                }
+                                updateBanner();
+                            };
+                            loadNextGame();
+                        },
+                        fastAnimation ? 833 : 1833,
+                    );
+                };
+
+                let [guess, verdict] = state[i] || ["", ""];
+                for (let j = 0; j < 5; ++j) {
+                    let letterEl = document.querySelector(`#letter-${i}-${j}`);
+                    let letter = guess.charAt(j);
+                    let color = verdict.charAt(j);
+
+                    let needsFlip = letterEl.classList.contains("judged") !== !!color;
+                    if (needsFlip && !noAnimation) {
+                        animatingRows.add(i);
+                        if (color && !letterEl.textContent && !fastAnimation) {
+                            // Allow a pre-judged word to be filled in with letters immediately (under fixed-opener mode), but don't allow clearing the board to immediately lose its letters
+                            letterEl.textContent = letter;
+                            letterEl.classList.toggle("nonempty", !!letter);
+                        }
+                        letterEl.classList.remove("typed");
+                        letterEl.classList.toggle("fast", fastAnimation);
+                        letterEl.classList.remove("flipping");
+                        void letterEl.offsetWidth;
+                        letterEl.classList.add("flipping");
+                        let checkToAddColor = () => {
+                            let animation = letterEl.getAnimations().find((a) => a.animationName === "Flip");
+                            // If animation is null, assume it already finished playing
+                            if (animation && animation.effect.getComputedTiming().progress <= 0.5) {
+                                requestAnimationFrame(checkToAddColor);
+                                return;
+                            }
+                            // Flip is at midpoint
+                            letter = loadedState[i]?.at(0)?.charAt(j) || "";
+                            color = loadedState[i]?.at(1)?.charAt(j) || "";
+                            letterEl.textContent = letter;
+                            letterEl.classList.toggle("nonempty", !!letter);
+                            letterEl.classList.toggle("black", color === "B");
+                            letterEl.classList.toggle("yellow", color === "Y");
+                            letterEl.classList.toggle("green", color === "G");
+                            if (fastAnimation && j === 4) {
+                                // Color keyboard sooner for a smoother look
+                                colorKeyboard(i + 1, keyboardColorState || state);
+                            }
+                            let handleFlipEnd = () => {
+                                letterEl.classList.remove("flipping");
+                                if (j === 4) {
+                                    handleRowFlipEnd();
+                                }
+                            };
+                            if (animation) {
+                                letterEl.addEventListener("animationend", handleFlipEnd, { once: true });
+                            } else {
+                                handleFlipEnd();
+                            }
+                        };
+                        letterEl.addEventListener("animationstart", checkToAddColor, { once: true });
+                    } else if (noAnimation || !letterEl.classList.contains("flipping")) {
+                        if (noAnimation) {
+                            animatingRows.delete(i);
+                            letterEl.classList.remove("flipping");
+                            letterEl.classList.remove("bouncing");
+                        }
+                        letterEl.textContent = letter;
+                        letterEl.classList.toggle("nonempty", !!letter);
+                        letterEl.classList.toggle("typed", letter && !color);
+                        letterEl.classList.toggle("black", color === "B");
+                        letterEl.classList.toggle("yellow", color === "Y");
+                        letterEl.classList.toggle("green", color === "G");
+                    }
+                    letterEl.classList.toggle("judged", !!color);
+                }
+            }
+            if (!isBoardAnimating()) {
+                colorKeyboard(currentBoardState.length, keyboardColorState || state);
+            }
+        };
+        let initializeChat = () => {
+            let shouldShowChat = !!+(localStorage.getItem("showChat") || "1");
+            /** @type {HTMLButtonElement} */
+            let showChatButton = document.querySelector("#show-chat-button");
+            /** @type {HTMLButtonElement} */
+            let hideChatButton = document.querySelector("#hide-chat-button");
+            /** @type {HTMLInputElement} */
+            let chatInput = document.querySelector("#chat-input");
+            /** @type {HTMLButtonElement} */
+            let sendChatButton = document.querySelector("#send-chat-button");
+            let handleShowOrHideFunction = (value) => () => {
+                (value ? hideChatButton : showChatButton).style.display = "";
+                (!value ? hideChatButton : showChatButton).style.display = "none";
+                chatInput.disabled = !value;
+                sendChatButton.disabled = !value;
+                shouldShowChat = value;
+                document.querySelector("#chat-section").style.display = value ? "" : "none";
+                localStorage.setItem("showChat", String(+shouldShowChat));
+            };
+            handleShowOrHideFunction(shouldShowChat)();
+            showChatButton.addEventListener("click", handleShowOrHideFunction(true));
+            hideChatButton.addEventListener("click", handleShowOrHideFunction(false));
+            let lastSendTime = Date.now() - 1000;
+            let handleChatSend = () => {
+                if (!currentPlayer) {
+                    return;
+                }
+                if (Date.now() - lastSendTime < 1000) {
+                    return;
+                }
+                lastSendTime = Date.now();
+                let text = chatInput.value.trim();
+                if (!text) {
+                    return;
+                }
+                connection.send({ type: "chat", data: [currentPlayer, text, ""] });
+                chatInput.value = "";
+            };
+            chatInput.addEventListener("keydown", (e) => {
+                if (e.code === "Enter") {
+                    handleChatSend();
+                }
+            });
+            sendChatButton.addEventListener("click", () => handleChatSend());
+
+            let chatSection = document.querySelector("#chat-section");
+            let handleChatSectionResize = () => {
+                let hasChatOverflowed = chatSection.scrollHeight > chatSection.clientHeight;
+                chatSection.querySelector(".blurry-top").style.display = hasChatOverflowed ? "" : "none";
+            };
+            handleChatSectionResize();
+            new ResizeObserver(handleChatSectionResize).observe(chatSection);
+            /** @type {HTMLButtonElement} */
+            let chatExpandButton = document.querySelector("#chat-expand-button");
+            chatExpandButton.addEventListener("click", () => {});
+        };
+        let chatMessages = [];
+        let addChatMessage = (player, text, specialEvent = "") => {
+            chatMessages.push([player, text, specialEvent]);
+            if (chatMessages.length >= 24) {
+                chatMessages.shift();
+            }
+            document.querySelector("#chat-message-container").innerHTML += specialEvent ? `<div class="chat-message ${specialEvent}${specialEvent ? "-message" : ""}"><span class="material-symbols-outlined" style="font-size: 14px; transform: translateY(2px)">${{ "player-join": "arrow_forward", "player-leave": "arrow_back", "player-won": "star_shine" }[specialEvent]}</span> <b>${player}</b> ${{ "player-join": "joined", "player-leave": "left", "player-won": "" }[specialEvent]}${text}</div>` : `<div class="chat-message"><b>${player}</b>&nbsp;&nbsp;${text}</div>`;
+            requestAnimationFrame(() => {
+                let section = document.querySelector("#chat-section");
+                section.scrollTo(0, section.scrollHeight);
+            });
+        };
+        let currentPlayer = "";
+        let playerIds = new Map();
+        let playerLeaderboardData = new Map();
+        let shouldShowLeaderboard = true;
+        localStorage.removeItem("showLeaderboard"); // FIXME Remove this
+        let initializeLeaderboard = () => {
+            let handleToggle = () => {
+                if (playerIds.size) {
+                    shouldShowLeaderboard = !shouldShowLeaderboard;
+                }
+                for (let [player, id] of playerIds) {
+                    document.querySelector(`#mini-leaderboard-item-${id}`).classList.toggle("hidden", !shouldShowLeaderboard);
+                }
+            };
+            document.querySelector("#leaderboard-button").addEventListener("click", handleToggle);
+            document.querySelector("#leaderboard-button-2").addEventListener("click", () => {
+                document.body.scrollTo({ top: window.innerHeight * 0.75, behavior: "smooth" });
+            });
+        };
+        const X_SYMBOL = "×";
+        let populateMiniLeaderboardItem = (player, leaderBoardItem, overrideWith = undefined) => {
+            let playerId = playerIds.get(player);
+            let { score, scoreText, verdict, numGuesses } = overrideWith || playerLeaderboardData.get(player);
+            leaderBoardItem.id = `mini-leaderboard-item-${playerId}`;
+            leaderBoardItem.classList.add("mini-leaderboard-item");
+            leaderBoardItem.classList.toggle("me", player === currentPlayer);
+            let delegatedToTeammate = (() => {
+                if (currentEvent?.mode !== "duo" || player === currentPlayer) {
+                    return false;
+                }
+                if (player === currentTeammate) {
+                    return true;
+                }
+                let i = currentPairing.indexOf(player);
+                return !!(currentPairing[i ^ 1] && i & 1);
+            })();
+            leaderBoardItem.classList.toggle("hidden", !shouldShowLeaderboard || delegatedToTeammate);
+            let [rankInfo, playerNameEl, scoreEl, guessEl, guessCountEl] = leaderBoardItem.children;
+            rankInfo.innerHTML = `<span class="material-symbols-outlined">arrow_forward</span>`;
+            playerNameEl.innerHTML = currentEvent.mode === "duo" ? `${player} + ${currentPairing[currentPairing.indexOf(player) ^ 1] || BOT_NAME}` : player;
+            scoreEl.textContent = scoreText;
+            let numGuessesText = numGuesses === gameParams().guessLimit && verdict !== "GGGGG" ? X_SYMBOL : `${numGuesses}`;
+            for (let i = 0; i < 5; ++i) {
+                let letterEl = guessEl.children[i];
+                // letterEl.classList.toggle("failed", numGuessesText === X_SYMBOL);
+                // letterEl.classList.toggle("nonempty", numGuessesText !== X_SYMBOL);
+                letterEl.classList.add("nonempty");
+                letterEl.classList.toggle("yellow", verdict.charAt(i) === "Y");
+                letterEl.classList.toggle("green", verdict.charAt(i) === "G");
+            }
+            guessEl.style.display = currentEvent.mode === "duo" ? "none" : "";
+            guessCountEl.textContent = numGuessesText;
+            guessCountEl.style.display = currentEvent.mode === "circuit" ? "" : "none";
+        };
+        let addPlayer = (player, notify, score, scoreText, verdict, numGuesses, done) => {
+            if (!player) {
+                console.assert(false, notify, score, scoreText, verdict, numGuesses, done);
+                connection.send({ type: "kick", player });
+                return;
+            }
+            console.assert(!playerIds.has(player), playerIds, player);
+            let playerId = Math.max(-1, ...playerIds.values()) + 1;
+            playerIds.set(player, playerId);
+            playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
+            if (notify) {
+                addChatMessage(player, "", "player-join");
+            }
+            let miniLeaderboard = document.querySelector("#mini-leaderboard");
+            let leaderBoardItem = miniLeaderboard.appendChild(document.createElement("div"));
+            let rankInfo = leaderBoardItem.appendChild(document.createElement("div"));
+            rankInfo.classList.add("mini-leaderboard-item-rank-info");
+            let playerNameEl = leaderBoardItem.appendChild(document.createElement("div"));
+            playerNameEl.classList.add("mini-leaderboard-item-player");
+            playerNameEl.classList.add("no-wrap");
+            let scoreEl = leaderBoardItem.appendChild(document.createElement("div"));
+            scoreEl.classList.add("mini-leaderboard-item-score");
+            let guessEl = leaderBoardItem.appendChild(document.createElement("div"));
+            guessEl.classList.add("guess");
+            for (let i = 0; i < 5; ++i) {
+                let letterEl = guessEl.appendChild(document.createElement("div"));
+                letterEl.classList.add("letter");
+                letterEl.classList.add("mini");
+            }
+            let guessCountEl = leaderBoardItem.appendChild(document.createElement("div"));
+            guessCountEl.classList.add("mini-leaderboard-item-guess-count");
+            populateMiniLeaderboardItem(player, leaderBoardItem);
+        };
+        let sortMiniLeaderboard = (currentPlayerScoreOverride) => {
+            let sortedPlayers = [...playerLeaderboardData].sort((a, b) => {
+                a = a[1].score;
+                b = b[1].score;
+                let n = Math.min(a.length, b.length);
+                for (let i = 0; i < n; ++i) {
+                    if (a[i] < b[i]) {
+                        return 1;
+                    }
+                    if (a[i] > b[i]) {
+                        return -1;
+                    }
+                }
+                return b.length - a.length;
+            });
+            let i = -1;
+            for (let el of document.querySelector("#mini-leaderboard").children) {
+                ++i;
+                let p = sortedPlayers[i][0];
+                populateMiniLeaderboardItem(p, el, (p === currentPlayer && currentPlayerScoreOverride) || sortedPlayers[i][1]);
+            }
+            // document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPlayer)).scrollIntoView({ behavior: "smooth", block: "center", container: "nearest" });
+            return sortedPlayers;
+        };
+
+        initializeKeyboard();
+        setBoardSize(6);
+        initializeChat();
+        initializeLeaderboard();
+
+        let toggleHelp = () => {
+            if (!document.body.classList.contains("showing-help") && !(currentEvent || upcomingEvent)) {
+                return;
+            }
+            document.body.classList.toggle("showing-help");
+            document.querySelector("#help-contents").scrollTo(0, 0);
+        };
+        document.querySelector("#event-description-button").addEventListener("click", toggleHelp);
+        document.querySelector("#help-ok-button").addEventListener("click", toggleHelp);
+        document.querySelector("#event-description-button-2").addEventListener("click", () => {
+            document.body.classList.remove("showing-settings");
+            toggleHelp();
+        });
+        document.querySelector("#full-screen-button").addEventListener("click", () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.body.classList.add("showing-panel");
+        let nicknameInput = document.querySelector("#nickname-input");
+        if (isDev) {
+            document.querySelector("title").textContent += " (Dev)";
+        } else {
+            nicknameInput.value = localStorage.getItem("nickname") || "";
+        }
+        nicknameInput.focus();
+        let createEvent = () => {
+            let allowedModes = new Set(["factory", "duo", "circuit", "sprint", "golf"]);
+            let newMode = urlParams.get("mode");
+            if (!allowedModes.has(newMode)) {
+                if (currentEvent?.mode) {
+                    allowedModes.delete(currentEvent.mode);
+                }
+                if (upcomingEvent?.mode) {
+                    allowedModes.delete(upcomingEvent.mode);
+                }
+                allowedModes = [...allowedModes];
+                newMode = allowedModes[Math.floor(Math.random() * allowedModes.length)];
+            }
+            let newOpener = (urlParams.get("opener") || "").toUpperCase();
+            if (newOpener === "NONE") {
+                newOpener = "";
+            } else if (!indexByTarget.has(newOpener)) {
+                let i = !!currentEvent + !!upcomingEvent;
+                let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8);
+                newOpener = newUseOpener ? targets[Math.floor(Math.random() * targets.length)] : "";
+            }
+            let newEvent = structuredClone(FORCED_EVENT_PARAMS || { mode: newMode, opener: newOpener });
+            if (newMode !== "factory") {
+                let i = indexByTarget.get(newOpener);
+                newEvent.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
+                    .fill("")
+                    .map(() => generateTarget(newEvent));
+            }
+            newEvent.id = Math.random();
+            return newEvent;
+        };
+        let formatEventName = (event) => {
+            let eventName = "";
+            if (event.opener) {
+                eventName += `"${event.opener}" `;
+            }
+            eventName += `${event.mode.charAt(0).toUpperCase()}${event.mode.slice(1)}`;
+            return eventName;
+        };
+        const MODE_ICONS = {
+            "factory": "conveyor_belt",
+            "duo": "group",
+            "circuit": "sports_score",
+            "sprint": "sprint",
+            "golf": "sports_golf",
+        };
+        const BOT_NAME = "Rattington";
+        let showEventInfo = () => {
+            let event = currentEvent?.mode ? currentEvent : upcomingEvent;
+            let eventName = formatEventName(event);
+            document.querySelector("#event-name").textContent = eventName;
+            document.querySelector("#event-description").innerHTML = {
+                "factory": "Guess and pass the Wordle around!",
+                "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentTeammate || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
+                "circuit": "Balance speed and accuracy!",
+                "sprint": "First to solve nine Wordles wins!",
+                "golf": "Nine Wordles. Fewest guesses wins!",
+            }[event.mode];
+            document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
+
+            let hardModeDescription = event.opener ? `<p>"${event.opener}" is the chosen first guess for every Wordle. Players must play on <em>Hard Mode</em>: yellow and green letters must be reused in subsequent guesses, where green letters must remain in their revealed positions.</p>` : "";
+            switch (event.mode) {
+                case "factory": {
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>Make a guess, then pass the Wordle to the next player. First to solve nine Wordles wins!</p>
+                        ${hardModeDescription}
+                        <h4>Ranking</h4>
+                        Players are ranked by
+                        <ul>
+                            <li>Number of Wordles solved</li>
+                            <li>Time since the challenge started when they last solved a Wordle</li>
+                        </ul>
+                        <h4>Time Limit</h4>
+                        The challenge ends when all but one player have solved nine Wordles, or 3 minutes after half of the players have solved nine Wordles.
+                        <h4>Mechanics</h4>
+                        <p>The challenge starts by assigning each player a random Wordle, then an extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the challenge going.</p>
+                        ${playerIds.size <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
+                    `;
+                    break;
+                }
+                case "duo": {
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>Solve nine Wordles with a random partner. First team to do so wins!</p>
+                        ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentTeammate || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
+                        ${hardModeDescription}
+                        <h4>Ranking</h4>
+                        Teams are ranked by
+                        <ul>
+                            <li>Number of Wordles solved</li>
+                            <li>Time since the challenge started when they finish their last Wordle</li>
+                        </ul>
+                        <h4>Time Limit</h4>
+                        30 seconds per guess. The challenge will end 3 minutes after half of the players have finished their ninth Wordle.
+                    `;
+                    break;
+                }
+                case "circuit": {
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>All players solve the same Wordles, one game at a time. Highest score after nine games wins!</p>
+                        ${hardModeDescription}
+                        <h4>Ranking</h4>
+                        Players are ranked by total score. Your score for each Wordle combines accuracy and speed:
+                        <ul>
+                            <li style="margin-bottom: 1em">Accuracy: you solved the Wordle in how many guesses
+                                <table style="font-size: 12px">
+                                    <thead>
+                                        <tr>
+                                            <th>Guesses</th>
+                                            <th>Points</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>18</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2</td>
+                                            <td>15</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3</td>
+                                            <td>12</td>
+                                        </tr>
+                                        <tr>
+                                            <td>4</td>
+                                            <td>9</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5</td>
+                                            <td>6</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6</td>
+                                            <td>3</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Unsolved</td>
+                                            <td>0</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </li>
+                            <li>Speed: among all players, were you the 1<sup>st</sup>, 2<sup>nd</sup>, etc. to solve the Wordle
+                                <table style="font-size: 12px">
+                                    <thead>
+                                        <tr>
+                                            <th>Solved</th>
+                                            <th>Points</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1<sup>st</sup></td>
+                                            <td>6</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2<sup>nd</sup></td>
+                                            <td>5</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3<sup>rd</sup></td>
+                                            <td>4</td>
+                                        </tr>
+                                        <tr>
+                                            <td>4<sup>th</sup></td>
+                                            <td>3</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5<sup>th</sup></td>
+                                            <td>2</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6<sup>th</sup></td>
+                                            <td>1</td>
+                                        </tr>
+                                        <tr>
+                                            <td>7<sup>th</sup> or later</td>
+                                            <td>0</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </li>
+                        </ul>
+                        <h4>Time Limit</h4>
+                        2 minutes per Wordle, or 30 seconds after half of the players have finished it, whichever sooner.
+                    `;
+                    break;
+                }
+                case "sprint": {
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>All players solve the same set of nine Wordles. First to do so wins!</p>
+                        ${hardModeDescription}
+                        <h4>Ranking</h4>
+                        Players are ranked by:
+                        <ul>
+                            <li>Number of Wordles solved</li>
+                            <li>Time since their first input when they finish their last Wordle</li>
+                        </ul>
+                        <h4>Time Limit</h4>
+                        The challenge ends 3 minutes after half of the players have completed it, or up to 15 minutes after it started.
+                    `;
+                    break;
+                }
+                case "golf": {
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>All players solve the same set of nine Wordles. Fewest guesses wins!</p>
+                        ${hardModeDescription}
+                        <h4>Ranking</h4>
+                        Players are ranked by:
+                        <ul>
+                            <li>Number of Wordles solved</li>
+                            <li>Total number of guesses they make</li>
+                        </ul>
+                        <h4>Time Limit</h4>
+                        The challenge ends 3 minutes after half of the players have completed it, or up to 15 minutes after it started.
+                    `;
+                    break;
+                }
+            }
+        };
+        let showOrHidePanel = (panelToShow) => {
+            let wasStartPanelShowing = !document.querySelector("#start-panel").display;
+            for (let panel of ["start-panel", "between-games-panel", "between-events-panel"]) {
+                document.querySelector("#" + panel).style.display = panel === panelToShow ? "" : "none";
+            }
+            document.body.classList.toggle("showing-panel", !!panelToShow);
+            if (!panelToShow && wasStartPanelShowing) {
+                document.querySelector("#main").focus();
+            }
+        };
+        let playButton = document.querySelector("#play-button");
+        let generateTarget = (event = undefined) => {
+            if (isDev && (DEFAULT_NUM_GAMES !== 9 || numGames() !== 9)) {
+                return "SAINT";
+            }
+            event ||= currentEvent;
+            let i = indexByTarget.get(event.opener) || NaN;
+            let j = Math.floor(Math.random() * (targets.length - !isNaN(i)));
+            j += j >= i;
+            return targets[j];
+        };
+        let createUnownedFactoryGame = (addBotGuess = true, event = undefined) => {
+            event ||= currentEvent;
+            let target = generateTarget(event);
+            let board = event.opener ? [[event.opener, judge(event.opener, target)]] : [];
+            if (addBotGuess) {
+                for (let i = 0; i < (event.opener ? 1 : 2); ++i) {
+                    let g = botPlay(board, !!event.opener);
+                    if (g !== target) {
+                        board.push([g, judge(g, target)]);
+                    }
+                }
+            }
+            return { target, board };
+        };
+        let handlePlayButtonClick = () => {
+            currentPlayer = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
+            if (currentPlayer.toLowerCase() === "rattington") {
+                alert("Please choose another nickname. (You're not a bot!)");
+                nicknameInput.focus();
+                return;
+            }
+            if (!currentPlayer) {
+                nicknameInput.focus();
+                return;
+            }
+            if (!playerByUid.size) {
+                let m = {
+                    type: "event-start",
+                    eventId: upcomingEvent.id,
+                    newUpcomingEvent: createEvent(),
+                    pairing: upcomingEvent.mode === "duo" ? [] : undefined,
+                };
+                if (upcomingEvent.mode === "factory") {
+                    m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
+                }
+                connection.send(m);
+            }
+            playButton.disabled = true;
+            connection.send({ type: "enter", player: currentPlayer });
+        };
+        playButton.addEventListener("click", handlePlayButtonClick);
+        nicknameInput.addEventListener("keydown", (e) => {
+            if (e.code === "Enter") {
+                handlePlayButtonClick();
+            }
+        });
+
+        let playerByUid = new Map();
+        let playersOrderedByEntrance = [];
+        let currentUid;
+        let room = "e4wordle-" + Math.abs(+urlParams.get("room") || 0);
+        if (isDev) {
+            room = "dev-" + room;
+        }
+        let connection = connect(room, { announce: true, echo: true, list: true });
+        let totalUsers;
+        let waitingForJoinResponse = false;
+        let waitingForEnterResponse = false;
+        let responseTimeoutHandle;
+        let ignoredUids = new Set();
+        let uidByPlayer = new Map();
+        connection.on("error", (data) => console.error("CONN ERROR", data));
+        let readyToPlay = () => {
+            playButton.disabled = false;
+            playButton.textContent = "Play";
+        };
+        // "Join" here means becoming online, where the "user" and their client enter the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
+        connection.on("join", ({ uid, total: newTotalUsers, self, users: onlineUids }) => {
+            totalUsers = newTotalUsers;
+            if (self) {
+                currentUid = uid;
+                if (isDev) {
+                    nicknameInput.value = "Player " + uid;
+                }
+                if (totalUsers === 1) {
+                    upcomingEvent = createEvent();
+                    showEventInfo();
+                    readyToPlay();
+                } else {
+                    waitingForJoinResponse = true;
+                    responseTimeoutHandle = setTimeout(() => {
+                        responseTimeoutHandle = undefined;
+                        if (!waitingForJoinResponse) {
+                            return;
+                        }
+                        waitingForJoinResponse = false;
+                        ignoredUids = new Set(onlineUids);
+                        upcomingEvent = createEvent();
+                        showEventInfo();
+                        readyToPlay();
+                    }, 2000);
+                }
+                return;
+            }
+            connection.send({
+                type: "join-response",
+                to: uid,
+                ignore: [...ignoredUids],
+                players: [...playerByUid],
+                entrance: [...playersOrderedByEntrance],
+                leaderboard: [...playerLeaderboardData],
+                chat: chatMessages,
+                currentEvent,
+                game: currentEvent?.mode === "circuit" ? currentGameIndex : 0,
+                pairing: currentPairing,
+                startTime: currentEventStartTime,
+                ended: currentEventEnded,
+                upcomingEvent,
+                upcomingStart: upcomingEventStartTime,
+                unownedGame: currentUnownedFactoryGame,
+            });
+        });
+        connection.on("join-response", ({ to, ignore, players, entrance, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
+            if (to !== currentUid || !waitingForJoinResponse) {
+                return;
+            }
+            clearTimeout(responseTimeoutHandle);
+            responseTimeoutHandle = undefined;
+            waitingForJoinResponse = false;
+            ignoredUids = new Set(ignore);
+            currentEvent = newCurrentEvent;
+            currentEventStartTime = startTime;
+            currentGameIndex = game;
+            currentPairing = pairing;
+            currentEventEnded = ended;
+            upcomingEvent = newUpcomingEvent;
+            upcomingEventStartTime = upcomingStart;
+            currentUnownedFactoryGame = unownedGame;
+            showEventInfo();
+            if (currentEventStartTime) {
+                lastProgressBarWidth = (100 * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - currentEventStartTime);
+                lastProgressBarUpdateTime = Date.now();
+            }
+            playerByUid = new Map(players);
+            for (let [x, y] of playerByUid) {
+                uidByPlayer.set(y, x);
+            }
+            playersOrderedByEntrance = entrance;
+            for (let [player, { score, scoreText, verdict, numGuesses, done }] of leaderboard) {
+                addPlayer(player, false, score, scoreText, verdict, numGuesses);
+            }
+            for (let c of chat) {
+                addChatMessage(...c);
+            }
+            readyToPlay();
+        });
+        connection.on("chat", ({ uid, data }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            addChatMessage(...data);
+        });
+        let removePlayer = (player) => {
+            addChatMessage(player, "", "player-leave");
+            document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`).remove();
+            playerIds.delete(player);
+            playersOrderedByEntrance.splice(playersOrderedByEntrance.indexOf(player), 1);
+            playerLeaderboardData.delete(player);
+            playerByUid.delete(uidByPlayer.get(player));
+            uidByPlayer.delete(player);
+            if (currentEvent.mode === "factory") {
+                // Potentially show/hide description for the bot
+                showEventInfo();
+            } else if (currentEvent.mode === "duo") {
+                let i = currentPairing.indexOf(player);
+                let mate = currentPairing[i ^ 1];
+                if (mate) {
+                    if (mate === currentPlayer) {
+                        currentTeammate = null;
+                        showEventInfo();
+                    }
+                    currentPairing[i] = null;
+                    populateMiniLeaderboardItem(mate, document.querySelector(`#mini-leaderboard-item-${playerIds.get(mate)}`));
+                    // If there are now two unpaired players, one idea could be to form team with them, but we can't do that easily because we'd have to merge their game and board states
+                } else {
+                    currentPairing.splice(i & ~1, 2);
+                }
+                console.assert(
+                    currentPairing.every((p) => !p || playerIds.has(p)),
+                    player,
+                    currentPairing,
+                    playerIds,
+                );
+            }
+            checkEventEndOrAcceleration();
+        };
+        connection.on("leave", ({ uid, total: newTotalUsers }) => {
+            if (ignoredUids.has(uid)) {
+                ignoredUids.delete(uid);
+                return;
+            }
+            totalUsers = newTotalUsers;
+            let leavingPlayer = playerByUid.get(uid);
+            if (leavingPlayer) {
+                removePlayer(leavingPlayer);
+            }
+        });
+        connection.on("kick", ({ uid, player }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (!playerIds.has(player)) {
+                return;
+            }
+            suggestedToKickTeammate = undefined;
+            removePlayer(player);
+            ignoredUids.add(uidByPlayer.get(player));
+            if (player === currentPlayer) {
+                location.reload();
+            }
+        });
+        connection.on("enter", ({ uid, player }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (playerIds.has(player)) {
+                if (uid === currentUid) {
+                    alert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                    playButton.disabled = false;
+                    currentPlayer = undefined;
+                    nicknameInput.select();
+                    nicknameInput.focus();
+                    return;
+                }
+                return;
+            }
+            playerByUid.set(uid, player);
+            uidByPlayer.set(player, uid);
+            playersOrderedByEntrance.push(player);
+            let score = initialScore()[currentEvent.mode];
+            addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, false);
+            if (currentEvent.mode === "factory") {
+                // Potentially show/hide description for the bot
+                showEventInfo();
+            } else if (currentEvent.mode === "duo" && !currentEventEnded && !currentPairing.includes(player)) {
+                let i = currentPairing.indexOf(null);
+                if (i === -1) {
+                    currentPairing.push(player, null);
+                    if (uid === currentUid) {
+                        showEventInfo();
+                        isCurrentPlayersTurn = true;
+                        playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                    }
+                } else {
+                    currentPairing[i] = player;
+                    if (uid === currentUid) {
+                        currentTeammate = currentPairing[i ^ 1];
+                        showEventInfo();
+                        isCurrentPlayersTurn = false; // Wait for the "enter-response" to tell
+                        waitingForEnterResponse = true;
+                        responseTimeoutHandle = setTimeout(() => {
+                            responseTimeoutHandle = undefined;
+                            if (!waitingForEnterResponse) {
+                                return;
+                            }
+                            waitingForEnterResponse = false;
+                            if (!suggestedToKickTeammate) {
+                                suggestedToKickTeammate = true;
+                                connection.send({ type: "kick", currentTeammate });
+                            }
+                        }, 2000);
+                    } else if (currentPlayer === currentPairing[i ^ 1]) {
+                        currentTeammate = player;
+                        showEventInfo();
+                        connection.send({
+                            type: "enter-response",
+                            to: uid,
+                            eventId: currentEvent.id,
+                            score: currentScore,
+                            game: currentGameIndex,
+                            board: currentBoardState,
+                            isNewPlayersTurn: !isCurrentPlayersTurn,
+                            dueTime: isCurrentPlayersTurn ? playerTurnDueTime : undefined,
+                            teamStartTime: currentPlayerStartTime,
+                        });
+                        if (!isCurrentPlayersTurn) {
+                            playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                        }
+                    }
+                    populateMiniLeaderboardItem(player, document.querySelector("#mini-leaderboard-item-" + playerIds.get(player)));
+                    populateMiniLeaderboardItem(currentPairing[i ^ 1], document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPairing[i ^ 1])));
+                }
+            }
+            if (uid !== currentUid) {
+                return;
+            }
+            localStorage.setItem("nickname", currentPlayer);
+            document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
+            if (currentEvent.mode !== "factory") {
+                target = currentEvent.targets[currentGameIndex];
+            } else {
+                target = generateTarget(currentEvent);
+            }
+            currentPlayerDone = false;
+            currentPlayerWaitingForOthers = false;
+            currentScore = score;
+            updateBanner();
+            if (currentEventEnded) {
+                showEventTransitionPanel(true);
+                return;
+            }
+            if (playerByUid.has(currentUid)) {
+                playAudio("event-start");
+            }
+            showOrHidePanel(undefined);
+            currentBoardState = [];
+            loadBoardState(currentBoardState, { fastAnimation: true });
+            if (currentEvent.opener) {
+                let v = judge(currentEvent.opener, target);
+                currentBoardState = [[currentEvent.opener, v]];
+                loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                updateCurrentScore(v, true);
+                currentPlayerStartTime = Date.now();
+            }
+            updateBanner();
+        });
+        connection.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, dueTime, teamStartTime }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (eventId !== currentEvent.id || to !== currentUid || !waitingForEnterResponse) {
+                return;
+            }
+            waitingForEnterResponse = false;
+            clearTimeout(responseTimeoutHandle);
+            responseTimeoutHandle = undefined;
+            console.assert(playerByUid.get(uid) === currentTeammate, uid, currentTeammate);
+            currentScore = score;
+            currentPlayerStartTime = teamStartTime;
+            currentGameIndex = game;
+            target = currentEvent.targets[currentGameIndex];
+            currentBoardState = board;
+            loadBoardState(currentBoardState, { fastAnimation: true });
+            isCurrentPlayersTurn = isNewPlayersTurn;
+            playerTurnDueTime = dueTime || Date.now() + PAIRED_GUESS_TIME_LIMIT;
+        });
+        connection.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (playerByUid.size ? playerByUid.has(currentUid) : uid === currentUid) {
+                showOrHidePanel(undefined);
+            }
+            upcomingEventSuggestedStarted = false;
+            upcomingEventStartTime = undefined;
+            currentPlayerStartTime = undefined;
+            let startingNewGameInCup = eventId >= 1;
+            if (eventId !== (startingNewGameInCup ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
+                return;
+            }
+            if (playerByUid.has(currentUid)) {
+                playAudio("event-start");
+            }
+            if (startingNewGameInCup) {
+                ++currentGameIndex;
+                for (let d of playerLeaderboardData.values()) {
+                    d.verdict = "";
+                    d.numGuesses = 0;
+                    d.done = false;
+                }
+                for (let [p, i] of playerIds) {
+                    populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
+                }
+            } else {
+                currentEvent = upcomingEvent;
+                upcomingEvent = newUpcomingEvent;
+                currentGameIndex = 0;
+                currentScore = initialScore()[currentEvent.mode];
+
+                if (currentEvent.mode !== "duo") {
+                    currentTeammate = undefined;
+                    isCurrentPlayersTurn = undefined;
+                    playerTurnDueTime = undefined;
+                    currentPairing = undefined;
+                } else {
+                    pairing = pairing.filter((p) => playerIds.has(p));
+                    for (let p of playersOrderedByEntrance) {
+                        if (!pairing.includes(p)) {
+                            pairing.push(p);
+                        }
+                    }
+                    console.assert(pairing.length === playerIds.size, pairing, playerIds);
+                    if (pairing.length & 1) {
+                        pairing.push(null);
+                    }
+                    currentPairing = pairing;
+                    let i = pairing.indexOf(currentPlayer);
+                    currentTeammate = pairing[i ^ 1];
+                    isCurrentPlayersTurn = (i & 1) === 0;
+                }
+
+                for (let p of playerIds.keys()) {
+                    playerLeaderboardData.set(p, { score: initialScore()[currentEvent.mode], scoreText: formatScore(currentEvent.mode, currentScore), verdict: "", numGuesses: 0 });
+                }
+                for (let [p, i] of playerIds) {
+                    populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
+                }
+                currentUnownedFactoryGame = unownedGame;
+            }
+            currentEvent.endTime = undefined;
+            setEventToEndIn(initialEventTimeLimit());
+            if (currentEvent.mode === "duo") {
+                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+            }
+            showEventInfo();
+            currentEventStartTime = Date.now();
+            if (currentEvent.mode !== "factory") {
+                target = currentEvent.targets[currentGameIndex];
+            } else {
+                target = generateTarget(currentEvent);
+            }
+            currentPlayerDone = false;
+            currentPlayerWaitingForOthers = false;
+            currentEventEnded = false;
+            if (playerByUid.has(currentUid)) {
+                currentGuess = "";
+                currentBoardState = [];
+                loadBoardState(currentBoardState, { noAnimation: true });
+                if (currentEvent.opener) {
+                    let v = judge(currentEvent.opener, target);
+                    currentBoardState = [[currentEvent.opener, v]];
+                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                    updateCurrentScore(v, true);
+                    if (currentEvent.mode === "sprint") {
+                        currentPlayerStartTime = Date.now();
+                    }
+                }
+                updateBanner();
+            }
+        });
+        let checkEventEndOrAcceleration = () => {
+            if (currentEventSuggestedEnded || currentEventEnded) {
+                return;
+            }
+            let playersDone = 0;
+            for (let { done } of playerLeaderboardData.values()) {
+                playersDone += !!done;
+            }
+            let suggestToEndEvent = () => {
+                if (!currentEventSuggestedEnded) {
+                    connection.send({ type: "event-end", eventId: currentEvent.id });
+                }
+                currentEventSuggestedEnded = true;
+            };
+            if (playersDone >= Math.max(playerByUid.size - (currentEvent.mode === "factory"), 1)) {
+                suggestToEndEvent();
+            } else if (playersDone >= playerByUid.size / 2) {
+                let onlyZombiesRemain = (() => {
+                    if (currentEvent.mode === "circuit" && (currentEvent.opener || Date.now() - currentEventStartTime < 15000)) {
+                        return false;
+                    }
+                    for (let { done, score, numGuesses } of playerLeaderboardData.values()) {
+                        if (!done && (numGuesses > (currentEvent.opener ? 1 : 0) || JSON.stringify(score) !== JSON.stringify(initialScore()[currentEvent.mode]))) {
+                            return false;
+                        }
+                    }
+                    return true;
+                })();
+                if (onlyZombiesRemain) {
+                    suggestToEndEvent();
+                } else {
+                    let m = currentEvent.mode;
+                    setEventToEndIn(m === "circuit" ? 30000 : 180000);
+                }
+            }
+        };
+        connection.on("score", ({ uid, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
+                return;
+            }
+            if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
+                // Speed component needs to wait until Score event to be added, in case of a race
+                let playersSolved = 0;
+                for (let { verdict } of playerLeaderboardData.values()) {
+                    playersSolved += verdict === "GGGGG";
+                }
+                let speed = Math.max(6 - playersSolved, 0);
+                score[0] += speed;
+                score[4] -= speed;
+                if (uid === currentUid) {
+                    currentScore[0] += speed;
+                    currentScore[4] -= speed;
+                }
+                scoreText = formatScore(currentEvent.mode, score);
+            }
+            let player = playerByUid.get(uid);
+            playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
+            if (uid !== currentUid) {
+                // Avoid spoiling the verdict while slow animation for chosen opener is playing
+                if (!(numGuesses === 1 && currentEvent.opener && animatingRows.has(0))) {
+                    populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
+                }
+            }
+            checkEventEndOrAcceleration();
+            if (currentEvent.mode === "factory") {
+                // Load next board only now for up-to-date unowned game
+                if (uid === currentUid) {
+                    waitingForScoreAfterGuessInFactory = undefined;
+                    factoryGameToShowAfterAnimation = currentUnownedFactoryGame;
+                    if (!isBoardAnimating()) {
+                        loadUnownedFactoryGameState();
+                    }
+                }
+                currentUnownedFactoryGame = newUnownedGame;
+            }
+            if (currentEvent.mode === "duo" && playerIds.has(currentPlayer)) {
+                if (!(game === currentGameIndex && numGuesses - 1 === currentBoardState.length)) {
+                    return;
+                }
+                if (player !== currentTeammate) {
+                    return;
+                }
+                let v = judge(guess, target);
+                currentBoardState.push([guess, v]);
+                loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                updateCurrentScore(v, hard, false);
+                isCurrentPlayersTurn = true;
+                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+            }
+        });
+        let showEventTransitionPanel = (playerJustEntered = false) => {
+            let startingNewGameInCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            let sortedPlayers = sortMiniLeaderboard();
+            if (playerJustEntered && !startingNewGameInCup) {
+                sortedPlayers = sortedPlayers.filter(([p, _]) => p !== currentPlayer);
+            }
+            if (currentEvent.mode === "duo") {
+                sortedPlayers = structuredClone(sortedPlayers);
+                let appendedTeammateAlready = new Set();
+                for (let i = sortedPlayers.length - 1; i >= 0; --i) {
+                    let p = sortedPlayers[i][0];
+                    if (appendedTeammateAlready.has(i)) {
+                        continue;
+                    }
+                    let mate = currentPairing[currentPairing.indexOf(sortedPlayers[i][0]) ^ 1];
+                    if (mate) {
+                        let j = sortedPlayers.findIndex(([p2, _]) => p2 === mate);
+                        appendedTeammateAlready.add(j);
+                        sortedPlayers[j][0] += " + " + p;
+                        sortedPlayers.splice(i, 1);
+                    } else {
+                        sortedPlayers[i][0] += " + " + BOT_NAME;
+                    }
+                }
+            }
+            if (!startingNewGameInCup && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
+                addChatMessage(sortedPlayers[0][0], `won ${formatEventName(currentEvent)} ${formatShortScoreDescription(currentEvent.mode, sortedPlayers[0][1].score)}`, "player-won");
+            }
+            if (!playerByUid.has(currentUid)) {
+                return;
+            }
+            if (startingNewGameInCup) {
+                let panel = document.querySelector("#between-games-panel");
+                panel.querySelector("#between-games-panel-round-id").textContent = currentGameIndex + 1;
+                panel.querySelector("#leaderboard").innerHTML = ["header"]
+                    .concat(sortedPlayers.slice(0, 6))
+                    .map(
+                        // case "circuit":
+                        (o, i) =>
+                            `
+                            <div style="display: flex${!i ? "; font-size: 12px" : ""}">
+                                <div class="no-wrap" style="width: 128px">${!i ? "Player" : `<b>${o[0]}</b>`}</div>
+                                <div style="width: 84px; text-align: center">${
+                                    !i
+                                        ? "Score"
+                                        : `
+                                            ${o[1].score[0]} <span style="font-size: 12px">(+${-o[1].score[4]})</span>
+                                        `
+                                }</div>
+                                <div style="width: 56px; text-align: center">${!i ? "Guess" : o[1].verdict !== "GGGGG" && o[1].numGuesses === gameParams().guessLimit ? X_SYMBOL : o[1].numGuesses}</div>
+                                <div style="width: 56px; text-align: center">${!i ? "Time" : o[1].verdict !== "GGGGG" && o[1].numGuesses < gameParams().guessLimit ? X_SYMBOL : o[1].score[5] ? formatTime(-o[1].score[5], true) : ""}</div>
+                            </div>
+                        `,
+                    )
+                    .join("\n");
+                let place = 1 + sortedPlayers.findIndex(([x, y]) => x === currentPlayer);
+                panel.querySelector("#leaderboard-your-place").querySelector("b").innerHTML = `${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup>`;
+                let delta;
+                let otherPlayer;
+                if (playerByUid.size > 1) {
+                    if (place === 1) {
+                        delta = sortedPlayers[1][1].score[0] - currentScore[0];
+                        otherPlayer = sortedPlayers[1][0];
+                    } else {
+                        delta = sortedPlayers[place - 2][1].score[0] - currentScore[0];
+                        otherPlayer = sortedPlayers[place - 2][0];
+                    }
+                }
+                panel.querySelector("#leaderboard-delta").innerHTML = playerByUid.size > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
+                panel.querySelector("#leaderboard-delta").display = delta ? "" : "none";
+                showOrHidePanel("between-games-panel");
+                updateCountdownInPanel();
+                return;
+            }
+            let panel = document.querySelector("#between-events-panel");
+            panel.querySelector("#between-events-panel-title").textContent = sortedPlayers[0][0] + " Won!";
+            panel.querySelector("#between-events-panel-description").textContent = formatEventName(currentEvent);
+            let anyHardMode = false;
+            for (let i = 0; i < 3; ++i) {
+                let el = panel.querySelector(".rank-" + (i + 1));
+                el.classList.toggle("empty", sortedPlayers.length <= i);
+                if (sortedPlayers.length <= i) {
+                    el.innerHTML = "";
+                    continue;
+                }
+                let [p, o] = sortedPlayers[i];
+                let scoreText;
+                let scoreText2;
+                let hardMode = !currentEvent.opener && currentEvent.mode !== "factory";
+                switch (currentEvent.mode) {
+                    case "factory": {
+                        let [solved, time] = o.score;
+                        time *= -1;
+                        scoreText = formatTime(time, true);
+                        scoreText2 = `${solved} solved`;
+                        break;
+                    }
+                    case "circuit": {
+                        let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = o.score;
+                        averageTime *= -1;
+                        totalTime *= -1;
+                        roundScore *= -1;
+                        roundTime *= -1;
+                        scoreText = `${eventScore} points`;
+                        scoreText2 = played && `${formatTime(averageTime, true)} average`;
+                        hardMode &&= played >= numGames() && playedOnHardMode;
+                        break;
+                    }
+                    case "duo":
+                    case "sprint": {
+                        let [solved, played, time, playedOnHardMode] = o.score;
+                        time *= -1;
+                        scoreText = formatTime(time, true);
+                        scoreText2 = `${solved}/${played} solved`;
+                        hardMode &&= played >= numGames() && playedOnHardMode;
+                        break;
+                    }
+                    case "golf": {
+                        let [solved, played, guesses, time, playedOnHardMode] = o.score;
+                        guesses *= -1;
+                        time *= -1;
+                        scoreText = `${guesses} guesses`;
+                        scoreText2 = `${solved}/${played} solved`;
+                        hardMode &&= played >= numGames() && playedOnHardMode;
+                        break;
+                    }
+                }
+                anyHardMode ||= hardMode;
+                el.classList.toggle("smaller-text", currentEvent.mode === "duo");
+                el.innerHTML = `
+                    <div>${p}</div>
+                    <div>
+                        ${scoreText}
+                        ${scoreText2 ? `<div style="font-size: 10px">${scoreText2}</div>` : ""}
+                    </div>
+                    ${hardMode ? '<span class="material-symbols-outlined">asterisk</span>' : ""}
+                `;
+            }
+            panel.querySelector("#final-leaderboard-hard-mode-description").style.display = anyHardMode ? "" : "none";
+            let nextEventInfoEl = panel.querySelector("#next-event-info");
+            nextEventInfoEl.querySelector("span").textContent = MODE_ICONS[upcomingEvent.mode];
+            nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
+            showOrHidePanel("between-events-panel");
+            updateCountdownInPanel();
+            if (sortedPlayers[0][0] === currentPlayer + (currentEvent.mode === "duo" ? ` + ${currentTeammate || BOT_NAME}` : "")) {
+                let colors = ["#d2b200", "#57ac78"];
+                confetti({
+                    particleCount: 96,
+                    angle: 60,
+                    spread: 52.5,
+                    origin: { x: 0 },
+                    colors,
+                });
+                confetti({
+                    particleCount: 96,
+                    angle: 120,
+                    spread: 52.5,
+                    origin: { x: 1 },
+                    colors,
+                });
+            }
+        };
+        let nextRoundCountdownWordEl = panel.querySelector("#next-round-countdown").querySelector("span");
+        let nextRoundCountdownValueEl = panel.querySelector("#next-round-countdown").querySelector("b");
+        let nextEventCountdownValueEl = panel.querySelector("#next-event-countdown").querySelector("b");
+        let updateCountdownInPanel = () => {
+            if (!currentEventEnded || !playerByUid.has(currentUid)) {
+                return;
+            }
+            let panel = document.querySelector("#between-games-panel");
+            if (panel.style.display !== "none") {
+                nextRoundCountdownWordEl.textContent = currentGameIndex === numGames() - 2 ? "Final" : "Next";
+                nextRoundCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
+            }
+            panel = document.querySelector("#between-events-panel");
+            if (panel.style.display !== "none") {
+                nextEventCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
+            }
+
+            if (Date.now() >= upcomingEventStartTime && !upcomingEventSuggestedStarted) {
+                upcomingEventSuggestedStarted = true;
+                let isUpcomingStillCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+                let m = {
+                    type: "event-start",
+                    eventId: isUpcomingStillCup ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
+                    newUpcomingEvent: isUpcomingStillCup ? undefined : createEvent(),
+                    pairing: !isUpcomingStillCup && upcomingEvent.mode === "duo" ? shuffled(playerIds.keys()) : undefined,
+                };
+                if (upcomingEvent.mode === "factory") {
+                    m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
+                }
+                connection.send(m);
+            }
+        };
+        setInterval(updateCountdownInPanel, 83);
+        connection.on("event-end", ({ uid, eventId }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (eventId !== currentEvent.id || currentEventEnded) {
+                return;
+            }
+            let showingTargetAlert = false;
+            if (playerByUid.has(currentUid)) {
+                playAudio("event-end");
+                if (!currentPlayerDone) {
+                    showAlert(`"${target}"`);
+                    showingTargetAlert = true;
+                    setTimeout(() => {
+                        if (currentEventEnded) {
+                            showEventTransitionPanel();
+                        }
+                    }, 2000);
+                }
+            }
+            let startingNewGameInCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            // Kick zombies
+            if (!startingNewGameInCup && playerByUid.has(currentUid)) {
+                for (let [player, { done, score, numGuesses }] of playerLeaderboardData) {
+                    if (player === currentPlayer) {
+                        continue;
+                    }
+                    if (!done && numGuesses <= (currentEvent.opener ? 1 : 0) && JSON.stringify(score) === JSON.stringify(initialScore()[currentEvent.mode])) {
+                        connection.send({ type: "kick", player });
+                    }
+                }
+            }
+            currentEventEnded = true;
+            currentEventSuggestedEnded = false;
+            upcomingEventStartTime = Date.now() + (startingNewGameInCup ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1);
+            isCurrentPlayersTurn = undefined;
+            playerTurnDueTime = undefined;
+            currentUnownedFactoryGame = undefined;
+            factoryGameToShowAfterAnimation = undefined;
+            updateBanner();
+            if (currentEvent.mode === "circuit") {
+                for (let [p, { done, score }] of playerLeaderboardData) {
+                    if (!done) {
+                        score[2] += -(Date.now() - currentEventStartTime);
+                        ++score[3];
+                        score[1] = score[2] / score[3];
+                        // FIXME: Can we get rid of the currentScore variable and let the score from playerLeaderBoardData be the source of truth?
+                        if (p === currentPlayer) {
+                            currentScore = score.concat();
+                        }
+                    }
+                }
+            }
+            if (!showingTargetAlert && !isBoardAnimating() && !postGameDelayTimeout) {
+                showEventTransitionPanel();
+            }
+        });
+
+        let shuffled = (a) => {
+            a = [...a];
+            let i = a.length;
+            while (i) {
+                let j = Math.floor(Math.random() * i);
+                --i;
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        };
+        let botPlay = (board = undefined, hardMode = undefined) => {
+            board ||= currentBoardState;
+            let candidateTargets = [];
+            let shuffledTargets = shuffled(targets);
+            for (let t of shuffledTargets) {
+                let bad = (() => {
+                    for (let i = board.length - 1; i >= 0; --i) {
+                        let [g, v] = board[i];
+                        let b = Array(26).fill(false);
+                        let c = Array(26).fill(0);
+                        let d = Array(26).fill(0);
+                        for (let j = 0; j < 5; ++j) {
+                            if ((v[j] === "G") !== (g[j] === t[j])) {
+                                return 1;
+                            }
+                            ++d[t.charCodeAt(j) % 26];
+                            if (v[j] === "B") {
+                                b[g.charCodeAt(j) % 26] = true;
+                            } else {
+                                ++c[g.charCodeAt(j) % 26];
+                            }
+                        }
+                        for (let k = 0; k < 26; ++k) {
+                            if (b[k] ? d[k] !== c[k] : d[k] < c[k]) {
+                                return 2;
+                            }
+                        }
+                    }
+                    return 0;
+                })();
+                if (bad) {
+                    continue;
+                }
+                candidateTargets.push(t);
+                if (candidateTargets.length >= 128) {
+                    break;
+                }
+            }
+            if (candidateTargets.length <= 2) {
+                return candidateTargets[0];
+            }
+            let candidateGuesses = new Set(candidateTargets.concat());
+            if (hardMode === undefined) {
+                hardMode = !!currentEvent?.opener;
+            }
+            hardMode ||= settings.alwaysHardMode;
+            let b = [];
+            let nonHardModeGuesses = new Set();
+            if (!hardMode) {
+                for (let i = 0; i < candidateTargets.length; ++i) {
+                    let t = shuffledTargets.at(-(i + 1));
+                    if (candidateGuesses.has(t)) {
+                        continue;
+                    }
+                    candidateGuesses.add(t);
+                    nonHardModeGuesses.add(t);
+                }
+            }
+            for (let g of candidateGuesses) {
+                let verdictCounts = new Map();
+                for (let t of candidateTargets) {
+                    let v = judge(g, t);
+                    verdictCounts.set(v, (verdictCounts.get(v) || 0) + 1);
+                }
+                let h = 0;
+                for (let [v, c] of verdictCounts) {
+                    let p = c / candidateTargets.length;
+                    h += p * -Math.log2(p);
+                }
+                b.push([h, g]);
+            }
+            let bestHardModeH = 0;
+            for (let [h, g] of b) {
+                if (!nonHardModeGuesses.has(g)) {
+                    bestHardModeH = Math.max(bestHardModeH, h);
+                }
+            }
+            b.sort((a, b) => b[0] - a[0]);
+            for (let i = b.length - 1; i >= 1; --i) {
+                if (b[i][0] < b[0][0] - 2 || (b[i][0] <= bestHardModeH && nonHardModeGuesses.has(b[i][1]))) {
+                    b.splice(i, 1);
+                    continue;
+                }
+            }
+            for (let i = 1; i < b.length; ++i) {
+                b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(36, b[i][0] - b[0][0]);
+            }
+            b[0][0] = 1;
+            let r = Math.random() * b.at(-1)[0];
+            for (let [s, g] of b) {
+                if (s > r) {
+                    return g;
+                }
+            }
+            console.assert(false, candidateTargets, candidateGuesses, b);
+            return "STYLE";
+        };
+    }
+</script>
