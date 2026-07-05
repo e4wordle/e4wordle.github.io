@@ -946,7 +946,6 @@
     <div class="info-section" id="info-section-0">
         <div id="event-info">
             <span class="material-symbols-outlined" id="event-logo">waving_hand</span>
-            <!-- sports_score sprint sports_golf group conveyor_belt -->
             <div id="event-text-container">
                 <div id="event-name-container">
                     <div id="event-name">Welcome</div>
@@ -955,8 +954,6 @@
                     </div>
                 </div>
                 <div id="event-description">Start a random Wordle challenge!</div>
-                <!-- <div id="event-description">Take a guess, then pass it along!</div> -->
-                <!-- <div id="event-description">Nine Wordles. Fewest guesses wins!</div> -->
             </div>
             <div class="mobile-button-container">
                 <button class="mobile-button" id="event-description-button-2" title="Rules">
@@ -1136,7 +1133,7 @@
         let urlParams = new URLSearchParams(location.search);
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
-        let numGames = () => (totalUsers - ignoredUids.size === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
+        let numGames = () => (isDev || totalUsers - ignoredUids.size === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
 
         let settings;
         const SETTINGS_VERSION = 1;
@@ -1241,7 +1238,7 @@
         let currentEventStartTime;
         let currentPlayerStartTime; // For Sprint event where players are timed against themselves
         let upcomingEventStartTime;
-        let currentScore;
+        let currentScore; // We also have this rather than relying playerLeaderboardData.get(currentPlayer) as the only source of truth to allow a smoother experience in individual events
         let initialScore = () => {
             return {
                 "factory": [0, 0], // [solved, -time]
@@ -1251,9 +1248,9 @@
                 "golf": [0, 0, 0, 0, 1], // [solved, played, -guesses, -time, playedOnHardMode]
             };
         };
-        const PAIRED_GUESS_TIME_LIMIT = 30000;
-        let initialEventTimeLimit = () => (currentEvent.mode === "circuit" ? 120000 : 900000);
-        let initialBoardState = (t) => (currentEvent?.opener ? [[currentEvent.opener, judge(currentEvent.opener, t || target)]] : []);
+        const DUO_GUESS_TIME_LIMIT = 30000;
+        let initialEventTimeLimit = () => ((currentEvent || upcomingEvent).mode === "circuit" ? 120000 : 900000);
+        let acceleratedTimeLimit = () => ((currentEvent || upcomingEvent).mode === "circuit" ? 30000 : 180000);
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
         let currentEventSuggestedEnded = false;
@@ -1309,6 +1306,9 @@
                 case "factory": {
                     let [solved, time] = score;
                     time *= -1;
+                    if (solved === numGames()) {
+                        return `${formatTime(time)} • ${solved}`;
+                    }
                     return `${solved}`;
                 }
                 case "duo": {
@@ -1363,7 +1363,6 @@
             }
             return verdict.join("");
         };
-        /** @type {string} */
         let target = "STYLE";
         for (let t of targets) {
             allowedGuesses.add(t);
@@ -1510,10 +1509,11 @@
             if (!playerByUid.has(currentUid)) {
                 return;
             }
+            let postGame = postGameDelayTimeout || currentBoardState.at(-1)?.at(1) === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
             bannerLeftTextEl.textContent = currentEvent.mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
             let leftIcon = currentPlayerWaitingForOthers ? (currentEvent.mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
             bannerLeftIconEl.textContent = leftIcon;
-            bannerLeftInnerTextEl.innerHTML = leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !currentPlayerDone ? `•&ensp;Wait for&nbsp;<b>${currentTeammate || BOT_NAME}</b>` : "";
+            bannerLeftInnerTextEl.innerHTML = leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentTeammate || BOT_NAME}</b>` : "";
             let rightText =
                 currentEvent.mode === "golf"
                     ? -currentScore[2]
@@ -1521,6 +1521,9 @@
                       ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
                       : currentEvent.mode === "duo"
                         ? (() => {
+                              if (postGame) {
+                                  return "";
+                              }
                               let time = currentEvent.endTime - Date.now();
                               let time2 = currentPlayerDone ? Infinity : playerTurnDueTime - Date.now();
                               let t = Math.min(time, time2);
@@ -1560,7 +1563,7 @@
             updateBanner();
         };
         setInterval(updateProgressBar, 83);
-        let checkPairedModeAutoGuess = () => {
+        let checkDuoModeAutoGuess = () => {
             if (currentPlayerDone || currentEvent?.mode !== "duo" || !playerIds.has(currentPlayer) || currentBoardState.length === gameParams().guessLimit || currentBoardState.at(-1)?.at(1) === "GGGGG") {
                 return;
             }
@@ -1571,33 +1574,38 @@
                 let h = checkHardMode(g);
                 currentBoardState.push([g, v]);
                 loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                updateCurrentScore(v, h);
-                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                updateCurrentScore(v, h, { markAsAuto: true });
+                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
             };
             if (isCurrentPlayersTurn === false) {
                 let d = Date.now();
                 if (!currentTeammate) {
                     let guessesMade = currentBoardState.length || 4; // Make the first guess also faster
-                    if (d >= playerTurnDueTime - (PAIRED_GUESS_TIME_LIMIT - 2500) && (playerIds.size <= 1 || d >= playerTurnDueTime - (PAIRED_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
+                    if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 2500) && (playerIds.size <= 1 || d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
                         isCurrentPlayersTurn = true;
                         playAndSend(undefined);
                     }
                 } else {
-                    if (d >= playerTurnDueTime + 2000 && !suggestedToKickTeammate) {
+                    if (!suggestedToKickTeammate && d >= playerTurnDueTime + MESSAGE_PENDING_TIME_LIMIT) {
                         suggestedToKickTeammate = true;
-                        connection.send({ type: "kick", player: currentTeammate });
+                        kickPlayer(currentTeammate);
                     }
                 }
                 return;
             }
             if (isCurrentPlayersTurn === true && Date.now() >= playerTurnDueTime) {
+                if (currentTeammate && !currentBoardState.length && !playersGuessedInCurrentEvent.has(currentPlayer)) {
+                    isCurrentPlayersTurn = undefined;
+                    kickPlayer(currentPlayer);
+                    return;
+                }
                 let g = currentBoardState.length && currentBoardState.at(-1)[0];
                 playAndSend(g);
                 isCurrentPlayersTurn = false;
                 return;
             }
         };
-        setInterval(checkPairedModeAutoGuess, 500);
+        setInterval(checkDuoModeAutoGuess, 500);
         let setEventToEndIn = (remaining) => {
             currentEvent.endTime = Math.min(currentEvent.endTime || Infinity, Date.now() + remaining);
             lastProgressBarUpdateTime = Date.now();
@@ -1632,8 +1640,8 @@
             }
             return undefined;
         };
-        let updateCurrentScore = (verdict, stillHardMode, shouldPlayAudio = true) => {
-            if (shouldPlayAudio) {
+        let updateCurrentScore = (verdict, stillHardMode, options = { shouldPlayAudio: true, markAsAuto: false }) => {
+            if (options.shouldPlayAudio) {
                 playAudio("score");
             }
             currentPlayerDone = (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) && (currentEvent.mode === "circuit" || (currentEvent.mode === "factory" ? currentScore[0] + (verdict === "GGGGG") : currentGameIndex) === numGames() - (currentEvent.mode !== "factory"));
@@ -1704,6 +1712,7 @@
                 game: currentGameIndex,
                 guess: currentBoardState.at(-1)[0],
                 hard: stillHardMode,
+                auto: options.markAsAuto,
             };
             if (currentEvent.mode === "factory") {
                 message.newUnownedGame = verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit ? { ...createUnownedFactoryGame(false), lastGuesser: currentEvent.opener ? undefined : currentPlayer } : { target, board: currentBoardState, lastGuesser: currentPlayer };
@@ -1745,7 +1754,7 @@
                     return;
                 }
                 if (isCurrentPlayersTurn === true) {
-                    playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
                     isCurrentPlayersTurn = false;
                 }
                 if (currentEvent.mode === "factory") {
@@ -1860,6 +1869,7 @@
                     // Fast animation colors at flip midpoint
 
                     let gameDone = false;
+                    let alertShown = false;
                     if (currentBoardState.length > i && currentBoardState[i][1] === "GGGGG") {
                         if (currentEvent.mode === "factory") {
                             ++currentGameIndex;
@@ -1878,6 +1888,7 @@
                     } else if (currentBoardState.length === guessLimit && i === guessLimit - 1) {
                         showAlert(`"${target}"`);
                         gameDone = true;
+                        alertShown = true;
                     }
                     sortMiniLeaderboard(options.leaderboardOverride);
 
@@ -1928,11 +1939,14 @@
                                 } else {
                                     loadBoardState(currentBoardState, { fastAnimation: true });
                                 }
+                                if (currentEvent.mode === "duo") {
+                                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                                }
                                 updateBanner();
                             };
                             loadNextGame();
                         },
-                        fastAnimation ? 833 : 1833,
+                        alertShown ? 2000 : fastAnimation ? 833 : 1833,
                     );
                 };
 
@@ -2132,7 +2146,7 @@
         let addPlayer = (player, notify, score, scoreText, verdict, numGuesses, done) => {
             if (!player) {
                 console.assert(false, notify, score, scoreText, verdict, numGuesses, done);
-                connection.send({ type: "kick", player });
+                kickPlayer(player);
                 return;
             }
             console.assert(!playerIds.has(player), playerIds, player);
@@ -2286,7 +2300,7 @@
                 case "factory": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>Make a guess, then pass the Wordle to the next player. First to solve nine Wordles wins!</p>
+                        <p>Make a guess, then pass the Wordle to the next player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
                         <h4>Ranking</h4>
                         Players are ranked by
@@ -2295,9 +2309,9 @@
                             <li>Time since the challenge started when they last solved a Wordle</li>
                         </ul>
                         <h4>Time Limit</h4>
-                        The challenge ends when all but one player have solved nine Wordles, or 3 minutes after half of the players have solved nine Wordles.
+                        The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit() / 60000} minutes after half of the players have solved 9 Wordles.
                         <h4>Mechanics</h4>
-                        <p>The challenge starts by assigning each player a random Wordle, then an extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the challenge going.</p>
+                        <p>Each player starts with an assigned random Wordle. An extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the factory in motion.</p>
                         ${playerIds.size <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
                     `;
                     break;
@@ -2305,7 +2319,7 @@
                 case "duo": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>Solve nine Wordles with a random partner. First team to do so wins!</p>
+                        <p>Solve 9 Wordles with a random partner. First team to do so wins!</p>
                         ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentTeammate || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
                         ${hardModeDescription}
                         <h4>Ranking</h4>
@@ -2315,14 +2329,14 @@
                             <li>Time since the challenge started when they finish their last Wordle</li>
                         </ul>
                         <h4>Time Limit</h4>
-                        30 seconds per guess. The challenge will end 3 minutes after half of the players have finished their ninth Wordle.
+                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge will end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
                     `;
                     break;
                 }
                 case "circuit": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same Wordles, one game at a time. Highest score after nine games wins!</p>
+                        <p>All players solve the same Wordles, one game at a time. Highest score after 9 games wins!</p>
                         ${hardModeDescription}
                         <h4>Ranking</h4>
                         Players are ranked by total score. Your score for each Wordle combines accuracy and speed:
@@ -2409,14 +2423,14 @@
                             </li>
                         </ul>
                         <h4>Time Limit</h4>
-                        2 minutes per Wordle, or 30 seconds after half of the players have finished it, whichever sooner.
+                        ${initialEventTimeLimit() / 60000} minutes per Wordle. The game will also end ${acceleratedTimeLimit() / 1000} seconds after half of the players have finished the Wordle.
                     `;
                     break;
                 }
                 case "sprint": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same set of nine Wordles. First to do so wins!</p>
+                        <p>All players solve the same set of 9 Wordles. First to do so wins!</p>
                         ${hardModeDescription}
                         <h4>Ranking</h4>
                         Players are ranked by:
@@ -2425,14 +2439,14 @@
                             <li>Time since their first input when they finish their last Wordle</li>
                         </ul>
                         <h4>Time Limit</h4>
-                        The challenge ends 3 minutes after half of the players have completed it, or up to 15 minutes after it started.
+                        The challenge runs for ${initialEventTimeLimit() / 60000} minutes, but it will also end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
                     `;
                     break;
                 }
                 case "golf": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same set of nine Wordles. Fewest guesses wins!</p>
+                        <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
                         ${hardModeDescription}
                         <h4>Ranking</h4>
                         Players are ranked by:
@@ -2441,7 +2455,7 @@
                             <li>Total number of guesses they make</li>
                         </ul>
                         <h4>Time Limit</h4>
-                        The challenge ends 3 minutes after half of the players have completed it, or up to 15 minutes after it started.
+                        The challenge runs for ${initialEventTimeLimit() / 60000} minutes, but it will also end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
                     `;
                     break;
                 }
@@ -2460,7 +2474,7 @@
         let playButton = document.querySelector("#play-button");
         let generateTarget = (event = undefined) => {
             if (isDev && (DEFAULT_NUM_GAMES !== 9 || numGames() !== 9)) {
-                return "SAINT";
+                return "THEIR";
             }
             event ||= currentEvent;
             let i = indexByTarget.get(event.opener) || NaN;
@@ -2529,6 +2543,10 @@
         let responseTimeoutHandle;
         let ignoredUids = new Set();
         let uidByPlayer = new Map();
+        // Zombie (either dead socket or player leaving tab open but not playing) detection
+        let playersAcknowledgedEventStart = new Map();
+        let playersGuessedInCurrentEvent = new Set();
+        const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
         connection.on("error", (data) => console.error("CONN ERROR", data));
         let readyToPlay = () => {
             playButton.disabled = false;
@@ -2558,7 +2576,7 @@
                         upcomingEvent = createEvent();
                         showEventInfo();
                         readyToPlay();
-                    }, 2000);
+                    }, MESSAGE_PENDING_TIME_LIMIT);
                 }
                 return;
             }
@@ -2568,6 +2586,8 @@
                 ignore: [...ignoredUids],
                 players: [...playerByUid],
                 entrance: [...playersOrderedByEntrance],
+                playersAck: [...playersAcknowledgedEventStart],
+                playersGuessed: [...playersGuessedInCurrentEvent],
                 leaderboard: [...playerLeaderboardData],
                 chat: chatMessages,
                 currentEvent,
@@ -2580,8 +2600,12 @@
                 unownedGame: currentUnownedFactoryGame,
             });
         });
-        connection.on("join-response", ({ to, ignore, players, entrance, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
+        connection.on("join-response", ({ uid, to, ignore, players, entrance, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
             if (to !== currentUid || !waitingForJoinResponse) {
+                return;
+            }
+            if (!(ignore && players && entrance && playersAck && playersGuessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
+                // Invalid
                 return;
             }
             clearTimeout(responseTimeoutHandle);
@@ -2596,6 +2620,8 @@
             upcomingEvent = newUpcomingEvent;
             upcomingEventStartTime = upcomingStart;
             currentUnownedFactoryGame = unownedGame;
+            playersAcknowledgedEventStart = new Map(playersAck);
+            playersGuessed = new Set(playersGuessed);
             showEventInfo();
             if (currentEventStartTime) {
                 lastProgressBarWidth = (100 * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - currentEventStartTime);
@@ -2676,6 +2702,7 @@
             removePlayer(player);
             ignoredUids.add(uidByPlayer.get(player));
             if (player === currentPlayer) {
+                alert("You have disconnected due to inactivity.");
                 location.reload();
             }
         });
@@ -2697,6 +2724,7 @@
             playerByUid.set(uid, player);
             uidByPlayer.set(player, uid);
             playersOrderedByEntrance.push(player);
+            playersAcknowledgedEventStart.set(player, Date.now());
             let score = initialScore()[currentEvent.mode];
             addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, false);
             if (currentEvent.mode === "factory") {
@@ -2709,7 +2737,7 @@
                     if (uid === currentUid) {
                         showEventInfo();
                         isCurrentPlayersTurn = true;
-                        playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                        playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
                     }
                 } else {
                     currentPairing[i] = player;
@@ -2726,9 +2754,9 @@
                             waitingForEnterResponse = false;
                             if (!suggestedToKickTeammate) {
                                 suggestedToKickTeammate = true;
-                                connection.send({ type: "kick", currentTeammate });
+                                kickPlayer(currentTeammate);
                             }
-                        }, 2000);
+                        }, MESSAGE_PENDING_TIME_LIMIT);
                     } else if (currentPlayer === currentPairing[i ^ 1]) {
                         currentTeammate = player;
                         showEventInfo();
@@ -2744,7 +2772,7 @@
                             teamStartTime: currentPlayerStartTime,
                         });
                         if (!isCurrentPlayersTurn) {
-                            playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                            playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
                         }
                     }
                     populateMiniLeaderboardItem(player, document.querySelector("#mini-leaderboard-item-" + playerIds.get(player)));
@@ -2802,7 +2830,7 @@
             currentBoardState = board;
             loadBoardState(currentBoardState, { fastAnimation: true });
             isCurrentPlayersTurn = isNewPlayersTurn;
-            playerTurnDueTime = dueTime || Date.now() + PAIRED_GUESS_TIME_LIMIT;
+            playerTurnDueTime = dueTime || Date.now() + DUO_GUESS_TIME_LIMIT;
         });
         connection.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
             if (ignoredUids.has(uid)) {
@@ -2814,14 +2842,18 @@
             upcomingEventSuggestedStarted = false;
             upcomingEventStartTime = undefined;
             currentPlayerStartTime = undefined;
-            let startingNewGameInCup = eventId >= 1;
-            if (eventId !== (startingNewGameInCup ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
+
+            let startingNewGameInCircuit = eventId >= 1;
+            if (eventId !== (startingNewGameInCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
                 return;
             }
+            playersAcknowledgedEventStart.clear();
+            playersGuessedInCurrentEvent.clear();
+            connection.send({ type: "event-start-ack", eventId });
             if (playerByUid.has(currentUid)) {
                 playAudio("event-start");
             }
-            if (startingNewGameInCup) {
+            if (startingNewGameInCircuit) {
                 ++currentGameIndex;
                 for (let d of playerLeaderboardData.values()) {
                     d.verdict = "";
@@ -2870,7 +2902,7 @@
             currentEvent.endTime = undefined;
             setEventToEndIn(initialEventTimeLimit());
             if (currentEvent.mode === "duo") {
-                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
             }
             showEventInfo();
             currentEventStartTime = Date.now();
@@ -2898,6 +2930,41 @@
                 updateBanner();
             }
         });
+        connection.on("event-start-ack", ({ uid, eventId }) => {
+            if (ignoredUids.has(uid)) {
+                return;
+            }
+            if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
+                return;
+            }
+            playersAcknowledgedEventStart.set(playerByUid.get(uid), Date.now());
+        });
+        let kickPlayer = (player) => connection.send({ type: "kick", player });
+        let checkForZombies = (kick = false) => {
+            let now = Date.now();
+            let firstGuessTimeLimit = currentEvent.opener ? 180000 : 60000; // Players started the event but didn't guess in this time are treated as zombies
+            let zombies = 0;
+            let checkAgainIn = -Infinity;
+            for (let player of playerIds.keys()) {
+                if (player === currentPlayer) {
+                    continue;
+                }
+                if (playersGuessedInCurrentEvent.has(player)) {
+                    continue;
+                }
+                let playerStartTime = playersAcknowledgedEventStart.get(player);
+                if (playerStartTime >= now - firstGuessTimeLimit) {
+                    checkAgainIn = Math.max(checkAgainIn, playerStartTime + firstGuessTimeLimit - now);
+                    continue;
+                }
+                ++zombies;
+                if (kick) {
+                    kickPlayer(player);
+                }
+            }
+            return [zombies, checkAgainIn];
+        };
+        let repeatedZombieCheckTimeoutHandle;
         let checkEventEndOrAcceleration = () => {
             if (currentEventSuggestedEnded || currentEventEnded) {
                 return;
@@ -2906,40 +2973,40 @@
             for (let { done } of playerLeaderboardData.values()) {
                 playersDone += !!done;
             }
-            let suggestToEndEvent = () => {
+            if (!playersDone) {
+                return;
+            }
+            let [zombies, checkAgainIn] = checkForZombies();
+            let activePlayers = playerByUid.size - zombies;
+            if (playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
                 if (!currentEventSuggestedEnded) {
                     connection.send({ type: "event-end", eventId: currentEvent.id });
+                    currentEventSuggestedEnded = true;
                 }
-                currentEventSuggestedEnded = true;
-            };
-            if (playersDone >= Math.max(playerByUid.size - (currentEvent.mode === "factory"), 1)) {
-                suggestToEndEvent();
-            } else if (playersDone >= playerByUid.size / 2) {
-                let onlyZombiesRemain = (() => {
-                    if (currentEvent.mode === "circuit" && (currentEvent.opener || Date.now() - currentEventStartTime < 15000)) {
-                        return false;
+            } else if (playersDone >= activePlayers / 2) {
+                setEventToEndIn(acceleratedTimeLimit());
+            }
+            if (isFinite(checkAgainIn)) {
+                clearTimeout(repeatedZombieCheckTimeoutHandle);
+                let id = currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex);
+                repeatedZombieCheckTimeoutHandle = setTimeout(() => {
+                    let stillTheSameEvent = !currentEventSuggestedEnded && !currentEventEnded && id === currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex);
+                    if (stillTheSameEvent) {
+                        checkEventEndOrAcceleration();
                     }
-                    for (let { done, score, numGuesses } of playerLeaderboardData.values()) {
-                        if (!done && (numGuesses > (currentEvent.opener ? 1 : 0) || JSON.stringify(score) !== JSON.stringify(initialScore()[currentEvent.mode]))) {
-                            return false;
-                        }
-                    }
-                    return true;
-                })();
-                if (onlyZombiesRemain) {
-                    suggestToEndEvent();
-                } else {
-                    let m = currentEvent.mode;
-                    setEventToEndIn(m === "circuit" ? 30000 : 180000);
-                }
+                }, checkAgainIn);
             }
         };
-        connection.on("score", ({ uid, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame }) => {
+        connection.on("score", ({ uid, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame, auto }) => {
             if (ignoredUids.has(uid)) {
                 return;
             }
             if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
                 return;
+            }
+            let player = playerByUid.get(uid);
+            if (numGuesses > !!currentEvent.opener && !auto) {
+                playersGuessedInCurrentEvent.add(player);
             }
             if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
                 // Speed component needs to wait until Score event to be added, in case of a race
@@ -2956,7 +3023,6 @@
                 }
                 scoreText = formatScore(currentEvent.mode, score);
             }
-            let player = playerByUid.get(uid);
             playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
             if (uid !== currentUid) {
                 // Avoid spoiling the verdict while slow animation for chosen opener is playing
@@ -2986,15 +3052,15 @@
                 let v = judge(guess, target);
                 currentBoardState.push([guess, v]);
                 loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                updateCurrentScore(v, hard, false);
+                updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
                 isCurrentPlayersTurn = true;
-                playerTurnDueTime = Date.now() + PAIRED_GUESS_TIME_LIMIT;
+                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
             }
         });
         let showEventTransitionPanel = (playerJustEntered = false) => {
-            let startingNewGameInCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
             let sortedPlayers = sortMiniLeaderboard();
-            if (playerJustEntered && !startingNewGameInCup) {
+            if (playerJustEntered && !startingNewGameInCircuit) {
                 sortedPlayers = sortedPlayers.filter(([p, _]) => p !== currentPlayer);
             }
             if (currentEvent.mode === "duo") {
@@ -3016,13 +3082,13 @@
                     }
                 }
             }
-            if (!startingNewGameInCup && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
+            if (!startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
                 addChatMessage(sortedPlayers[0][0], `won ${formatEventName(currentEvent)} ${formatShortScoreDescription(currentEvent.mode, sortedPlayers[0][1].score)}`, "player-won");
             }
             if (!playerByUid.has(currentUid)) {
                 return;
             }
-            if (startingNewGameInCup) {
+            if (startingNewGameInCircuit) {
                 let panel = document.querySelector("#between-games-panel");
                 panel.querySelector("#between-games-panel-round-id").textContent = currentGameIndex + 1;
                 panel.querySelector("#leaderboard").innerHTML = ["header"]
@@ -3135,7 +3201,19 @@
             nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
             showOrHidePanel("between-events-panel");
             updateCountdownInPanel();
-            if (sortedPlayers[0][0] === currentPlayer + (currentEvent.mode === "duo" ? ` + ${currentTeammate || BOT_NAME}` : "")) {
+            let playConfetti;
+            if (currentEvent.mode === "duo") {
+                let a = [currentPlayer, currentTeammate || BOT_NAME];
+                for (let i = 0; i < 2; ++i) {
+                    if (sortedPlayers[0][0] === `${a[i]} + ${a[i ^ 1]}`) {
+                        playConfetti = true;
+                        break;
+                    }
+                }
+            } else {
+                playConfetti = sortedPlayers[0][0] === currentPlayer;
+            }
+            if (playConfetti) {
                 let colors = ["#d2b200", "#57ac78"];
                 confetti({
                     particleCount: 96,
@@ -3172,12 +3250,12 @@
 
             if (Date.now() >= upcomingEventStartTime && !upcomingEventSuggestedStarted) {
                 upcomingEventSuggestedStarted = true;
-                let isUpcomingStillCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+                let isUpcomingStillCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
                 let m = {
                     type: "event-start",
-                    eventId: isUpcomingStillCup ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
-                    newUpcomingEvent: isUpcomingStillCup ? undefined : createEvent(),
-                    pairing: !isUpcomingStillCup && upcomingEvent.mode === "duo" ? shuffled(playerIds.keys()) : undefined,
+                    eventId: isUpcomingStillCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
+                    newUpcomingEvent: isUpcomingStillCircuit ? undefined : createEvent(),
+                    pairing: !isUpcomingStillCircuit && upcomingEvent.mode === "duo" ? shuffled(playerIds.keys()) : undefined,
                 };
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
@@ -3206,21 +3284,14 @@
                     }, 2000);
                 }
             }
-            let startingNewGameInCup = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
-            // Kick zombies
-            if (!startingNewGameInCup && playerByUid.has(currentUid)) {
-                for (let [player, { done, score, numGuesses }] of playerLeaderboardData) {
-                    if (player === currentPlayer) {
-                        continue;
-                    }
-                    if (!done && numGuesses <= (currentEvent.opener ? 1 : 0) && JSON.stringify(score) === JSON.stringify(initialScore()[currentEvent.mode])) {
-                        connection.send({ type: "kick", player });
-                    }
-                }
+            let isUpcomingEventNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            if (playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
+                checkForZombies(true);
             }
+            clearTimeout(repeatedZombieCheckTimeoutHandle);
             currentEventEnded = true;
             currentEventSuggestedEnded = false;
-            upcomingEventStartTime = Date.now() + (startingNewGameInCup ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1);
+            upcomingEventStartTime = Date.now() + (isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
             isCurrentPlayersTurn = undefined;
             playerTurnDueTime = undefined;
             currentUnownedFactoryGame = undefined;
@@ -3232,7 +3303,6 @@
                         score[2] += -(Date.now() - currentEventStartTime);
                         ++score[3];
                         score[1] = score[2] / score[3];
-                        // FIXME: Can we get rid of the currentScore variable and let the score from playerLeaderBoardData be the source of truth?
                         if (p === currentPlayer) {
                             currentScore = score.concat();
                         }
@@ -3349,7 +3419,7 @@
                 }
             }
             console.assert(false, candidateTargets, candidateGuesses, b);
-            return "STYLE";
+            return "JAZZY";
         };
     }
 </script>
