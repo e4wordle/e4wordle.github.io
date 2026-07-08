@@ -873,7 +873,7 @@
             opacity: 0.5;
         }
         #alert {
-            filter: drop-shadow(0 0 8px #000);
+            filter: drop-shadow(0 2px 8px #000);
         }
         #chat-input {
             border: 1px solid #777;
@@ -953,7 +953,7 @@
                         <span class="material-symbols-outlined">info</span>
                     </div>
                 </div>
-                <div id="event-description">Start a random Wordle challenge!</div>
+                <div id="event-description">Join a random Wordle challenge!</div>
             </div>
             <div class="mobile-button-container">
                 <button class="mobile-button" id="event-description-button-2" title="Rules">
@@ -1120,6 +1120,8 @@
 <script src="./targets.js"></script>
 <script src="./allowedGuesses.js"></script>
 <script>
+    const APP_VERSION = Date.parse("2026-07-06 19:40");
+
     {
         let isDev = location.href.includes("localhost") || location.href.includes("192.168");
         let FORCED_EVENT_PARAMS;
@@ -1133,7 +1135,7 @@
         let urlParams = new URLSearchParams(location.search);
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
-        let numGames = () => (isDev || totalUsers - ignoredUids.size === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
+        let numGames = () => (isDev || totalUsers === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
 
         let settings;
         const SETTINGS_VERSION = 1;
@@ -1551,7 +1553,7 @@
                     return;
                 }
                 currentEventSuggestedEnded = true;
-                connection.send({ type: "event-end", eventId: currentEvent.id });
+                room.send({ type: "event-end", eventId: currentEvent.id });
                 progressBar.style.width = "0";
                 updateBanner();
                 return;
@@ -1581,7 +1583,7 @@
                 let d = Date.now();
                 if (!currentTeammate) {
                     let guessesMade = currentBoardState.length || 4; // Make the first guess also faster
-                    if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 2500) && (playerIds.size <= 1 || d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
+                    if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 2500) && (playerByUid.size <= 1 || d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
                         isCurrentPlayersTurn = true;
                         playAndSend(undefined);
                     }
@@ -1722,7 +1724,7 @@
                 leaderboardOverride: verdict !== "GGGGG" ? { score: message.score, scoreText: message.scoreText, verdict: message.verdict, numGuesses: message.numGuesses } : undefined,
             });
             if (!(currentEvent.mode === "factory" && currentEvent.opener && currentBoardState.length === 1)) {
-                connection.send(message);
+                room.send(message);
             }
         };
         const ENTER_KEY = "0";
@@ -1807,7 +1809,7 @@
             }
             target = factoryGameToShowAfterAnimation.target;
             currentBoardState = factoryGameToShowAfterAnimation.board;
-            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer && (playerIds.size === 1 || Math.random() < 0.5)) {
+            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer && (playerByUid.size === 1 || Math.random() < 0.5)) {
                 // Make a bot guess sometimes so the player doesn't get bored from only solving Wordles passed to themselves
                 let g;
                 if (currentBoardState.length < gameParams().guessLimit - 1 && ((g = botPlay()), g !== target)) {
@@ -1866,7 +1868,7 @@
                     if (!fastAnimation) {
                         colorKeyboard(i + 1, keyboardColorState || state);
                     }
-                    // Fast animation colors at flip midpoint
+                    // Fast animation colors keyboard at flip midpoint
 
                     let gameDone = false;
                     let alertShown = false;
@@ -2056,7 +2058,7 @@
                 if (!text) {
                     return;
                 }
-                connection.send({ type: "chat", data: [currentPlayer, text, ""] });
+                room.send({ type: "chat", data: [currentPlayer, text, ""] });
                 chatInput.value = "";
             };
             chatInput.addEventListener("keydown", (e) => {
@@ -2093,10 +2095,10 @@
         let playerIds = new Map();
         let playerLeaderboardData = new Map();
         let shouldShowLeaderboard = true;
-        localStorage.removeItem("showLeaderboard"); // FIXME Remove this
+        localStorage.removeItem("showLeaderboard"); // Clean up stale setting. FIXME: Remove this after a while
         let initializeLeaderboard = () => {
             let handleToggle = () => {
-                if (playerIds.size) {
+                if (playerByUid.size) {
                     shouldShowLeaderboard = !shouldShowLeaderboard;
                 }
                 for (let [player, id] of playerIds) {
@@ -2312,7 +2314,7 @@
                         The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit() / 60000} minutes after half of the players have solved 9 Wordles.
                         <h4>Mechanics</h4>
                         <p>Each player starts with an assigned random Wordle. An extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the factory in motion.</p>
-                        ${playerIds.size <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
+                        ${playerByUid.size <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
                     `;
                     break;
                 }
@@ -2507,7 +2509,13 @@
                 nicknameInput.focus();
                 return;
             }
-            if (!playerByUid.size) {
+            if (playerByUid.size) {
+                room.send({
+                    type: "enter",
+                    player: currentPlayer,
+                    eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
+                });
+            } else {
                 let m = {
                     type: "event-start",
                     eventId: upcomingEvent.id,
@@ -2517,10 +2525,9 @@
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
                 }
-                connection.send(m);
+                room.send(m);
             }
             playButton.disabled = true;
-            connection.send({ type: "enter", player: currentPlayer });
         };
         playButton.addEventListener("click", handlePlayButtonClick);
         nicknameInput.addEventListener("keydown", (e) => {
@@ -2529,14 +2536,191 @@
             }
         });
 
+        const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}-${Math.floor(APP_VERSION / 60000)}-`;
+        const MAX_PLAYERS_PER_ROOM = 12;
+        const MAX_USERS_PER_ROOM = 36;
+        const MAX_REPS_IN_LOBBY = 36;
+        let createConnection = (token, command = undefined) =>
+            connect(SOCKET_ID_PREFIX + token, {
+                announce: true,
+                echo: true,
+                list: true,
+                as: command && `${Math.random()}-${command}`,
+                // https://ittysockets.com/reservations
+                joinKey: "WuwHlms1QSOU79NtTpfgPyVZ", // spell-checker: disable-line
+            });
+        let getConnectionInitialCommand = (alias) => alias && alias.slice(alias.indexOf("-") + 1);
+        let room;
+        let _lobby;
+        Object.defineProperty(window, "lobby", {
+            get: () => _lobby,
+            set: (x) => {
+                log("set??", !!x);
+                _lobby = x;
+            },
+        });
+        let currentRoomId;
+        let searchAndJoinRoom = (autoEnter = false) => {
+            lobby = createConnection("lobby", "search");
+            let createAndJoinRoom = () => {
+                joinRoom(Math.random(), autoEnter);
+            };
+            lobby.on("join", ({ uid, total, self }) => {
+                if (!self) {
+                    return;
+                }
+                if (total === 1) {
+                    // Only user globally
+                    closeLobbyConnection();
+                    createAndJoinRoom();
+                    return;
+                }
+                let waitingForSearchResponse = true;
+                lobby.on("search-response", ({ to, roomId }) => {
+                    if (to !== uid) {
+                        return;
+                    }
+                    clearTimeout(responseTimeoutHandle);
+                    waitingForSearchResponse = false;
+                    closeLobbyConnection();
+                    joinRoom(roomId);
+                });
+                clearTimeout(responseTimeoutHandle);
+                responseTimeoutHandle = setTimeout(() => {
+                    if (!waitingForSearchResponse) {
+                        return;
+                    }
+                    waitingForScoreAfterGuessInFactory = false;
+                    closeLobbyConnection();
+                    createAndJoinRoom();
+                }, MESSAGE_PENDING_TIME_LIMIT);
+            });
+        };
+        let closeLobbyConnection = () => {
+            log("close lobby", !!lobby);
+            lobby?.close();
+            lobby = undefined;
+        };
+        let reps;
+        let representRoom = () => {
+            // A representative (rep) is the oldest user in a spacious room that may appear in the lobby to greet new users. A lobby can hold up to a certain number of reps. If the lobby is unfilled, more users from a room (ordered by join time) may also become rep to fill the lobby, to improve availability (in case the oldest user becomes a zombie)
+            if (currentRoomId >= 1) {
+                // Treat as private room
+                return;
+            }
+            log("rep", !!lobby);
+            if (lobby) {
+                return;
+            }
+            lobby = createConnection("lobby", "rep");
+            reps = [];
+            let lobbyUid;
+            let usersWaitingForRepResponse = new Set();
+            let usersWaitingForSearchResponse = new Set();
+            let pendingNewUsers = [];
+            let handleNewUser = (uid, command) => {
+                log("new user", uid, command);
+                switch (command) {
+                    case "rep": {
+                        reps.push(uid);
+                        usersWaitingForRepResponse.add(uid);
+                        setTimeout(
+                            () => {
+                                if (!usersWaitingForRepResponse.has(uid)) {
+                                    return;
+                                }
+                                lobby.send({
+                                    type: "rep-response",
+                                    to: uid,
+                                    // reps already includes the new user
+                                    full: reps.length > MAX_REPS_IN_LOBBY,
+                                    reps: reps.length <= MAX_REPS_IN_LOBBY ? [...reps] : undefined,
+                                });
+                            },
+                            (lobbyUid !== reps[0]) * 750,
+                        );
+                        break;
+                    }
+                    case "search": {
+                        usersWaitingForSearchResponse.add(uid);
+                        setTimeout(() => {
+                            if (!usersWaitingForSearchResponse.has(uid)) {
+                                return;
+                            }
+                            log("search-response sent", uid, currentRoomId, !!lobby);
+                            lobby.send({
+                                type: "search-response",
+                                to: uid,
+                                roomId: currentRoomId,
+                            });
+                        }, Math.random() * 500);
+                        break;
+                    }
+                }
+            };
+            lobby.on("join", ({ uid, alias, total, self, users }) => {
+                if (self) {
+                    lobbyUid = uid;
+                    reps.push(uid);
+                    if (total === 1) {
+                        return;
+                    }
+                    usersWaitingForRepResponse.add(uid);
+                    clearTimeout(responseTimeoutHandle);
+                    responseTimeoutHandle = setTimeout(() => {
+                        if (!usersWaitingForRepResponse.has(uid)) {
+                            return;
+                        }
+                        usersWaitingForRepResponse.delete(uid);
+                        for (let r of reps) {
+                            lobby.send({ type: "kick-rep", to: r });
+                        }
+                        for (let u of pendingNewUsers) {
+                            handleNewUser(...u);
+                        }
+                    }, MESSAGE_PENDING_TIME_LIMIT);
+                    return;
+                }
+                let command = getConnectionInitialCommand(alias);
+                if (usersWaitingForRepResponse.has(lobbyUid)) {
+                    pendingNewUsers.push([uid, command]);
+                } else {
+                    handleNewUser(uid, command);
+                }
+            });
+            lobby.on("rep-response", ({ uid, to, full, reps: existingReps }) => {
+                if (!usersWaitingForRepResponse.delete(to)) {
+                    return;
+                }
+                if (to !== lobbyUid) {
+                    return;
+                }
+                if (full) {
+                    closeLobbyConnection();
+                    return;
+                }
+                reps = existingReps;
+                if (currentUid === usersOrderedByJoinTime[0] && reps.length < MAX_REPS_IN_LOBBY) {
+                    room.send({ type: "extra-reps", count: MAX_REPS_IN_LOBBY - reps.length });
+                }
+            });
+            lobby.on("search-response", ({ to }) => {
+                usersWaitingForSearchResponse.delete(to);
+            });
+            lobby.on("kick-rep", ({ to }) => {
+                if (to === lobbyUid) {
+                    closeLobbyConnection();
+                }
+            });
+            lobby.on("leave", ({ uid }) => {
+                reps = reps.filter((r) => r !== uid);
+            });
+        };
+
         let playerByUid = new Map();
+        let usersOrderedByJoinTime = [];
         let playersOrderedByEntrance = [];
         let currentUid;
-        let room = "e4wordle-" + Math.abs(+urlParams.get("room") || 0);
-        if (isDev) {
-            room = "dev-" + room;
-        }
-        let connection = connect(room, { announce: true, echo: true, list: true });
         let totalUsers;
         let waitingForJoinResponse = false;
         let waitingForEnterResponse = false;
@@ -2547,105 +2731,590 @@
         let playersAcknowledgedEventStart = new Map();
         let playersGuessedInCurrentEvent = new Set();
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
-        connection.on("error", (data) => console.error("CONN ERROR", data));
+
+        let joinRoom = (roomId, autoEnter = false) => {
+            log("joinRoom", roomId, autoEnter);
+            currentRoomId = roomId;
+            if (room) {
+                room.close();
+                usersOrderedByJoinTime = [];
+            }
+            room = createConnection(roomId);
+            room.on("error", (data) => console.error("CONN ERROR (ROOM)", data));
+            let handleRoomFull = (autoEnter) => {
+                room.close();
+                room = undefined;
+                searchAndJoinRoom(autoEnter);
+            };
+            let uidsWaitingForJoinResponse = new Set();
+            let representIfOldest = () => {
+                log("represent?", playerByUid, currentUid, usersOrderedByJoinTime);
+                if (playerByUid.size < MAX_PLAYERS_PER_ROOM && currentUid === usersOrderedByJoinTime[0]) {
+                    representRoom();
+                }
+            };
+            // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
+            room.on("join", ({ uid, alias, total: newTotalUids, self, users: onlineUids }) => {
+                totalUsers = newTotalUids - ignoredUids.size;
+                usersOrderedByJoinTime.push(uid);
+                currentRoomId = roomId;
+                if (self) {
+                    currentUid = uid;
+                    if (isDev) {
+                        nicknameInput.value = "Player " + uid;
+                    }
+                    if (totalUsers === 1) {
+                        playerByUid = new Map();
+                        playersOrderedByEntrance = [];
+                        waitingForJoinResponse = false;
+                        waitingForEnterResponse = false;
+                        ignoredUids = new Set();
+                        uidByPlayer = new Map();
+                        playersAcknowledgedEventStart = new Map();
+                        playersGuessedInCurrentEvent = new Set();
+                        document.querySelector("#chat-message-container").innerHTML = "";
+                        chatMessages = [];
+                        playerIds = new Map();
+                        playerLeaderboardData = new Map();
+                        document.querySelector("#mini-leaderboard").innerHTML = "";
+                        representRoom();
+                        upcomingEvent = createEvent();
+                        showEventInfo();
+                        readyToPlay();
+                        if (autoEnter) {
+                            handlePlayButtonClick();
+                        }
+                    } else {
+                        waitingForJoinResponse = true;
+                        uidsWaitingForJoinResponse.add(uid);
+                        responseTimeoutHandle = setTimeout(() => {
+                            responseTimeoutHandle = undefined;
+                            if (!waitingForJoinResponse) {
+                                return;
+                            }
+                            waitingForJoinResponse = false;
+                            handleRoomFull(autoEnter);
+                        }, MESSAGE_PENDING_TIME_LIMIT);
+                    }
+                    return;
+                }
+                uidsWaitingForJoinResponse.add(uid);
+                setTimeout(
+                    () => {
+                        if (!uidsWaitingForJoinResponse.has(uid)) {
+                            return;
+                        }
+                        uidsWaitingForJoinResponse.delete(uid);
+                        room.send({
+                            type: "join-response",
+                            to: uid,
+                            full: playerByUid.size >= MAX_PLAYERS_PER_ROOM || totalUsers >= MAX_USERS_PER_ROOM,
+                            rep: lobby && reps.length < MAX_REPS_IN_LOBBY,
+                            ignore: [...ignoredUids],
+                            players: [...playerByUid],
+                            entrance: [...playersOrderedByEntrance],
+                            users: [...usersOrderedByJoinTime],
+                            playersAck: [...playersAcknowledgedEventStart],
+                            playersGuessed: [...playersGuessedInCurrentEvent],
+                            leaderboard: [...playerLeaderboardData],
+                            chat: chatMessages,
+                            currentEvent,
+                            game: currentEvent?.mode === "circuit" ? currentGameIndex : 0,
+                            pairing: currentPairing,
+                            startTime: currentEventStartTime,
+                            ended: currentEventEnded,
+                            upcomingEvent,
+                            upcomingStart: upcomingEventStartTime,
+                            unownedGame: currentUnownedFactoryGame,
+                        });
+                    },
+                    // Add a short delay, if not the oldest user, to try to avoid spamming the join response
+                    (currentUid !== usersOrderedByJoinTime[0]) * 750,
+                );
+                if (lobby && totalUsers >= MAX_USERS_PER_ROOM) {
+                    closeLobbyConnection();
+                }
+            });
+            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
+                if (!uidsWaitingForJoinResponse.has(to)) {
+                    return;
+                }
+                uidsWaitingForJoinResponse.delete(to);
+                if (to !== currentUid) {
+                    return;
+                }
+                clearTimeout(responseTimeoutHandle);
+                responseTimeoutHandle = undefined;
+                waitingForJoinResponse = false;
+                if (full) {
+                    handleRoomFull(autoEnter);
+                    return;
+                }
+                if (!(ignore && players && entrance && playersAck && playersGuessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
+                    // Invalid
+                    handleRoomFull(autoEnter);
+                    return;
+                }
+                usersOrderedByJoinTime = users;
+                if (shouldRep) {
+                    representRoom();
+                }
+                ignoredUids = new Set(ignore);
+                currentEvent = newCurrentEvent;
+                currentEventStartTime = startTime;
+                currentGameIndex = game;
+                currentPairing = pairing;
+                currentEventEnded = ended;
+                upcomingEvent = newUpcomingEvent;
+                upcomingEventStartTime = upcomingStart;
+                currentUnownedFactoryGame = unownedGame;
+                playersAcknowledgedEventStart = new Map(playersAck);
+                playersGuessed = new Set(playersGuessed);
+                showEventInfo();
+                if (currentEventStartTime) {
+                    lastProgressBarWidth = (100 * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - currentEventStartTime);
+                    lastProgressBarUpdateTime = Date.now();
+                }
+                playerByUid = new Map(players);
+                for (let [x, y] of playerByUid) {
+                    uidByPlayer.set(y, x);
+                }
+                playersOrderedByEntrance = entrance;
+                for (let [player, { score, scoreText, verdict, numGuesses, done }] of leaderboard) {
+                    addPlayer(player, false, score, scoreText, verdict, numGuesses);
+                }
+                for (let c of chat) {
+                    addChatMessage(...c);
+                }
+                readyToPlay();
+                if (autoEnter) {
+                    handlePlayButtonClick();
+                }
+            });
+            room.on("chat", ({ uid, data }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                addChatMessage(...data);
+            });
+            room.on("leave", ({ uid, total: newTotalUids }) => {
+                if (ignoredUids.has(uid)) {
+                    ignoredUids.delete(uid);
+                    return;
+                }
+                usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== uid);
+                log("left", uid, usersOrderedByJoinTime);
+                totalUsers = newTotalUids - ignoredUids.size;
+                let leavingPlayer = playerByUid.get(uid);
+                if (leavingPlayer) {
+                    removePlayer(leavingPlayer);
+                }
+                representIfOldest();
+            });
+            room.on("kick", ({ uid, player }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (!playerIds.has(player)) {
+                    return;
+                }
+                suggestedToKickTeammate = undefined;
+                let playerUid = uidByPlayer.get(player);
+                usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== playerUid);
+                removePlayer(player);
+                ignoredUids.add(uidByPlayer.get(player));
+                --totalUsers;
+                if (player === currentPlayer) {
+                    location.reload();
+                    return;
+                }
+                representIfOldest();
+            });
+            room.on("enter", ({ uid, player, eventId }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (playerIds.has(player)) {
+                    if (uid === currentUid) {
+                        alert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        playButton.disabled = false;
+                        currentPlayer = undefined;
+                        nicknameInput.select();
+                        nicknameInput.focus();
+                        return;
+                    }
+                    return;
+                }
+                if (playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
+                    if (uid === currentUid) {
+                        handleRoomFull(true);
+                    }
+                    return;
+                }
+                if (uid !== currentUid && eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
+                    // Outdated event data
+                    kickPlayer(player);
+                    return;
+                }
+                playerByUid.set(uid, player);
+                uidByPlayer.set(player, uid);
+                playersOrderedByEntrance.push(player);
+                playersAcknowledgedEventStart.set(player, Date.now());
+                let score = initialScore()[currentEvent.mode];
+                addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, false);
+                if (currentEvent.mode === "factory") {
+                    // Potentially show/hide description for the bot
+                    showEventInfo();
+                } else if (currentEvent.mode === "duo" && !currentEventEnded && !currentPairing.includes(player)) {
+                    let i = currentPairing.indexOf(null);
+                    if (i === -1) {
+                        currentPairing.push(player, null);
+                        if (uid === currentUid) {
+                            showEventInfo();
+                            isCurrentPlayersTurn = true;
+                            playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                        }
+                    } else {
+                        currentPairing[i] = player;
+                        if (uid === currentUid) {
+                            currentTeammate = currentPairing[i ^ 1];
+                            showEventInfo();
+                            isCurrentPlayersTurn = false; // Wait for the "enter-response" to tell
+                            waitingForEnterResponse = true;
+                            responseTimeoutHandle = setTimeout(() => {
+                                responseTimeoutHandle = undefined;
+                                if (!waitingForEnterResponse) {
+                                    return;
+                                }
+                                waitingForEnterResponse = false;
+                                if (!suggestedToKickTeammate) {
+                                    suggestedToKickTeammate = true;
+                                    kickPlayer(currentTeammate);
+                                }
+                            }, MESSAGE_PENDING_TIME_LIMIT);
+                        } else if (currentPlayer === currentPairing[i ^ 1]) {
+                            currentTeammate = player;
+                            showEventInfo();
+                            room.send({
+                                type: "enter-response",
+                                to: uid,
+                                eventId: currentEvent.id,
+                                score: currentScore,
+                                game: currentGameIndex,
+                                board: currentBoardState,
+                                isNewPlayersTurn: !isCurrentPlayersTurn,
+                                dueTime: isCurrentPlayersTurn ? playerTurnDueTime : undefined,
+                                teamStartTime: currentPlayerStartTime,
+                            });
+                            if (!isCurrentPlayersTurn) {
+                                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                            }
+                        }
+                        populateMiniLeaderboardItem(player, document.querySelector("#mini-leaderboard-item-" + playerIds.get(player)));
+                        populateMiniLeaderboardItem(currentPairing[i ^ 1], document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPairing[i ^ 1])));
+                    }
+                }
+                log("full now?!!", playerByUid.size, MAX_PLAYERS_PER_ROOM, lobby);
+                if (lobby && playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
+                    log("full now!!!");
+                    closeLobbyConnection();
+                }
+                if (uid !== currentUid) {
+                    return;
+                }
+                localStorage.setItem("nickname", currentPlayer);
+                document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
+                // let url = new URL(location.href);
+                // url.searchParams.set("room", roomId);
+                // history.pushState(null, "", url);
+                if (currentEvent.mode !== "factory") {
+                    target = currentEvent.targets[currentGameIndex];
+                } else {
+                    target = generateTarget(currentEvent);
+                }
+                currentPlayerDone = false;
+                currentPlayerWaitingForOthers = false;
+                currentScore = score;
+                updateBanner();
+                if (currentEventEnded) {
+                    showEventTransitionPanel(true);
+                    return;
+                }
+                if (playerByUid.has(currentUid)) {
+                    playAudio("event-start");
+                }
+                showOrHidePanel(undefined);
+                currentBoardState = [];
+                loadBoardState(currentBoardState, { fastAnimation: true });
+                if (currentEvent.opener) {
+                    let v = judge(currentEvent.opener, target);
+                    currentBoardState = [[currentEvent.opener, v]];
+                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                    updateCurrentScore(v, true);
+                    currentPlayerStartTime = Date.now();
+                }
+                updateBanner();
+            });
+            room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, dueTime, teamStartTime }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (eventId !== currentEvent.id || to !== currentUid || !waitingForEnterResponse) {
+                    return;
+                }
+                waitingForEnterResponse = false;
+                clearTimeout(responseTimeoutHandle);
+                responseTimeoutHandle = undefined;
+                console.assert(playerByUid.get(uid) === currentTeammate, uid, currentTeammate);
+                currentScore = score;
+                currentPlayerStartTime = teamStartTime;
+                currentGameIndex = game;
+                target = currentEvent.targets[currentGameIndex];
+                currentBoardState = board;
+                loadBoardState(currentBoardState, { fastAnimation: true });
+                isCurrentPlayersTurn = isNewPlayersTurn;
+                playerTurnDueTime = dueTime || Date.now() + DUO_GUESS_TIME_LIMIT;
+            });
+            room.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (playerByUid.size ? playerByUid.has(currentUid) : uid === currentUid) {
+                    showOrHidePanel(undefined);
+                }
+                upcomingEventSuggestedStarted = false;
+                upcomingEventStartTime = undefined;
+                currentPlayerStartTime = undefined;
+
+                let startingNewGameInCircuit = eventId >= 1;
+                if (eventId !== (startingNewGameInCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
+                    return;
+                }
+                playersAcknowledgedEventStart.clear();
+                playersGuessedInCurrentEvent.clear();
+                room.send({ type: "event-start-ack", eventId });
+                if (playerByUid.has(currentUid)) {
+                    playAudio("event-start");
+                }
+                if (startingNewGameInCircuit) {
+                    ++currentGameIndex;
+                    for (let d of playerLeaderboardData.values()) {
+                        d.verdict = "";
+                        d.numGuesses = 0;
+                        d.done = false;
+                    }
+                    for (let [p, i] of playerIds) {
+                        populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
+                    }
+                } else {
+                    currentEvent = upcomingEvent;
+                    upcomingEvent = newUpcomingEvent;
+                    currentGameIndex = 0;
+                    currentScore = initialScore()[currentEvent.mode];
+
+                    if (currentEvent.mode !== "duo") {
+                        currentTeammate = undefined;
+                        isCurrentPlayersTurn = undefined;
+                        playerTurnDueTime = undefined;
+                        currentPairing = undefined;
+                    } else {
+                        pairing = pairing.filter((p) => playerIds.has(p));
+                        for (let p of playersOrderedByEntrance) {
+                            if (!pairing.includes(p)) {
+                                pairing.push(p);
+                            }
+                        }
+                        console.assert(pairing.length === playerByUid.size, pairing, playerIds);
+                        if (pairing.length & 1) {
+                            pairing.push(null);
+                        }
+                        currentPairing = pairing;
+                        let i = pairing.indexOf(currentPlayer);
+                        currentTeammate = pairing[i ^ 1];
+                        isCurrentPlayersTurn = (i & 1) === 0;
+                    }
+
+                    for (let p of playerIds.keys()) {
+                        playerLeaderboardData.set(p, { score: initialScore()[currentEvent.mode], scoreText: formatScore(currentEvent.mode, currentScore), verdict: "", numGuesses: 0 });
+                    }
+                    for (let [p, i] of playerIds) {
+                        populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
+                    }
+                    currentUnownedFactoryGame = unownedGame;
+                }
+                currentEvent.endTime = undefined;
+                setEventToEndIn(initialEventTimeLimit());
+                if (currentEvent.mode === "duo") {
+                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                }
+                showEventInfo();
+                currentEventStartTime = Date.now();
+                if (currentEvent.mode !== "factory") {
+                    target = currentEvent.targets[currentGameIndex];
+                } else {
+                    target = generateTarget(currentEvent);
+                }
+                currentPlayerDone = false;
+                currentPlayerWaitingForOthers = false;
+                currentEventEnded = false;
+                if (playerByUid.has(currentUid)) {
+                    currentGuess = "";
+                    currentBoardState = [];
+                    loadBoardState(currentBoardState, { noAnimation: true });
+                    if (currentEvent.opener) {
+                        let v = judge(currentEvent.opener, target);
+                        currentBoardState = [[currentEvent.opener, v]];
+                        loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                        updateCurrentScore(v, true);
+                        if (currentEvent.mode === "sprint") {
+                            currentPlayerStartTime = Date.now();
+                        }
+                    }
+                    updateBanner();
+                } else if (uid === currentUid) {
+                    // Current player is the only user who just pressed play to started the first event
+                    room.send({ type: "enter", player: currentPlayer, eventId });
+                }
+            });
+            room.on("event-start-ack", ({ uid, eventId }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
+                    return;
+                }
+                playersAcknowledgedEventStart.set(playerByUid.get(uid), Date.now());
+            });
+            room.on("score", ({ uid, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame, auto }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
+                    return;
+                }
+                let player = playerByUid.get(uid);
+                if (numGuesses > !!currentEvent.opener && !auto) {
+                    playersGuessedInCurrentEvent.add(player);
+                }
+                if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
+                    // Speed component needs to wait until Score event to be added, in case of a race
+                    let playersSolved = 0;
+                    for (let { verdict } of playerLeaderboardData.values()) {
+                        playersSolved += verdict === "GGGGG";
+                    }
+                    let speed = Math.max(6 - playersSolved, 0);
+                    score[0] += speed;
+                    score[4] -= speed;
+                    if (uid === currentUid) {
+                        currentScore[0] += speed;
+                        currentScore[4] -= speed;
+                    }
+                    scoreText = formatScore(currentEvent.mode, score);
+                }
+                playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
+                if (uid !== currentUid) {
+                    // Avoid spoiling the verdict while slow animation for chosen opener is playing
+                    if (!(numGuesses === 1 && currentEvent.opener && animatingRows.has(0))) {
+                        populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
+                    }
+                }
+                checkEventEndOrAcceleration();
+                if (currentEvent.mode === "factory") {
+                    // Load next board only now for up-to-date unowned game
+                    if (uid === currentUid) {
+                        waitingForScoreAfterGuessInFactory = undefined;
+                        factoryGameToShowAfterAnimation = currentUnownedFactoryGame;
+                        if (!isBoardAnimating()) {
+                            loadUnownedFactoryGameState();
+                        }
+                    }
+                    currentUnownedFactoryGame = newUnownedGame;
+                }
+                if (currentEvent.mode === "duo" && playerIds.has(currentPlayer)) {
+                    if (!(game === currentGameIndex && numGuesses - 1 === currentBoardState.length)) {
+                        return;
+                    }
+                    if (player !== currentTeammate) {
+                        return;
+                    }
+                    let v = judge(guess, target);
+                    currentBoardState.push([guess, v]);
+                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                    updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
+                    isCurrentPlayersTurn = true;
+                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                }
+            });
+            room.on("event-end", ({ uid, eventId }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (eventId !== currentEvent.id || currentEventEnded) {
+                    return;
+                }
+                let showingTargetAlert = false;
+                if (playerByUid.has(currentUid)) {
+                    playAudio("event-end");
+                    if (!currentPlayerDone) {
+                        showAlert(`"${target}"`);
+                        showingTargetAlert = true;
+                        setTimeout(() => {
+                            if (currentEventEnded) {
+                                showEventTransitionPanel();
+                            }
+                        }, 2000);
+                    }
+                }
+                let isUpcomingEventNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+                if (playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
+                    checkForZombies(true);
+                }
+                clearTimeout(repeatedZombieCheckTimeoutHandle);
+                currentEventEnded = true;
+                currentEventSuggestedEnded = false;
+                upcomingEventStartTime = Date.now() + (isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                isCurrentPlayersTurn = undefined;
+                playerTurnDueTime = undefined;
+                currentUnownedFactoryGame = undefined;
+                factoryGameToShowAfterAnimation = undefined;
+                updateBanner();
+                if (currentEvent.mode === "circuit") {
+                    for (let [p, { done, score }] of playerLeaderboardData) {
+                        if (!done) {
+                            score[2] += -(Date.now() - currentEventStartTime);
+                            ++score[3];
+                            score[1] = score[2] / score[3];
+                            if (p === currentPlayer) {
+                                currentScore = score.concat();
+                            }
+                        }
+                    }
+                }
+                if (!showingTargetAlert && !isBoardAnimating() && !postGameDelayTimeout) {
+                    showEventTransitionPanel();
+                }
+                representIfOldest();
+            });
+            room.on("extra-reps", ({ uid, count }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (playerByUid.size < MAX_PLAYERS_PER_ROOM && usersOrderedByJoinTime.indexOf(currentUid) <= count) {
+                    representRoom();
+                }
+            });
+        };
+        let preferredRoomIdFromURLParam = +urlParams.get("room") || 0;
+        if (preferredRoomIdFromURLParam) {
+            joinRoom(preferredRoomIdFromURLParam);
+        } else {
+            searchAndJoinRoom();
+        }
+
         let readyToPlay = () => {
             playButton.disabled = false;
             playButton.textContent = "Play";
         };
-        // "Join" here means becoming online, where the "user" and their client enter the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
-        connection.on("join", ({ uid, total: newTotalUsers, self, users: onlineUids }) => {
-            totalUsers = newTotalUsers;
-            if (self) {
-                currentUid = uid;
-                if (isDev) {
-                    nicknameInput.value = "Player " + uid;
-                }
-                if (totalUsers === 1) {
-                    upcomingEvent = createEvent();
-                    showEventInfo();
-                    readyToPlay();
-                } else {
-                    waitingForJoinResponse = true;
-                    responseTimeoutHandle = setTimeout(() => {
-                        responseTimeoutHandle = undefined;
-                        if (!waitingForJoinResponse) {
-                            return;
-                        }
-                        waitingForJoinResponse = false;
-                        ignoredUids = new Set(onlineUids);
-                        upcomingEvent = createEvent();
-                        showEventInfo();
-                        readyToPlay();
-                    }, MESSAGE_PENDING_TIME_LIMIT);
-                }
-                return;
-            }
-            connection.send({
-                type: "join-response",
-                to: uid,
-                ignore: [...ignoredUids],
-                players: [...playerByUid],
-                entrance: [...playersOrderedByEntrance],
-                playersAck: [...playersAcknowledgedEventStart],
-                playersGuessed: [...playersGuessedInCurrentEvent],
-                leaderboard: [...playerLeaderboardData],
-                chat: chatMessages,
-                currentEvent,
-                game: currentEvent?.mode === "circuit" ? currentGameIndex : 0,
-                pairing: currentPairing,
-                startTime: currentEventStartTime,
-                ended: currentEventEnded,
-                upcomingEvent,
-                upcomingStart: upcomingEventStartTime,
-                unownedGame: currentUnownedFactoryGame,
-            });
-        });
-        connection.on("join-response", ({ uid, to, ignore, players, entrance, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
-            if (to !== currentUid || !waitingForJoinResponse) {
-                return;
-            }
-            if (!(ignore && players && entrance && playersAck && playersGuessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
-                // Invalid
-                return;
-            }
-            clearTimeout(responseTimeoutHandle);
-            responseTimeoutHandle = undefined;
-            waitingForJoinResponse = false;
-            ignoredUids = new Set(ignore);
-            currentEvent = newCurrentEvent;
-            currentEventStartTime = startTime;
-            currentGameIndex = game;
-            currentPairing = pairing;
-            currentEventEnded = ended;
-            upcomingEvent = newUpcomingEvent;
-            upcomingEventStartTime = upcomingStart;
-            currentUnownedFactoryGame = unownedGame;
-            playersAcknowledgedEventStart = new Map(playersAck);
-            playersGuessed = new Set(playersGuessed);
-            showEventInfo();
-            if (currentEventStartTime) {
-                lastProgressBarWidth = (100 * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - currentEventStartTime);
-                lastProgressBarUpdateTime = Date.now();
-            }
-            playerByUid = new Map(players);
-            for (let [x, y] of playerByUid) {
-                uidByPlayer.set(y, x);
-            }
-            playersOrderedByEntrance = entrance;
-            for (let [player, { score, scoreText, verdict, numGuesses, done }] of leaderboard) {
-                addPlayer(player, false, score, scoreText, verdict, numGuesses);
-            }
-            for (let c of chat) {
-                addChatMessage(...c);
-            }
-            readyToPlay();
-        });
-        connection.on("chat", ({ uid, data }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            addChatMessage(...data);
-        });
         let removePlayer = (player) => {
             addChatMessage(player, "", "player-leave");
             document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`).remove();
@@ -2680,266 +3349,7 @@
             }
             checkEventEndOrAcceleration();
         };
-        connection.on("leave", ({ uid, total: newTotalUsers }) => {
-            if (ignoredUids.has(uid)) {
-                ignoredUids.delete(uid);
-                return;
-            }
-            totalUsers = newTotalUsers;
-            let leavingPlayer = playerByUid.get(uid);
-            if (leavingPlayer) {
-                removePlayer(leavingPlayer);
-            }
-        });
-        connection.on("kick", ({ uid, player }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (!playerIds.has(player)) {
-                return;
-            }
-            suggestedToKickTeammate = undefined;
-            removePlayer(player);
-            ignoredUids.add(uidByPlayer.get(player));
-            if (player === currentPlayer) {
-                alert("You have disconnected due to inactivity.");
-                location.reload();
-            }
-        });
-        connection.on("enter", ({ uid, player }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (playerIds.has(player)) {
-                if (uid === currentUid) {
-                    alert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
-                    playButton.disabled = false;
-                    currentPlayer = undefined;
-                    nicknameInput.select();
-                    nicknameInput.focus();
-                    return;
-                }
-                return;
-            }
-            playerByUid.set(uid, player);
-            uidByPlayer.set(player, uid);
-            playersOrderedByEntrance.push(player);
-            playersAcknowledgedEventStart.set(player, Date.now());
-            let score = initialScore()[currentEvent.mode];
-            addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, false);
-            if (currentEvent.mode === "factory") {
-                // Potentially show/hide description for the bot
-                showEventInfo();
-            } else if (currentEvent.mode === "duo" && !currentEventEnded && !currentPairing.includes(player)) {
-                let i = currentPairing.indexOf(null);
-                if (i === -1) {
-                    currentPairing.push(player, null);
-                    if (uid === currentUid) {
-                        showEventInfo();
-                        isCurrentPlayersTurn = true;
-                        playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
-                    }
-                } else {
-                    currentPairing[i] = player;
-                    if (uid === currentUid) {
-                        currentTeammate = currentPairing[i ^ 1];
-                        showEventInfo();
-                        isCurrentPlayersTurn = false; // Wait for the "enter-response" to tell
-                        waitingForEnterResponse = true;
-                        responseTimeoutHandle = setTimeout(() => {
-                            responseTimeoutHandle = undefined;
-                            if (!waitingForEnterResponse) {
-                                return;
-                            }
-                            waitingForEnterResponse = false;
-                            if (!suggestedToKickTeammate) {
-                                suggestedToKickTeammate = true;
-                                kickPlayer(currentTeammate);
-                            }
-                        }, MESSAGE_PENDING_TIME_LIMIT);
-                    } else if (currentPlayer === currentPairing[i ^ 1]) {
-                        currentTeammate = player;
-                        showEventInfo();
-                        connection.send({
-                            type: "enter-response",
-                            to: uid,
-                            eventId: currentEvent.id,
-                            score: currentScore,
-                            game: currentGameIndex,
-                            board: currentBoardState,
-                            isNewPlayersTurn: !isCurrentPlayersTurn,
-                            dueTime: isCurrentPlayersTurn ? playerTurnDueTime : undefined,
-                            teamStartTime: currentPlayerStartTime,
-                        });
-                        if (!isCurrentPlayersTurn) {
-                            playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
-                        }
-                    }
-                    populateMiniLeaderboardItem(player, document.querySelector("#mini-leaderboard-item-" + playerIds.get(player)));
-                    populateMiniLeaderboardItem(currentPairing[i ^ 1], document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPairing[i ^ 1])));
-                }
-            }
-            if (uid !== currentUid) {
-                return;
-            }
-            localStorage.setItem("nickname", currentPlayer);
-            document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
-            if (currentEvent.mode !== "factory") {
-                target = currentEvent.targets[currentGameIndex];
-            } else {
-                target = generateTarget(currentEvent);
-            }
-            currentPlayerDone = false;
-            currentPlayerWaitingForOthers = false;
-            currentScore = score;
-            updateBanner();
-            if (currentEventEnded) {
-                showEventTransitionPanel(true);
-                return;
-            }
-            if (playerByUid.has(currentUid)) {
-                playAudio("event-start");
-            }
-            showOrHidePanel(undefined);
-            currentBoardState = [];
-            loadBoardState(currentBoardState, { fastAnimation: true });
-            if (currentEvent.opener) {
-                let v = judge(currentEvent.opener, target);
-                currentBoardState = [[currentEvent.opener, v]];
-                loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                updateCurrentScore(v, true);
-                currentPlayerStartTime = Date.now();
-            }
-            updateBanner();
-        });
-        connection.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, dueTime, teamStartTime }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (eventId !== currentEvent.id || to !== currentUid || !waitingForEnterResponse) {
-                return;
-            }
-            waitingForEnterResponse = false;
-            clearTimeout(responseTimeoutHandle);
-            responseTimeoutHandle = undefined;
-            console.assert(playerByUid.get(uid) === currentTeammate, uid, currentTeammate);
-            currentScore = score;
-            currentPlayerStartTime = teamStartTime;
-            currentGameIndex = game;
-            target = currentEvent.targets[currentGameIndex];
-            currentBoardState = board;
-            loadBoardState(currentBoardState, { fastAnimation: true });
-            isCurrentPlayersTurn = isNewPlayersTurn;
-            playerTurnDueTime = dueTime || Date.now() + DUO_GUESS_TIME_LIMIT;
-        });
-        connection.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (playerByUid.size ? playerByUid.has(currentUid) : uid === currentUid) {
-                showOrHidePanel(undefined);
-            }
-            upcomingEventSuggestedStarted = false;
-            upcomingEventStartTime = undefined;
-            currentPlayerStartTime = undefined;
-
-            let startingNewGameInCircuit = eventId >= 1;
-            if (eventId !== (startingNewGameInCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
-                return;
-            }
-            playersAcknowledgedEventStart.clear();
-            playersGuessedInCurrentEvent.clear();
-            connection.send({ type: "event-start-ack", eventId });
-            if (playerByUid.has(currentUid)) {
-                playAudio("event-start");
-            }
-            if (startingNewGameInCircuit) {
-                ++currentGameIndex;
-                for (let d of playerLeaderboardData.values()) {
-                    d.verdict = "";
-                    d.numGuesses = 0;
-                    d.done = false;
-                }
-                for (let [p, i] of playerIds) {
-                    populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
-                }
-            } else {
-                currentEvent = upcomingEvent;
-                upcomingEvent = newUpcomingEvent;
-                currentGameIndex = 0;
-                currentScore = initialScore()[currentEvent.mode];
-
-                if (currentEvent.mode !== "duo") {
-                    currentTeammate = undefined;
-                    isCurrentPlayersTurn = undefined;
-                    playerTurnDueTime = undefined;
-                    currentPairing = undefined;
-                } else {
-                    pairing = pairing.filter((p) => playerIds.has(p));
-                    for (let p of playersOrderedByEntrance) {
-                        if (!pairing.includes(p)) {
-                            pairing.push(p);
-                        }
-                    }
-                    console.assert(pairing.length === playerIds.size, pairing, playerIds);
-                    if (pairing.length & 1) {
-                        pairing.push(null);
-                    }
-                    currentPairing = pairing;
-                    let i = pairing.indexOf(currentPlayer);
-                    currentTeammate = pairing[i ^ 1];
-                    isCurrentPlayersTurn = (i & 1) === 0;
-                }
-
-                for (let p of playerIds.keys()) {
-                    playerLeaderboardData.set(p, { score: initialScore()[currentEvent.mode], scoreText: formatScore(currentEvent.mode, currentScore), verdict: "", numGuesses: 0 });
-                }
-                for (let [p, i] of playerIds) {
-                    populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
-                }
-                currentUnownedFactoryGame = unownedGame;
-            }
-            currentEvent.endTime = undefined;
-            setEventToEndIn(initialEventTimeLimit());
-            if (currentEvent.mode === "duo") {
-                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
-            }
-            showEventInfo();
-            currentEventStartTime = Date.now();
-            if (currentEvent.mode !== "factory") {
-                target = currentEvent.targets[currentGameIndex];
-            } else {
-                target = generateTarget(currentEvent);
-            }
-            currentPlayerDone = false;
-            currentPlayerWaitingForOthers = false;
-            currentEventEnded = false;
-            if (playerByUid.has(currentUid)) {
-                currentGuess = "";
-                currentBoardState = [];
-                loadBoardState(currentBoardState, { noAnimation: true });
-                if (currentEvent.opener) {
-                    let v = judge(currentEvent.opener, target);
-                    currentBoardState = [[currentEvent.opener, v]];
-                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                    updateCurrentScore(v, true);
-                    if (currentEvent.mode === "sprint") {
-                        currentPlayerStartTime = Date.now();
-                    }
-                }
-                updateBanner();
-            }
-        });
-        connection.on("event-start-ack", ({ uid, eventId }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
-                return;
-            }
-            playersAcknowledgedEventStart.set(playerByUid.get(uid), Date.now());
-        });
-        let kickPlayer = (player) => connection.send({ type: "kick", player });
+        let kickPlayer = (player) => room.send({ type: "kick", player });
         let checkForZombies = (kick = false) => {
             let now = Date.now();
             let firstGuessTimeLimit = currentEvent.opener ? 180000 : 60000; // Players started the event but didn't guess in this time are treated as zombies
@@ -2980,7 +3390,7 @@
             let activePlayers = playerByUid.size - zombies;
             if (playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
                 if (!currentEventSuggestedEnded) {
-                    connection.send({ type: "event-end", eventId: currentEvent.id });
+                    room.send({ type: "event-end", eventId: currentEvent.id });
                     currentEventSuggestedEnded = true;
                 }
             } else if (playersDone >= activePlayers / 2) {
@@ -2997,66 +3407,6 @@
                 }, checkAgainIn);
             }
         };
-        connection.on("score", ({ uid, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame, auto }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
-                return;
-            }
-            let player = playerByUid.get(uid);
-            if (numGuesses > !!currentEvent.opener && !auto) {
-                playersGuessedInCurrentEvent.add(player);
-            }
-            if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
-                // Speed component needs to wait until Score event to be added, in case of a race
-                let playersSolved = 0;
-                for (let { verdict } of playerLeaderboardData.values()) {
-                    playersSolved += verdict === "GGGGG";
-                }
-                let speed = Math.max(6 - playersSolved, 0);
-                score[0] += speed;
-                score[4] -= speed;
-                if (uid === currentUid) {
-                    currentScore[0] += speed;
-                    currentScore[4] -= speed;
-                }
-                scoreText = formatScore(currentEvent.mode, score);
-            }
-            playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
-            if (uid !== currentUid) {
-                // Avoid spoiling the verdict while slow animation for chosen opener is playing
-                if (!(numGuesses === 1 && currentEvent.opener && animatingRows.has(0))) {
-                    populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
-                }
-            }
-            checkEventEndOrAcceleration();
-            if (currentEvent.mode === "factory") {
-                // Load next board only now for up-to-date unowned game
-                if (uid === currentUid) {
-                    waitingForScoreAfterGuessInFactory = undefined;
-                    factoryGameToShowAfterAnimation = currentUnownedFactoryGame;
-                    if (!isBoardAnimating()) {
-                        loadUnownedFactoryGameState();
-                    }
-                }
-                currentUnownedFactoryGame = newUnownedGame;
-            }
-            if (currentEvent.mode === "duo" && playerIds.has(currentPlayer)) {
-                if (!(game === currentGameIndex && numGuesses - 1 === currentBoardState.length)) {
-                    return;
-                }
-                if (player !== currentTeammate) {
-                    return;
-                }
-                let v = judge(guess, target);
-                currentBoardState.push([guess, v]);
-                loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
-                isCurrentPlayersTurn = true;
-                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
-            }
-        });
         let showEventTransitionPanel = (playerJustEntered = false) => {
             let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
             let sortedPlayers = sortMiniLeaderboard();
@@ -3260,59 +3610,10 @@
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
                 }
-                connection.send(m);
+                room.send(m);
             }
         };
         setInterval(updateCountdownInPanel, 83);
-        connection.on("event-end", ({ uid, eventId }) => {
-            if (ignoredUids.has(uid)) {
-                return;
-            }
-            if (eventId !== currentEvent.id || currentEventEnded) {
-                return;
-            }
-            let showingTargetAlert = false;
-            if (playerByUid.has(currentUid)) {
-                playAudio("event-end");
-                if (!currentPlayerDone) {
-                    showAlert(`"${target}"`);
-                    showingTargetAlert = true;
-                    setTimeout(() => {
-                        if (currentEventEnded) {
-                            showEventTransitionPanel();
-                        }
-                    }, 2000);
-                }
-            }
-            let isUpcomingEventNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
-            if (playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
-                checkForZombies(true);
-            }
-            clearTimeout(repeatedZombieCheckTimeoutHandle);
-            currentEventEnded = true;
-            currentEventSuggestedEnded = false;
-            upcomingEventStartTime = Date.now() + (isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
-            isCurrentPlayersTurn = undefined;
-            playerTurnDueTime = undefined;
-            currentUnownedFactoryGame = undefined;
-            factoryGameToShowAfterAnimation = undefined;
-            updateBanner();
-            if (currentEvent.mode === "circuit") {
-                for (let [p, { done, score }] of playerLeaderboardData) {
-                    if (!done) {
-                        score[2] += -(Date.now() - currentEventStartTime);
-                        ++score[3];
-                        score[1] = score[2] / score[3];
-                        if (p === currentPlayer) {
-                            currentScore = score.concat();
-                        }
-                    }
-                }
-            }
-            if (!showingTargetAlert && !isBoardAnimating() && !postGameDelayTimeout) {
-                showEventTransitionPanel();
-            }
-        });
 
         let shuffled = (a) => {
             a = [...a];
