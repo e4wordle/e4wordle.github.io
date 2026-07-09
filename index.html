@@ -763,7 +763,7 @@
             max-height: 48px;
         }
         .mobile-button {
-            padding: 8px;
+            padding: 8px 5px;
         }
         #chat {
             width: unset;
@@ -799,7 +799,8 @@
             width: min(384px, calc(100vw - 56px));
             height: fit-content;
         }
-        body.showing-help {
+        body.showing-help,
+        body.showing-settings {
             #panel {
                 display: unset;
             }
@@ -1622,14 +1623,15 @@
         };
         // Returns a description for why the guess didn't fit Hard Mode
         let checkHardMode = (nextGuess) => {
-            for (let [pastGuess, verdict] of currentBoardState) {
+            for (let i = currentBoardState.length - 1; i >= 0; --i) {
+                let [pastGuess, verdict] = currentBoardState[i];
                 let pastCounts = {};
-                for (let i = 0; i < 5; ++i) {
-                    let letter = pastGuess.charAt(i);
-                    if (verdict.charAt(i) === "G" && nextGuess.charAt(i) !== letter) {
-                        return `${["First", "Second", "Third", "Fourth", "Last"][i]} letter must be "${letter}"`;
+                for (let j = 0; j < 5; ++j) {
+                    let letter = pastGuess.charAt(j);
+                    if (verdict.charAt(j) === "G" && nextGuess.charAt(j) !== letter) {
+                        return `${["First", "Second", "Third", "Fourth", "Last"][j]} letter must be "${letter}"`;
                     }
-                    if (verdict.charAt(i) !== "B") {
+                    if (verdict.charAt(j) !== "B") {
                         pastCounts[letter] = (pastCounts[letter] || 0) + 1;
                     }
                 }
@@ -1642,7 +1644,8 @@
             }
             return undefined;
         };
-        let updateCurrentScore = (verdict, stillHardMode, options = { shouldPlayAudio: true, markAsAuto: false }) => {
+        let updateCurrentScore = (verdict, stillHardMode, options = {}) => {
+            options = { shouldPlayAudio: true, markAsAuto: false, ...options };
             if (options.shouldPlayAudio) {
                 playAudio("score");
             }
@@ -1818,18 +1821,46 @@
             }
             loadBoardState(currentBoardState, { boardPassAnimation: true });
         };
+        let saveGameState = () => {
+            // localStorage.removeItem("gameState");
+            if (!playerByUid.has(currentUid)) {
+                return;
+            }
+            let state = {};
+            switch (currentEvent.mode) {
+                case "factory": {
+                    break;
+                }
+                case "duo": {
+                    break;
+                }
+                case "circuit": {
+                    // FIXME: We shouldn't require the (eventId + gameIndex) to match. Matching just eventId should be fine (they'll keep the score but will miss some games, rather than completely starting from 0 points)
+                    break;
+                }
+                case "sprint": {
+                    // FIXME: When loading, maybe just add 5s per guess from last recorded time as a heuristic
+                    break;
+                }
+                case "golf": {
+                    break;
+                }
+            }
+            // FIXME: When loading, check if game is finished to load next game (in case the player left right at post-game)
+            // FIXME: Find out what it looks like on mobile to exit the browser (leaving it in background)
+            // FIXME: Maybe we should also save when local score updates, not just on room connection's {enter, event-start, score}, in case network goes down for the user to still be able to save their progress?
+        };
         let postGameDelayTimeout; // A delay after a completed game to prevent the transition panel popping up too quickly
         let loadedState = [];
-        let loadBoardState = (
-            state,
+        let loadBoardState = (state, options = {}) => {
             options = {
                 fastAnimation: false,
                 noAnimation: false,
                 keyboardColorState: undefined,
                 boardPassAnimation: false,
                 leaderboardOverride: undefined,
-            },
-        ) => {
+                ...options,
+            };
             state = structuredClone(state);
             loadedState = structuredClone(state);
             let { fastAnimation, noAnimation, keyboardColorState, boardPassAnimation } = options;
@@ -1948,7 +1979,7 @@
                             };
                             loadNextGame();
                         },
-                        alertShown ? 2000 : fastAnimation ? 833 : 1833,
+                        alertShown ? (fastAnimation ? 1000 : 2000) : fastAnimation ? 833 : 1833,
                     );
                 };
 
@@ -2255,7 +2286,7 @@
                 newOpener = "";
             } else if (!indexByTarget.has(newOpener)) {
                 let i = !!currentEvent + !!upcomingEvent;
-                let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8);
+                let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
                 newOpener = newUseOpener ? targets[Math.floor(Math.random() * targets.length)] : "";
             }
             let newEvent = structuredClone(FORCED_EVENT_PARAMS || { mode: newMode, opener: newOpener });
@@ -2314,7 +2345,7 @@
                         The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit() / 60000} minutes after half of the players have solved 9 Wordles.
                         <h4>Mechanics</h4>
                         <p>Each player starts with an assigned random Wordle. An extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the factory in motion.</p>
-                        ${playerByUid.size <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
+                        ${playerByUid.size + !playerByUid.has(currentUid) <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
                     `;
                     break;
                 }
@@ -2432,7 +2463,7 @@
                 case "sprint": {
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same set of 9 Wordles. First to do so wins!</p>
+                        <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
                         ${hardModeDescription}
                         <h4>Ranking</h4>
                         Players are ranked by:
@@ -2476,7 +2507,7 @@
         let playButton = document.querySelector("#play-button");
         let generateTarget = (event = undefined) => {
             if (isDev && (DEFAULT_NUM_GAMES !== 9 || numGames() !== 9)) {
-                return "THEIR";
+                return "SAINT";
             }
             event ||= currentEvent;
             let i = indexByTarget.get(event.opener) || NaN;
@@ -2540,22 +2571,22 @@
         const MAX_PLAYERS_PER_ROOM = 12;
         const MAX_USERS_PER_ROOM = 36;
         const MAX_REPS_IN_LOBBY = 36;
-        let createConnection = (token, command = undefined) =>
-            connect(SOCKET_ID_PREFIX + token, {
+        let createConnection = (token, command = undefined) => {
+            return connect(SOCKET_ID_PREFIX + token, {
                 announce: true,
                 echo: true,
                 list: true,
-                as: command && `${Math.random()}-${command}`,
+                as: `${Math.random()}-${command || ""}`,
                 // https://ittysockets.com/reservations
                 joinKey: "WuwHlms1QSOU79NtTpfgPyVZ", // spell-checker: disable-line
             });
+        };
         let getConnectionInitialCommand = (alias) => alias && alias.slice(alias.indexOf("-") + 1);
         let room;
         let _lobby;
         Object.defineProperty(window, "lobby", {
             get: () => _lobby,
             set: (x) => {
-                log("set??", !!x);
                 _lobby = x;
             },
         });
@@ -2597,18 +2628,16 @@
             });
         };
         let closeLobbyConnection = () => {
-            log("close lobby", !!lobby);
             lobby?.close();
             lobby = undefined;
         };
         let reps;
         let representRoom = () => {
             // A representative (rep) is the oldest user in a spacious room that may appear in the lobby to greet new users. A lobby can hold up to a certain number of reps. If the lobby is unfilled, more users from a room (ordered by join time) may also become rep to fill the lobby, to improve availability (in case the oldest user becomes a zombie)
-            if (currentRoomId >= 1) {
+            if (currentRoomId > 1) {
                 // Treat as private room
                 return;
             }
-            log("rep", !!lobby);
             if (lobby) {
                 return;
             }
@@ -2619,7 +2648,6 @@
             let usersWaitingForSearchResponse = new Set();
             let pendingNewUsers = [];
             let handleNewUser = (uid, command) => {
-                log("new user", uid, command);
                 switch (command) {
                     case "rep": {
                         reps.push(uid);
@@ -2647,7 +2675,6 @@
                             if (!usersWaitingForSearchResponse.has(uid)) {
                                 return;
                             }
-                            log("search-response sent", uid, currentRoomId, !!lobby);
                             lobby.send({
                                 type: "search-response",
                                 to: uid,
@@ -2673,7 +2700,9 @@
                         }
                         usersWaitingForRepResponse.delete(uid);
                         for (let r of reps) {
-                            lobby.send({ type: "kick-rep", to: r });
+                            if (r !== uid) {
+                                lobby.send({ type: "kick-rep", to: r });
+                            }
                         }
                         for (let u of pendingNewUsers) {
                             handleNewUser(...u);
@@ -2733,7 +2762,6 @@
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
 
         let joinRoom = (roomId, autoEnter = false) => {
-            log("joinRoom", roomId, autoEnter);
             currentRoomId = roomId;
             if (room) {
                 room.close();
@@ -2748,13 +2776,12 @@
             };
             let uidsWaitingForJoinResponse = new Set();
             let representIfOldest = () => {
-                log("represent?", playerByUid, currentUid, usersOrderedByJoinTime);
                 if (playerByUid.size < MAX_PLAYERS_PER_ROOM && currentUid === usersOrderedByJoinTime[0]) {
                     representRoom();
                 }
             };
             // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
-            room.on("join", ({ uid, alias, total: newTotalUids, self, users: onlineUids }) => {
+            room.on("join", ({ uid, alias, total: newTotalUids, self }) => {
                 totalUsers = newTotalUids - ignoredUids.size;
                 usersOrderedByJoinTime.push(uid);
                 currentRoomId = roomId;
@@ -2903,7 +2930,6 @@
                     return;
                 }
                 usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== uid);
-                log("left", uid, usersOrderedByJoinTime);
                 totalUsers = newTotalUids - ignoredUids.size;
                 let leavingPlayer = playerByUid.get(uid);
                 if (leavingPlayer) {
@@ -3014,9 +3040,7 @@
                         populateMiniLeaderboardItem(currentPairing[i ^ 1], document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPairing[i ^ 1])));
                     }
                 }
-                log("full now?!!", playerByUid.size, MAX_PLAYERS_PER_ROOM, lobby);
                 if (lobby && playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
-                    log("full now!!!");
                     closeLobbyConnection();
                 }
                 if (uid !== currentUid) {
@@ -3053,6 +3077,7 @@
                     updateCurrentScore(v, true);
                     currentPlayerStartTime = Date.now();
                 }
+                saveGameState();
                 updateBanner();
             });
             room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, dueTime, teamStartTime }) => {
@@ -3170,6 +3195,7 @@
                             currentPlayerStartTime = Date.now();
                         }
                     }
+                    saveGameState();
                     updateBanner();
                 } else if (uid === currentUid) {
                     // Current player is the only user who just pressed play to started the first event
@@ -3243,6 +3269,9 @@
                     updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
                     isCurrentPlayersTurn = true;
                     playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                }
+                if (uid === currentUid) {
+                    saveGameState();
                 }
             });
             room.on("event-end", ({ uid, eventId }) => {
@@ -3482,7 +3511,7 @@
                 return;
             }
             let panel = document.querySelector("#between-events-panel");
-            panel.querySelector("#between-events-panel-title").textContent = sortedPlayers[0][0] + " Won!";
+            panel.querySelector("#between-events-panel-title").textContent = sortedPlayers[0][0] + " won!";
             panel.querySelector("#between-events-panel-description").textContent = formatEventName(currentEvent);
             let anyHardMode = false;
             for (let i = 0; i < 3; ++i) {
