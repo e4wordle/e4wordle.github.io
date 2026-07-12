@@ -1238,6 +1238,7 @@
         let currentEvent;
         let upcomingEvent;
         let currentGameIndex;
+        let currentEventEndTime;
         let currentEventStartTime;
         let currentPlayerStartTime; // For Sprint event where players are timed against themselves
         let upcomingEventStartTime;
@@ -1527,13 +1528,13 @@
                               if (postGame) {
                                   return "";
                               }
-                              let time = currentEvent.endTime - Date.now();
+                              let time = currentEventEndTime - Date.now();
                               let time2 = currentPlayerDone ? Infinity : playerTurnDueTime - Date.now();
                               let t = Math.min(time, time2);
                               return currentEventEnded || t >= 60000 ? "" : formatTime(t + 999);
                           })()
                         : (() => {
-                              let time = currentEvent.endTime - Date.now();
+                              let time = currentEventEndTime - Date.now();
                               return time >= (currentEvent.mode === "circuit" ? 30000 : 60000) ? "" : formatTime(time + 999);
                           })();
             rightText = `${rightText}`;
@@ -1544,12 +1545,12 @@
         let lastProgressBarUpdateTime = Date.now();
         let progressBar = document.querySelector("#progress-bar-foreground");
         let updateProgressBar = () => {
-            if (!currentEvent?.endTime || currentEventEnded || !lastProgressBarUpdateTime) {
+            if (!currentEventEndTime || currentEventEnded || !lastProgressBarUpdateTime) {
                 lastProgressBarUpdateTime = Date.now();
                 lastProgressBarWidth = 100;
                 return;
             }
-            if (Date.now() >= currentEvent.endTime) {
+            if (Date.now() >= currentEventEndTime) {
                 if (currentEventSuggestedEnded) {
                     return;
                 }
@@ -1559,7 +1560,7 @@
                 updateBanner();
                 return;
             }
-            let newWidth = (lastProgressBarWidth * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - lastProgressBarUpdateTime);
+            let newWidth = (lastProgressBarWidth * (currentEventEndTime - Date.now())) / (currentEventEndTime - lastProgressBarUpdateTime);
             progressBar.style.width = `${newWidth}%`;
             lastProgressBarWidth = newWidth;
             lastProgressBarUpdateTime = Date.now();
@@ -1610,7 +1611,7 @@
         };
         setInterval(checkDuoModeAutoGuess, 500);
         let setEventToEndIn = (remaining) => {
-            currentEvent.endTime = Math.min(currentEvent.endTime || Infinity, Date.now() + remaining);
+            currentEventEndTime = Math.min(currentEventEndTime || Infinity, Date.now() + remaining);
             lastProgressBarUpdateTime = Date.now();
         };
         /** @type {HTMLElement} */
@@ -2846,12 +2847,13 @@
                             leaderboard: [...playerLeaderboardData],
                             chat: chatMessages,
                             currentEvent,
+                            end: currentEventEndTime - Date.now(),
+                            start: currentEventStartTime - Date.now(),
                             game: currentEvent?.mode === "circuit" ? currentGameIndex : 0,
                             pairing: currentPairing,
-                            startTime: currentEventStartTime,
                             ended: currentEventEnded,
                             upcomingEvent,
-                            upcomingStart: upcomingEventStartTime,
+                            upcomingStart: upcomingEventStartTime - Date.now(),
                             unownedGame: currentUnownedFactoryGame,
                         });
                     },
@@ -2862,7 +2864,7 @@
                     closeLobbyConnection();
                 }
             });
-            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, game, pairing, startTime, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
+            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
                 if (!uidsWaitingForJoinResponse.has(to)) {
                     return;
                 }
@@ -2888,18 +2890,19 @@
                 }
                 ignoredUids = new Set(ignore);
                 currentEvent = newCurrentEvent;
-                currentEventStartTime = startTime;
+                currentEventEndTime = Date.now() + end;
+                currentEventStartTime = Date.now() + start;
                 currentGameIndex = game;
                 currentPairing = pairing;
                 currentEventEnded = ended;
                 upcomingEvent = newUpcomingEvent;
-                upcomingEventStartTime = upcomingStart;
+                upcomingEventStartTime = Date.now() + upcomingStart;
                 currentUnownedFactoryGame = unownedGame;
                 playersAcknowledgedEventStart = new Map(playersAck);
                 playersGuessed = new Set(playersGuessed);
                 showEventInfo();
                 if (currentEventStartTime) {
-                    lastProgressBarWidth = (100 * (currentEvent.endTime - Date.now())) / (currentEvent.endTime - currentEventStartTime);
+                    lastProgressBarWidth = (100 * (currentEventEndTime - Date.now())) / (currentEventEndTime - currentEventStartTime);
                     lastProgressBarUpdateTime = Date.now();
                 }
                 playerByUid = new Map(players);
@@ -3029,8 +3032,8 @@
                                 game: currentGameIndex,
                                 board: currentBoardState,
                                 isNewPlayersTurn: !isCurrentPlayersTurn,
-                                dueTime: isCurrentPlayersTurn ? playerTurnDueTime : undefined,
-                                teamStartTime: currentPlayerStartTime,
+                                due: isCurrentPlayersTurn ? playerTurnDueTime - Date.now() : undefined,
+                                teamStart: currentPlayerStartTime - Date.now(),
                             });
                             if (!isCurrentPlayersTurn) {
                                 playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
@@ -3080,7 +3083,7 @@
                 saveGameState();
                 updateBanner();
             });
-            room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, dueTime, teamStartTime }) => {
+            room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, due, teamStart }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -3092,13 +3095,13 @@
                 responseTimeoutHandle = undefined;
                 console.assert(playerByUid.get(uid) === currentTeammate, uid, currentTeammate);
                 currentScore = score;
-                currentPlayerStartTime = teamStartTime;
+                currentPlayerStartTime = Date.now() + teamStart;
                 currentGameIndex = game;
                 target = currentEvent.targets[currentGameIndex];
                 currentBoardState = board;
                 loadBoardState(currentBoardState, { fastAnimation: true });
                 isCurrentPlayersTurn = isNewPlayersTurn;
-                playerTurnDueTime = dueTime || Date.now() + DUO_GUESS_TIME_LIMIT;
+                playerTurnDueTime = Date.now() + (due || DUO_GUESS_TIME_LIMIT);
             });
             room.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
                 if (ignoredUids.has(uid)) {
@@ -3167,7 +3170,7 @@
                     }
                     currentUnownedFactoryGame = unownedGame;
                 }
-                currentEvent.endTime = undefined;
+                currentEventEndTime = undefined;
                 setEventToEndIn(initialEventTimeLimit());
                 if (currentEvent.mode === "duo") {
                     playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
