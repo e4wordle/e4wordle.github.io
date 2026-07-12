@@ -627,6 +627,11 @@
         overflow: auto;
         margin-bottom: -12px;
         padding-bottom: 12px;
+        th,
+        td {
+            height: 17px;
+            width: 61px;
+        }
     }
     body.showing-help {
         #help {
@@ -1027,7 +1032,7 @@
     <div id="start-panel" style="width: 228px; /* display: none */">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
-            <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges.</em></h2>
+            <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
             <div style="height: 4px"></div>
             <input id="nickname-input" style="font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
             <button id="play-button" style="font-size: 16px; padding: 4px; min-width: 88px" disabled>Loading...</button>
@@ -1242,7 +1247,10 @@
             };
         };
         const DUO_GUESS_TIME_LIMIT = 30000;
-        let initialEventTimeLimit = () => ((currentEvent || upcomingEvent).mode === "circuit" ? 120000 : 900000);
+        let initialEventTimeLimit = () => {
+            let m = (currentEvent || upcomingEvent).mode;
+            return m === "circuit" ? 120000 : m === "sprint" ? 600000 : 900000;
+        };
         let acceleratedTimeLimit = () => ((currentEvent || upcomingEvent).mode === "circuit" ? 30000 : 180000);
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
@@ -1661,7 +1669,7 @@
                     break;
                 }
                 case "circuit": {
-                    let roundScore = verdict === "GGGGG" && 3 * (gameParams().guessLimit + 1 - currentBoardState.length);
+                    let roundScore = verdict === "GGGGG" && 2 * (gameParams().guessLimit + 1 - currentBoardState.length);
                     // Speed component needs to wait until Score event to be added, in case of a race
                     currentScore[0] += roundScore;
                     currentScore[4] = -roundScore;
@@ -2376,27 +2384,27 @@
                                     <tbody>
                                         <tr>
                                             <td>1</td>
-                                            <td>18</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>15</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
                                             <td>12</td>
                                         </tr>
                                         <tr>
+                                            <td>2</td>
+                                            <td>10</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3</td>
+                                            <td>8</td>
+                                        </tr>
+                                        <tr>
                                             <td>4</td>
-                                            <td>9</td>
+                                            <td>6</td>
                                         </tr>
                                         <tr>
                                             <td>5</td>
-                                            <td>6</td>
+                                            <td>4</td>
                                         </tr>
                                         <tr>
                                             <td>6</td>
-                                            <td>3</td>
+                                            <td>2</td>
                                         </tr>
                                         <tr>
                                             <td>Unsolved</td>
@@ -2439,7 +2447,7 @@
                                             <td>1</td>
                                         </tr>
                                         <tr>
-                                            <td>7<sup>th</sup> or later</td>
+                                            <td>Later</td>
                                             <td>0</td>
                                         </tr>
                                     </tbody>
@@ -3726,13 +3734,13 @@
             }
             b.sort((a, b) => b[0] - a[0]);
             for (let i = b.length - 1; i >= 1; --i) {
-                if (b[i][0] < b[0][0] - 2 || (b[i][0] <= bestHardModeH && nonHardModeGuesses.has(b[i][1]))) {
+                if (b[i][0] < b[0][0] - (board.length ? 2 : 1) || (b[i][0] <= bestHardModeH && nonHardModeGuesses.has(b[i][1]))) {
                     b.splice(i, 1);
                     continue;
                 }
             }
             for (let i = 1; i < b.length; ++i) {
-                b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(36, b[i][0] - b[0][0]);
+                b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(board.length ? 36 : 49, b[i][0] - b[0][0]);
             }
             b[0][0] = 1;
             let r = Math.random() * b.at(-1)[0];
