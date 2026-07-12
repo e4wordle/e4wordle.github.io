@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://e4wordle.github.io/sitemap.xml

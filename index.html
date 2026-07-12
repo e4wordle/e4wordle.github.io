@@ -1,8 +1,14 @@
 <meta charset="UTF-8" />
+<title>e4! Wordle – Competitive Multiplayer Wordle Challenges</title>
+<meta name="description" content="Experience Wordle in five unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
+<meta property="og:title" content="e4! Wordle" />
+<meta property="og:description" content="Multiplayer Wordle with rotating competitive challenges" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://e4wordle.github.io/" />
 <link rel="icon" href="/favicon.png" type="image/png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -923,7 +929,6 @@
     }
 </style>
 <style id="dark-theme-styles"></style>
-<title>e4! Wordle</title>
 <div id="main" tabindex="0">
     <div id="game-keyboard-container">
         <div id="game">
@@ -1021,8 +1026,8 @@
 <div id="panel">
     <div id="start-panel" style="width: 228px; /* display: none */">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
-            <div style="font-size: 20px; font-weight: 600"><span class="glow-green">e4! Wordle</span></div>
-            <div style="opacity: 0.5"><em>Battle with other avid Wordlers in rotating challenges</em></div>
+            <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
+            <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges.</em></h2>
             <div style="height: 4px"></div>
             <input id="nickname-input" style="font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
             <button id="play-button" style="font-size: 16px; padding: 4px; min-width: 88px" disabled>Loading...</button>
@@ -1036,34 +1041,18 @@
             <div id="leaderboard-your-place" style="font-size: 16px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
-            <div id="leaderboard-delta">(42 points behind <b>EAS</b>)</div>
+            <div id="leaderboard-delta"></div>
             <p id="next-round-countdown"><span>Next</span> game starts in <b>10</b></p>
         </div>
     </div>
     <div id="between-events-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
-            <div class="glow-green" id="between-events-panel-title" style="font-weight: bold; font-size: 16px">So-and-so Won!</div>
-            <div id="between-events-panel-description" style="opacity: 0.5">"SWIFT" Sprint</div>
+            <div class="glow-green" id="between-events-panel-title" style="font-weight: bold; font-size: 16px"></div>
+            <div id="between-events-panel-description" style="opacity: 0.5"></div>
             <div style="display: flex">
-                <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px">
-                    <div>EAS</div>
-                    <div>
-                        1:13
-                        <div style="font-size: 11px">9/9 solved</div>
-                    </div>
-                </div>
-                <div class="final-leaderboard-top-item rank-1">
-                    <div>lorem ipsum lorem ipsum</div>
-                    <div>144 pts</div>
-                    <span class="material-symbols-outlined">asterisk</span>
-                </div>
-                <div class="final-leaderboard-top-item rank-3" style="margin-top: 24px">
-                    <div>e4 e5 Ke2 1-0</div>
-                    <div>
-                        32 guesses
-                        <div style="font-size: 11px">9/9 solved</div>
-                    </div>
-                </div>
+                <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px"></div>
+                <div class="final-leaderboard-top-item rank-1"></div>
+                <div class="final-leaderboard-top-item rank-3" style="margin-top: 24px"></div>
             </div>
             <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
             <div class="divider"></div>
@@ -2264,7 +2253,8 @@
         document.body.classList.add("showing-panel");
         let nicknameInput = document.querySelector("#nickname-input");
         if (isDev) {
-            document.querySelector("title").textContent += " (Dev)";
+            let el = document.querySelector("title");
+            el.textContent = `(Dev) ${el.textContent}`;
         } else {
             nicknameInput.value = localStorage.getItem("nickname") || "";
         }
