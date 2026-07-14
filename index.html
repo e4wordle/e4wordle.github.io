@@ -1137,7 +1137,7 @@
         <hr />
         <div class="settings-row">
             <div class="settings-label">Sound effects</div>
-            <div class="settings-toggle-container" id="settings-item-mute">
+            <div class="settings-toggle-container" id="settings-item-sound">
                 <div class="key settings-toggle">Off</div>
                 <div class="key settings-toggle">On</div>
             </div>
@@ -1180,7 +1180,7 @@
                     version: SETTINGS_VERSION,
                     theme: "auto",
                     alwaysHardMode: false,
-                    mute: false,
+                    sound: false,
                     accessibleColors: false,
                 };
             }
@@ -1243,17 +1243,17 @@
             accessibleColorsEl.children[0].addEventListener("click", toggleAccessibleColors(false));
             accessibleColorsEl.children[1].addEventListener("click", toggleAccessibleColors(true));
 
-            let muteEl = document.querySelector("#settings-item-mute");
-            let toggleMute = (value) => () => {
-                settings.mute = value;
+            let soundEl = document.querySelector("#settings-item-sound");
+            let toggleSound = (value) => () => {
+                settings.sound = value;
                 localStorage.setItem("settings", JSON.stringify(settings));
-                setButtonColor(muteEl.children[0], value);
-                setButtonColor(muteEl.children[1], !value);
+                setButtonColor(soundEl.children[0], !value);
+                setButtonColor(soundEl.children[1], value);
             };
-            toggleMute(!!settings.mute)();
-            muteEl.children[0].addEventListener("click", toggleMute(true));
-            muteEl.children[1].addEventListener("click", () => {
-                toggleMute(false)();
+            toggleSound(!!settings.sound)();
+            soundEl.children[0].addEventListener("click", toggleSound(false));
+            soundEl.children[1].addEventListener("click", () => {
+                toggleSound(true)();
                 playAudio("score");
             });
         };
@@ -1268,7 +1268,7 @@
                 a.preload = "auto";
             }
             return (name) => {
-                if (settings.mute) {
+                if (!settings.sound) {
                     return;
                 }
                 let a = audio[name];
@@ -2685,7 +2685,7 @@
         let reps;
         let representRoom = () => {
             // A representative (rep) is the oldest user in a spacious room that may appear in the lobby to greet new users. A lobby can hold up to a certain number of reps. If the lobby is unfilled, more users from a room (ordered by join time) may also become rep to fill the lobby, to improve availability (in case the oldest user becomes a zombie)
-            if (currentRoomId > 1) {
+            if (currentRoomId >= 2) {
                 // Treat as private room
                 return;
             }
@@ -2940,8 +2940,8 @@
                 }
                 ignoredUids = new Set(ignore);
                 currentEvent = newCurrentEvent;
-                currentEventEndTime = Date.now() + end;
-                currentEventStartTime = Date.now() + start;
+                currentEventEndTime = Date.now() + parseFloat(end);
+                currentEventStartTime = Date.now() + parseFloat(start);
                 currentGameIndex = game;
                 currentPairing = pairing;
                 currentEventEnded = ended;
@@ -2989,6 +2989,14 @@
                     removePlayer(leavingPlayer);
                 }
                 representIfOldest();
+                if (!playerIds.size) {
+                    // Only spectators remain; restore to as if first event hasn't started
+                    currentEvent = undefined;
+                    showEventInfo();
+                    currentEventEndTime = undefined;
+                    currentEventStartTime = undefined;
+                    progressBar.style.width = "100%";
+                }
             });
             room.on("kick", ({ uid, player }) => {
                 if (ignoredUids.has(uid)) {
@@ -3384,6 +3392,11 @@
                 if (playerByUid.size < MAX_PLAYERS_PER_ROOM && usersOrderedByJoinTime.indexOf(currentUid) <= count) {
                     representRoom();
                 }
+            });
+            room.on("close", () => {
+                requestAnimationFrame(() => {
+                    location.reload();
+                });
             });
         };
         let preferredRoomIdFromURLParam = +urlParams.get("room") || 0;
