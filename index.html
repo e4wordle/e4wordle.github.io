@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 <style id="main-styles">
     :root {
-        --main-background-color: #f7f7f7;
+        --main-background-color: hsl(0, 0%, 95.8%);
     }
     b {
         font-weight: 600;
@@ -40,7 +40,7 @@
         font-size: 14px;
     }
     input {
-        border: 1px solid #bbb;
+        border: 1px solid hsl(0, 0%, 58.3%);
         outline: none;
         flex: 1;
         padding: 2px;
@@ -190,7 +190,7 @@
     .letter {
         opacity: 0.375;
         margin: 2px;
-        border: 2px solid #a2a2a2;
+        border: 2px solid hsl(0, 0%, 62.5%);
         width: 48px;
         height: 48px;
         font-size: 26px;
@@ -278,7 +278,7 @@
     #banner {
         min-height: 24px;
         margin: 4px 0;
-        opacity: 0.583;
+        opacity: 0.625;
         font-size: 14px;
         display: flex;
         align-items: center;
@@ -313,7 +313,7 @@
         min-height: 30px;
         margin: 2px;
         border: 2px solid transparent;
-        background: #ddd;
+        background: hsl(0, 0%, 83.3%);
         font-size: 14px;
         font-weight: bold;
         display: flex;
@@ -356,19 +356,19 @@
     }
     .black {
         border-color: transparent;
-        background: #888;
+        background: hsl(0, 0%, 56.2%);
         color: #fff;
     }
     .yellow {
         border-style: dashed;
-        border-color: #a59a00;
-        background: #dcbb01;
+        border-color: hsl(48.8deg, 93.8%, 33.3%);
+        background: hsl(48.8deg, 93.8%, 41.7%);
         color: #fff;
     }
     .green {
         border-style: solid;
-        border-color: #397752;
-        background: #57ac78;
+        border-color: hsl(146.2deg, 50%, 31.2%);
+        background: hsl(146.2deg, 50%, 43.8%);
         color: #fff;
     }
     .letter.mini {
@@ -415,7 +415,7 @@
     .info-section {
         position: fixed;
         padding: 8px;
-        opacity: 0.583;
+        opacity: 0.625;
         display: flex;
         flex-direction: column-reverse;
         gap: var(--info-section-gap);
@@ -491,13 +491,13 @@
         background: #00000040;
     }
     .player-join-message {
-        color: #0a7734;
+        color: hsl(146.2deg, 100%, 16.7%);
     }
     .player-leave-message {
-        color: #6a2609;
+        color: hsl(18.8deg, 100%, 16.7%);
     }
     .player-won-message {
-        color: #776608;
+        color: hsl(48.8deg, 100%, 16.7%);
     }
     #info-section-1 {
         right: 0;
@@ -575,7 +575,7 @@
         display: none;
     }
     .glow-green {
-        filter: drop-shadow(0 0 4px #67e898c0);
+        filter: drop-shadow(0 0 4px hsl(146.2deg, 100%, 75%));
     }
     body.showing-panel {
         #panel {
@@ -711,16 +711,16 @@
         }
     }
     .final-leaderboard-top-item.rank-1 {
-        border-color: #948011;
-        background: #e9c915;
+        border-color: hsl(48.8deg, 83.3%, 33.3%);
+        background: hsl(48.8deg, 83.3%, 50%);
     }
     .final-leaderboard-top-item.rank-2 {
-        border-color: #9c9c9c;
-        background: #d2d2d2;
+        border-color: hsl(0, 0%, 58.3%);
+        background: hsl(0, 0%, 75%);
     }
     .final-leaderboard-top-item.rank-3 {
-        border-color: #957759;
-        background: #d9ad82;
+        border-color: hsl(18.8deg, 50%, 37.5%);
+        background: hsl(18.8deg, 50%, 58.3%);
     }
     #final-leaderboard-hard-mode-description {
         font-size: 12px;
@@ -755,6 +755,9 @@
         }
         .key.wide .material-symbols-outlined {
             font-size: 24px;
+        }
+        .key:active {
+            transform: scale(1.333);
         }
         .info-section {
             position: unset;
@@ -823,15 +826,15 @@
     }
     body.accessible-colors {
         .yellow {
-            border-color: #3c70a1;
-            background: #66a2de;
+            border-color: hsl(207.5deg, 62.5%, 41.7%);
+            background: hsl(207.5deg, 62.5%, 58.3%);
         }
         .green {
-            border-color: #873a14;
-            background: #be5019;
+            border-color: hsl(18.8deg, 75%, 25%);
+            background: hsl(18.8deg, 75%, 41.7%);
         }
         .glow-green {
-            filter: drop-shadow(0 0 4px #e88858c0);
+            filter: drop-shadow(0 0 4px hsl(18.8deg, 100%, 75%));
         }
     }
     /* Not implemented yet */
@@ -844,16 +847,16 @@
 <style id="auto-theme-styles">
     @media (prefers-color-scheme: dark) {
         :root {
-            --main-background-color: #111;
+            --main-background-color: hsl(0, 0%, 6.3%);
         }
         button {
-            background: #444;
+            background: hsl(0, 0%, 25%);
             color: #fff;
         }
         input {
-            background: #333;
+            background: hsl(0, 0%, 8.3%);
             color: #fff;
-            border-color: #555;
+            border-color: hsl(0, 0%, 41.7%);
         }
         input::placeholder {
             color: #ffffff80;
@@ -866,28 +869,28 @@
             color: #fff;
         }
         .letter {
-            border-color: #494949;
+            border-color: hsl(0, 0%, 33.3%);
         }
         .key {
-            background: #555;
+            background: hsl(0, 0%, 33.3%);
         }
         .key:active {
             filter: drop-shadow(0 0 8px #000);
         }
         .black {
             border-color: transparent;
-            background: #333;
+            background: hsl(0, 0%, 16.7%);
         }
         .key.black {
-            color: #888;
+            color: hsl(0, 0%, 50%);
         }
         .yellow {
-            border-color: #d2b200;
-            background: #9c9101;
+            border-color: hsl(48.8deg, 87.5%, 39.6%);
+            background: hsl(48.8deg, 87.5%, 31.2%);
         }
         .green {
-            border-color: #57ac78;
-            background: #3d885b;
+            border-color: hsl(146.2deg, 50%, 45.8%);
+            background: hsl(146.2deg, 50%, 33.3%);
         }
         .key.yellow,
         .key.green {
@@ -900,20 +903,17 @@
         #alert {
             filter: drop-shadow(0 2px 8px #000);
         }
-        #chat-input {
-            border: 1px solid #777;
-        }
         #chat-expand-button:hover {
             background: #ffffff20;
         }
         .player-join-message {
-            color: #67e898;
+            color: hsl(146.2deg, 100%, 66.7%);
         }
         .player-leave-message {
-            color: #e89673;
+            color: hsl(18.8deg, 100%, 66.7%);
         }
         .player-won-message {
-            color: #e2c418;
+            color: hsl(48.8deg, 100%, 66.7%);
         }
         #progress-bar-background {
             background: #ffffff40;
@@ -927,36 +927,34 @@
         #help,
         #settings {
             filter: drop-shadow(0 8px 32px #000);
-            background: #222;
+            background: hsl(0, 0%, 12.5%);
         }
         .glow-green {
-            filter: drop-shadow(0 0 2px #67e898);
+            filter: drop-shadow(0 0 2px hsl(146.2deg, 100%, 75%));
         }
         .final-leaderboard-top-item.rank-1 {
-            border-color: #d3b716;
-            background: #9a850d;
+            border-color: hsl(48.8deg, 83.3%, 50%);
+            background: hsl(48.8deg, 83.3%, 33.3%);
         }
         .final-leaderboard-top-item.rank-2 {
-            border-color: #c8c8c8;
-            background: #7b7b7b;
+            border-color: hsl(0, 0%, 66.7%);
+            background: hsl(0, 0%, 47.9%);
         }
         .final-leaderboard-top-item.rank-3 {
-            border-color: #cca37a;
-            background: #896d52;
+            border-color: hsl(18.8deg, 50%, 50%);
+            background: hsl(18.8deg, 50%, 33.3%);
         }
         body.accessible-colors {
             .yellow {
-                /* border-color: #546baf;
-                background: #3b4e8c; */
-                border-color: #89b3de;
-                background: #5c89b6;
+                border-color: hsl(207.5deg, 50%, 58.3%);
+                background: hsl(207.5deg, 50%, 41.7%);
             }
             .green {
-                border-color: #e75f1b;
-                background: #b24814;
+                border-color: hsl(18.8deg, 75%, 50%);
+                background: hsl(18.8deg, 75%, 33.3%);
             }
             .glow-green {
-                filter: drop-shadow(0 0 2px #e88858);
+                filter: drop-shadow(0 0 2px hsl(18.8deg, 100%, 75%));
             }
         }
     }
