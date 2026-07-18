@@ -39,6 +39,9 @@
             sans-serif;
         font-size: 14px;
     }
+    button {
+        color: black;
+    }
     input {
         border: 1px solid hsl(0, 0%, 58.3%);
         outline: none;
@@ -344,8 +347,7 @@
         right: calc(-50% - 3px);
     }
     .key:active {
-        transform: scale(1.167);
-        filter: drop-shadow(0 0 2px #00000080);
+        filter: drop-shadow(0 0 2px #00000080) brightness(112.5%);
         z-index: 1;
     }
     .key.wide {
@@ -756,9 +758,6 @@
         .key.wide .material-symbols-outlined {
             font-size: 24px;
         }
-        .key:active {
-            transform: scale(1.333);
-        }
         .info-section {
             position: unset;
         }
@@ -875,7 +874,7 @@
             background: hsl(0, 0%, 33.3%);
         }
         .key:active {
-            filter: drop-shadow(0 0 8px #000);
+            filter: drop-shadow(0 0 8px #000) brightness(112.5%);
         }
         .black {
             border-color: transparent;
@@ -1055,13 +1054,21 @@
 </div>
 <div id="alert">Phew</div>
 <div id="panel">
-    <div id="start-panel" style="width: 228px; /* display: none */">
+    <div id="start-panel" style="width: 252px; /* display: none */">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
             <div style="height: 4px"></div>
-            <input id="nickname-input" style="font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
-            <button id="play-button" style="font-size: 16px; padding: 4px; min-width: 88px" disabled>Loading...</button>
+            <input id="nickname-input" style="width: calc(100% - 4px); font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
+            <div style="display: flex; gap: 8px; width: 100%">
+                <button id="play-button" class="key green" style="font-size: 16px; font-weight: 600" disabled>Loading...</button>
+                <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
+                    <div style="display: flex; flex-direction: column; gap: 2px">
+                        <b>Invite</b>
+                        <div style="font-size: 10px">Create private room</div>
+                    </div>
+                </button>
+            </div>
         </div>
     </div>
     <div id="between-games-panel" style="display: none">
@@ -1152,16 +1159,14 @@
     const APP_VERSION = Date.parse("2026-07-06 19:40");
 
     {
-        let isDev = location.href.includes("localhost") || location.href.includes("192.168");
-        let FORCED_EVENT_PARAMS;
-        // FORCED_EVENT_PARAMS = isDev && { mode: "circuit", opener: "SWIFT" };
+        let urlParams = new URLSearchParams(location.search);
+        let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
         let log = (...args) => {
             let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
             let replacer = (k, v) => (v instanceof Set || v instanceof Map ? [...v] : v);
             console.assert(0, "#=#", time, site, "\n", JSON.stringify(args, replacer));
         };
-        let urlParams = new URLSearchParams(location.search);
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
         let numGames = () => (isDev || totalUsers === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
@@ -1868,35 +1873,6 @@
             }
             loadBoardState(currentBoardState, { boardPassAnimation: true });
         };
-        let saveGameState = () => {
-            // localStorage.removeItem("gameState");
-            if (!playerByUid.has(currentUid)) {
-                return;
-            }
-            let state = {};
-            switch (currentEvent.mode) {
-                case "factory": {
-                    break;
-                }
-                case "duo": {
-                    break;
-                }
-                case "circuit": {
-                    // FIXME: We shouldn't require the (eventId + gameIndex) to match. Matching just eventId should be fine (they'll keep the score but will miss some games, rather than completely starting from 0 points)
-                    break;
-                }
-                case "sprint": {
-                    // FIXME: When loading, maybe just add 5s per guess from last recorded time as a heuristic
-                    break;
-                }
-                case "golf": {
-                    break;
-                }
-            }
-            // FIXME: When loading, check if game is finished to load next game (in case the player left right at post-game)
-            // FIXME: Find out what it looks like on mobile to exit the browser (leaving it in background)
-            // FIXME: Maybe we should also save when local score updates, not just on room connection's {enter, event-start, score}, in case network goes down for the user to still be able to save their progress?
-        };
         let postGameDelayTimeout; // A delay after a completed game to prevent the transition panel popping up too quickly
         let loadedState = [];
         let loadBoardState = (state, options = {}) => {
@@ -2338,7 +2314,7 @@
                 let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
                 newOpener = newUseOpener ? targets[Math.floor(Math.random() * targets.length)] : "";
             }
-            let newEvent = structuredClone(FORCED_EVENT_PARAMS || { mode: newMode, opener: newOpener });
+            let newEvent = { mode: newMode, opener: newOpener };
             if (newMode !== "factory") {
                 let i = indexByTarget.get(newOpener);
                 newEvent.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
@@ -2578,15 +2554,22 @@
             }
             return { target, board };
         };
-        let handlePlayButtonClick = () => {
+        let validateNickname = () => {
             currentPlayer = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
             if (currentPlayer.toLowerCase() === "rattington") {
                 alert("Please choose another nickname. (You're not a bot!)");
                 nicknameInput.focus();
-                return;
+                currentPlayer = "";
+                return true;
             }
             if (!currentPlayer) {
                 nicknameInput.focus();
+                return true;
+            }
+            return false;
+        };
+        let handlePlayButtonClick = () => {
+            if (validateNickname()) {
                 return;
             }
             if (playerByUid.size) {
@@ -2683,7 +2666,7 @@
         let reps;
         let representRoom = () => {
             // A representative (rep) is the oldest user in a spacious room that may appear in the lobby to greet new users. A lobby can hold up to a certain number of reps. If the lobby is unfilled, more users from a room (ordered by join time) may also become rep to fill the lobby, to improve availability (in case the oldest user becomes a zombie)
-            if (currentRoomId >= 2) {
+            if (currentRoomId >= 1) {
                 // Treat as private room
                 return;
             }
@@ -2813,12 +2796,17 @@
         let joinRoom = (roomId, autoEnter = false) => {
             currentRoomId = roomId;
             if (room) {
+                room.remove("close", room._closeHandler);
                 room.close();
                 usersOrderedByJoinTime = [];
             }
             room = createConnection(roomId);
             room.on("error", (data) => console.error("CONN ERROR (ROOM)", data));
             let handleRoomFull = (autoEnter) => {
+                if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
+                    alert("This room is full.");
+                    privateRoomButton.style.display = "";
+                }
                 room.close();
                 room = undefined;
                 searchAndJoinRoom(autoEnter);
@@ -3107,9 +3095,6 @@
                 }
                 localStorage.setItem("nickname", currentPlayer);
                 document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
-                // let url = new URL(location.href);
-                // url.searchParams.set("room", roomId);
-                // history.pushState(null, "", url);
                 if (currentEvent.mode !== "factory") {
                     target = currentEvent.targets[currentGameIndex];
                 } else {
@@ -3136,7 +3121,6 @@
                     updateCurrentScore(v, true);
                     currentPlayerStartTime = Date.now();
                 }
-                saveGameState();
                 updateBanner();
             });
             room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, due, teamStart }) => {
@@ -3254,7 +3238,6 @@
                             currentPlayerStartTime = Date.now();
                         }
                     }
-                    saveGameState();
                     updateBanner();
                 } else if (uid === currentUid) {
                     // Current player is the only user who just pressed play to started the first event
@@ -3330,7 +3313,6 @@
                     playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
                 }
                 if (uid === currentUid) {
-                    saveGameState();
                 }
             });
             room.on("event-end", ({ uid, eventId }) => {
@@ -3391,18 +3373,42 @@
                     representRoom();
                 }
             });
-            room.on("close", () => {
+            room._closeHandler = () => {
                 requestAnimationFrame(() => {
                     location.reload();
                 });
-            });
+            };
+            room.on("close", room._closeHandler);
         };
         let preferredRoomIdFromURLParam = +urlParams.get("room") || 0;
+        let privateRoomButton = document.querySelector("#private-room-button");
         if (preferredRoomIdFromURLParam) {
             joinRoom(preferredRoomIdFromURLParam);
+            privateRoomButton.style.display = "none";
         } else {
             searchAndJoinRoom();
         }
+
+        privateRoomButton.addEventListener("click", () => {
+            if (validateNickname()) {
+                return;
+            }
+            closeLobbyConnection();
+            let roomId = Math.random() + 1;
+            let url = new URL(location.href);
+            url.searchParams.set("room", roomId);
+            history.pushState(null, "", url);
+            joinRoom(roomId, true);
+            navigator.clipboard.writeText(location.href).then(() => {
+                setTimeout(() => {
+                    showAlert("Room link copied");
+                }, 250);
+            });
+        });
+        // Force the browser back button to reload the page, in case a private room was created
+        addEventListener("popstate", () => {
+            location.reload();
+        });
 
         let readyToPlay = () => {
             playButton.disabled = false;
