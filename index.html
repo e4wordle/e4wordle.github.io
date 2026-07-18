@@ -1,6 +1,6 @@
 <meta charset="UTF-8" />
 <title>e4! Wordle – Competitive Multiplayer Wordle Challenges</title>
-<meta name="description" content="Experience Wordle in five unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
+<meta name="description" content="Experience Wordle in six unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
@@ -91,7 +91,6 @@
         flex-direction: column;
         justify-content: center;
         margin-top: 32px;
-        padding: 0 4px;
     }
     @keyframes Pop {
         0%,
@@ -175,8 +174,25 @@
             opacity: 0.5;
         }
     }
+    #board-container {
+        margin: auto;
+        padding: 8px 0;
+    }
+    #board-container.has-opponent {
+        display: flex;
+        padding-left: 34px;
+        gap: 24px;
+        .letter:not(.mini) {
+            width: min(calc(100vw / 8), 48px);
+        }
+    }
     #board {
         margin: auto;
+        width: fit-content;
+    }
+    #opponent-board {
+        transform: scale(0.707);
+        margin-left: -6.2%;
     }
     .guess {
         display: flex;
@@ -280,7 +296,7 @@
     }
     #banner {
         min-height: 24px;
-        margin: 4px 0;
+        margin: 4px;
         opacity: 0.625;
         font-size: 14px;
         display: flex;
@@ -291,6 +307,9 @@
     .banner-section {
         display: flex;
         align-items: center;
+    }
+    #banner-left-text span {
+        font-weight: normal;
     }
     .banner-icon {
         font-size: 19px;
@@ -417,6 +436,7 @@
     .info-section {
         position: fixed;
         padding: 8px;
+        background: var(--main-background-color);
         opacity: 0.625;
         display: flex;
         flex-direction: column-reverse;
@@ -469,6 +489,9 @@
     #chat {
         position: relative;
     }
+    .auto-blur-section {
+        padding-top: 48px;
+    }
     .auto-blur-section .blurry-top {
         position: absolute;
         top: -4px;
@@ -514,9 +537,23 @@
     }
     #mini-leaderboard-container {
         margin-bottom: calc(-1 * var(--info-section-gap));
+        .auto-blur-section {
+            max-height: 50vh;
+        }
+    }
+    #mini-leaderboard-container.short {
+        .auto-blur-section {
+            max-height: calc(100vh - ((100vh - 120px) / 2 + 120px) - 54px - 48px); /* Just below opponent's board */
+        }
     }
     #mini-leaderboard {
         padding-bottom: var(--info-section-gap);
+    }
+    #mini-leaderboard.me-only {
+        .guess,
+        .mini-leaderboard-item-guess-count {
+            display: none;
+        }
     }
     .mini-leaderboard-item {
         display: flex;
@@ -586,6 +623,11 @@
         #game-keyboard-container {
             opacity: 0.417;
             pointer-events: none;
+        }
+    }
+    #panel > .optional-hidden {
+        .panel-optional {
+            display: none;
         }
     }
     #help {
@@ -791,6 +833,13 @@
         #widget-container-1 {
             display: none;
         }
+        #mini-leaderboard-container .auto-blur-section {
+            max-height: unset !important;
+            padding-top: 0;
+            .blurry-top {
+                display: none;
+            }
+        }
         #mini-leaderboard {
             display: flex;
             flex-direction: column;
@@ -798,6 +847,7 @@
             width: fit-content;
             min-width: 264px;
             max-width: 100%;
+            margin: auto;
         }
         .mini-leaderboard-item.hidden {
             .mini-leaderboard-item-rank-info {
@@ -821,6 +871,14 @@
                 opacity: 0.417;
                 pointer-events: none;
             }
+        }
+    }
+    @media (max-width: 576px) {
+        #board-container.has-opponent {
+            overflow: scroll;
+            padding-left: 24px;
+            gap: 12px;
+            max-width: calc(100vw - 24px);
         }
     }
     body.accessible-colors {
@@ -962,7 +1020,10 @@
 <div id="main" tabindex="0">
     <div id="game-keyboard-container">
         <div id="game">
-            <div id="board"></div>
+            <div id="board-container">
+                <div id="board"></div>
+                <div id="opponent-board"></div>
+            </div>
             <div id="banner">
                 <div class="banner-section">
                     <b id="banner-left-text"></b>
@@ -1007,7 +1068,7 @@
             </div>
         </div>
         <div id="chat" style="display: flex; flex-direction: column; font-size: 14px">
-            <div class="auto-blur-section" id="chat-section" style="max-height: 37.5vh; overflow: auto; padding: 48px 0 12px">
+            <div class="auto-blur-section" id="chat-section" style="max-height: 37.5vh; overflow: auto; padding-bottom: 12px">
                 <div class="blurry-top">
                     <div class="expand-button" id="chat-expand-button" style="width: 100%; text-align: center">
                         <span class="material-symbols-outlined" style="font-size: 24px">arrow_drop_up</span>
@@ -1045,14 +1106,14 @@
             <div id="progress-bar-foreground" style="width: 100%"></div>
         </div>
         <div id="mini-leaderboard-container">
-            <div class="auto-blur-section" style="max-height: 50vh; overflow: auto; padding: 48px 0 0">
+            <div class="auto-blur-section" style="overflow: auto">
                 <div class="blurry-top"></div>
                 <div id="mini-leaderboard" style="display: flex; flex-direction: column; gap: 2px; padding-right: 4px"></div>
             </div>
         </div>
     </div>
 </div>
-<div id="alert">Phew</div>
+<div id="alert"></div>
 <div id="panel">
     <div id="start-panel" style="width: 252px; /* display: none */">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
@@ -1073,14 +1134,23 @@
     </div>
     <div id="between-games-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
-            <h3 style="font-weight: normal">Leaderboard <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Game <span id="between-games-panel-round-id">0</span></h3>
+            <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">0</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
             <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding-left: 10px"></div>
             <div class="divider"></div>
             <div id="leaderboard-your-place" style="font-size: 16px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
             <div id="leaderboard-delta"></div>
-            <p id="next-round-countdown"><span>Next</span> game starts in <b>10</b></p>
+            <p id="next-game-countdown"><span>Next</span> game starts in <b>10</b></p>
+        </div>
+    </div>
+    <div class="optional-hidden" id="between-duels-panel" style="display: none">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+            <div class="divider panel-optional"></div>
+            <div class="panel-optional" id="between-duels-your-place" style="font-size: 16px">
+                You are in <b>3<sup>rd</sup></b> place
+            </div>
+            <p id="next-duel-countdown"></p>
         </div>
     </div>
     <div id="between-events-panel" style="display: none">
@@ -1295,32 +1365,44 @@
             return {
                 "factory": [0, 0], // [solved, -time]
                 "duo": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
+                "arena": [0, 0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, solved, played, hasStreak, -roundScore, -roundTime, playedOnHardMode]
                 "circuit": [0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, playedOnHardMode]
                 "sprint": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
                 "golf": [0, 0, 0, 0, 0, 1], // [solved, played, -guesses, -time, currentGameGuesses, playedOnHardMode]
             };
         };
         const DUO_GUESS_TIME_LIMIT = 30000;
+        const ARENA_POST_PAIRING_TIMEOUT = 3000;
         let initialEventTimeLimit = () => {
             let m = (currentEvent || upcomingEvent).mode;
             return m === "circuit" ? 120000 : m === "sprint" ? 600000 : 900000;
         };
-        let acceleratedTimeLimit = () => ((currentEvent || upcomingEvent).mode === "circuit" ? 30000 : 180000);
+        let acceleratedTimeLimit = () => {
+            let m = (currentEvent || upcomingEvent).mode;
+            return m === "circuit"
+                ? 31500 // Add a bit of delay for the flipping animation of last guess
+                : m === "arena"
+                  ? 60000
+                  : 180000;
+        };
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
         let currentEventSuggestedEnded = false;
         let currentEventEnded = false;
         let upcomingEventSuggestedStarted = false;
-        let currentTeammate;
+        let currentPartner; // For Duo or Arena
         let isCurrentPlayersTurn;
         let playerTurnDueTime;
         let currentPairing;
-        let suggestedToKickTeammate;
+        let suggestedToKickTeammate; // For Duo
+        let playersWaitingForPairing; // For Arena
+        let upcomingPairingTime;
+        let numArenaPairingsDone;
         let currentUnownedFactoryGame;
         let factoryGameToShowAfterAnimation;
         let waitingForScoreAfterGuessInFactory;
         let waitingForScoreAfterGuessInFactoryTimeoutHandle;
-        let gameParams = () => ({ guessLimit: 6, fastAnimation: ["duo", "sprint"].includes(currentEvent?.mode), hardMode: !!currentEvent?.opener });
+        let gameParams = () => ({ guessLimit: 6, fastAnimation: ["duo", "arena", "sprint"].includes(currentEvent?.mode), hardMode: !!currentEvent?.opener });
         let formatShortScoreDescription = (mode, score) => {
             switch (mode) {
                 case "factory": {
@@ -1332,6 +1414,14 @@
                     let [solved, played, time, playedOnHardMode] = score;
                     time *= -1;
                     return "in " + formatTime(time, true);
+                }
+                case "arena": {
+                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return `with ${eventScore} ${score === 1 ? "point" : "points"}`;
                 }
                 case "circuit": {
                     let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
@@ -1374,6 +1464,14 @@
                     }
                     return `${solved}/${played}`;
                 }
+                case "arena": {
+                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return eventScore.toString();
+                }
                 case "circuit": {
                     let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
                     averageTime *= -1;
@@ -1381,7 +1479,6 @@
                     roundScore *= -1;
                     roundTime *= -1;
                     return eventScore.toString();
-                    break;
                 }
                 case "sprint": {
                     let [solved, played, time, playedOnHardMode] = score;
@@ -1426,9 +1523,12 @@
         let currentGuess = "";
 
         let animatingRows = new Set();
+        let opponentAnimatingRows = new Set();
         let isBoardAnimating = () => animatingRows.size > 0;
+        let boardContainerEl = document.querySelector("#board-container");
         let boardEl = document.querySelector("#board");
-        let setBoardSize = (size) => {
+        let setBoardSize = (size, hasOpponentBoard = false) => {
+            boardContainerEl.classList.toggle("has-opponent", hasOpponentBoard);
             boardEl.innerHTML = "";
             for (let i = 0; i < size; ++i) {
                 let guessEl = boardEl.appendChild(document.createElement("div"));
@@ -1439,6 +1539,19 @@
                 }
             }
             animatingRows.clear();
+            let opponentBoardEl = document.querySelector("#opponent-board");
+            opponentBoardEl.innerHTML = "";
+            for (let i = 0; i < size; ++i) {
+                let guessEl = opponentBoardEl.appendChild(document.createElement("div"));
+                guessEl.classList.add("guess");
+                guessEl.id = `opponent-guess-${i}`;
+                for (let j = 0; j < 5; ++j) {
+                    guessEl.innerHTML += `<div class="letter" id="opponent-letter-${i}-${j}"></div>`;
+                }
+            }
+            opponentAnimatingRows.clear();
+            opponentBoardEl.style.display = hasOpponentBoard ? "" : "none";
+            document.querySelector("#mini-leaderboard-container").classList.toggle("short", hasOpponentBoard);
         };
         let initializeKeyboard = () => {
             /** @type {Map<number, [string, boolean]>} */
@@ -1564,17 +1677,18 @@
             if (!playerByUid.has(currentUid)) {
                 return;
             }
+            let mode = currentEvent.mode;
             let postGame = postGameDelayTimeout || currentBoardState.at(-1)?.at(1) === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
-            bannerLeftTextEl.textContent = currentEvent.mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
-            let leftIcon = currentPlayerWaitingForOthers ? (currentEvent.mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
+            bannerLeftTextEl.innerHTML = mode === "arena" ? (currentPartner ? `<span>Duel vs</span> ${currentPartner}` : "") : mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
+            let leftIcon = mode === "arena" && playerLeaderboardData.get(currentPartner)?.score?.at(5) ? "mode_heat" : currentPlayerWaitingForOthers ? (mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
             bannerLeftIconEl.textContent = leftIcon;
-            bannerLeftInnerTextEl.innerHTML = leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentTeammate || BOT_NAME}</b>` : "";
+            bannerLeftInnerTextEl.innerHTML = currentPlayerWaitingForOthers && leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentPartner || BOT_NAME}</b>` : "";
             let rightText =
-                currentEvent.mode === "golf"
+                mode === "golf"
                     ? -currentScore[2] + currentScore[4]
-                    : currentEvent.mode === "sprint"
+                    : mode === "sprint"
                       ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
-                      : currentEvent.mode === "duo"
+                      : mode === "duo"
                         ? (() => {
                               if (postGame) {
                                   return "";
@@ -1586,11 +1700,11 @@
                           })()
                         : (() => {
                               let time = currentEventEndTime - Date.now();
-                              return time >= (currentEvent.mode === "circuit" ? 30000 : 60000) ? "" : formatTime(time + 999);
+                              return time >= (mode === "circuit" ? 30000 : 60000) ? "" : formatTime(time + 999);
                           })();
             rightText = `${rightText}`;
             bannerRightTextEl.innerHTML = rightText;
-            bannerRightIconEl.textContent = rightText ? (currentEvent.mode === "golf" ? "edit_square" : "timer") : "";
+            bannerRightIconEl.textContent = rightText ? (mode === "golf" ? "edit_square" : "timer") : "";
         };
         let lastProgressBarWidth = 100;
         let lastProgressBarUpdateTime = Date.now();
@@ -1622,7 +1736,7 @@
             if (currentPlayerDone || currentEvent?.mode !== "duo" || !playerIds.has(currentPlayer) || currentBoardState.length === gameParams().guessLimit || currentBoardState.at(-1)?.at(1) === "GGGGG") {
                 return;
             }
-            let playAndSend = (guess) => {
+            let guessAndSend = (guess) => {
                 currentGuess = "";
                 let g = guess || botPlay();
                 let v = judge(g, target);
@@ -1634,28 +1748,28 @@
             };
             if (isCurrentPlayersTurn === false) {
                 let d = Date.now();
-                if (!currentTeammate) {
+                if (!currentPartner) {
                     let guessesMade = currentBoardState.length || 4; // Make the first guess also faster
                     if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 2500) && (playerByUid.size <= 1 || d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
                         isCurrentPlayersTurn = true;
-                        playAndSend(undefined);
+                        guessAndSend(undefined);
                     }
                 } else {
                     if (!suggestedToKickTeammate && d >= playerTurnDueTime + MESSAGE_PENDING_TIME_LIMIT) {
                         suggestedToKickTeammate = true;
-                        kickPlayer(currentTeammate);
+                        kickPlayer(currentPartner);
                     }
                 }
                 return;
             }
             if (isCurrentPlayersTurn === true && Date.now() >= playerTurnDueTime) {
-                if (currentTeammate && !currentBoardState.length && !playersGuessedInCurrentEvent.has(currentPlayer)) {
+                if (currentPartner && !currentBoardState.length && !playersGuessedInCurrentEvent.has(currentPlayer)) {
                     isCurrentPlayersTurn = undefined;
                     kickPlayer(currentPlayer);
                     return;
                 }
                 let g = currentBoardState.length && currentBoardState.at(-1)[0];
-                playAndSend(g);
+                guessAndSend(g);
                 isCurrentPlayersTurn = false;
                 return;
             }
@@ -1724,7 +1838,7 @@
                 }
                 case "circuit": {
                     let roundScore = verdict === "GGGGG" && 2 * (gameParams().guessLimit + 1 - currentBoardState.length);
-                    // Speed component needs to wait until Score event to be added, in case of a race
+                    // Speed component needs to wait until Score event to be added, in case of a race condition (two players solve the word before either player receiving their echoed Score message)
                     currentScore[0] += roundScore;
                     currentScore[4] = -roundScore;
                     if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
@@ -1992,6 +2106,9 @@
                                     let v = judge(currentEvent.opener, target);
                                     currentBoardState.push([currentEvent.opener, v]);
                                     loadBoardState([], { fastAnimation: true, keyboardColorState: fastAnimation ? currentBoardState : undefined, leaderboardOverride: playerLeaderboardData.get(currentPlayer) });
+                                    if (fastAnimation) {
+                                        colorKeyboard(1, currentBoardState);
+                                    }
                                     loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                                     updateCurrentScore(v, true);
                                 } else {
@@ -2157,6 +2274,7 @@
                 if (playerByUid.size) {
                     shouldShowLeaderboard = !shouldShowLeaderboard;
                 }
+                document.querySelector("#mini-leaderboard").classList.toggle("me-only", !shouldShowLeaderboard);
                 for (let [player, id] of playerIds) {
                     document.querySelector(`#mini-leaderboard-item-${id}`).classList.toggle("hidden", !shouldShowLeaderboard);
                 }
@@ -2166,7 +2284,7 @@
                 document.body.scrollTo({ top: window.innerHeight * 0.75, behavior: "smooth" });
             });
         };
-        const X_SYMBOL = "×";
+        const X_SYMBOL = '<span class="material-symbols-outlined" style="font-size: 116.7%">close</span>';
         let populateMiniLeaderboardItem = (player, leaderBoardItem, overrideWith = undefined) => {
             let playerId = playerIds.get(player);
             let { score, scoreText, verdict, numGuesses } = overrideWith || playerLeaderboardData.get(player);
@@ -2177,7 +2295,7 @@
                 if (currentEvent?.mode !== "duo" || player === currentPlayer) {
                     return false;
                 }
-                if (player === currentTeammate) {
+                if (player === currentPartner) {
                     return true;
                 }
                 let i = currentPairing.indexOf(player);
@@ -2186,9 +2304,22 @@
             leaderBoardItem.classList.toggle("hidden", !shouldShowLeaderboard || delegatedToTeammate);
             let [rankInfo, playerNameEl, scoreEl, guessEl, guessCountEl] = leaderBoardItem.children;
             rankInfo.innerHTML = `<span class="material-symbols-outlined">arrow_forward</span>`;
-            playerNameEl.innerHTML = currentEvent.mode === "duo" ? `${player} + ${currentPairing[currentPairing.indexOf(player) ^ 1] || BOT_NAME}` : player;
+            playerNameEl.textContent = (() => {
+                let partner = () => currentPairing[currentPairing.indexOf(player) ^ 1];
+                if (currentEvent.mode === "duo") {
+                    return `${player} + ${partner() || BOT_NAME}`;
+                }
+                if (currentEvent.mode === "arena") {
+                    let p = partner() || BOT_NAME; // FIXME
+                    if (p) {
+                        return `${player} (vs ${p})`;
+                    }
+                }
+                return player;
+            })();
+            playerNameEl.title = playerNameEl.textContent;
             scoreEl.textContent = scoreText;
-            let numGuessesText = numGuesses === gameParams().guessLimit && verdict !== "GGGGG" ? X_SYMBOL : `${numGuesses}`;
+            let guessCountHTML = currentEvent.mode === "circuit" ? (numGuesses === gameParams().guessLimit && verdict !== "GGGGG" ? X_SYMBOL : `${numGuesses}`) : currentEvent.mode === "arena" ? X_SYMBOL.replace("close", "mode_heat") : "";
             for (let i = 0; i < 5; ++i) {
                 let letterEl = guessEl.children[i];
                 // letterEl.classList.toggle("failed", numGuessesText === X_SYMBOL);
@@ -2197,9 +2328,15 @@
                 letterEl.classList.toggle("yellow", verdict.charAt(i) === "Y");
                 letterEl.classList.toggle("green", verdict.charAt(i) === "G");
             }
-            guessEl.style.display = currentEvent.mode === "duo" ? "none" : "";
-            guessCountEl.textContent = numGuessesText;
-            guessCountEl.style.display = currentEvent.mode === "circuit" ? "" : "none";
+            guessEl.style.display = ["duo", "arena"].includes(currentEvent.mode) ? "none" : "";
+            guessCountEl.innerHTML = guessCountHTML;
+            guessCountEl.style.display =
+                currentEvent.mode === "circuit"
+                    ? ""
+                    : currentEvent.mode === "arena"
+                      ? "unset" // Override me-only setting
+                      : "none";
+            guessCountEl.style.visibility = currentEvent.mode === "arena" && !score[5] ? "hidden" : "unset";
         };
         let addPlayer = (player, notify, score, scoreText, verdict, numGuesses, done) => {
             if (!player) {
@@ -2297,6 +2434,9 @@
         nicknameInput.focus();
         let createEvent = () => {
             let allowedModes = new Set(["factory", "duo", "circuit", "sprint", "golf"]);
+            if (isDev) {
+                allowedModes.add("arena");
+            }
             let newMode = urlParams.get("mode");
             if (!allowedModes.has(newMode)) {
                 if (currentEvent?.mode) {
@@ -2337,6 +2477,7 @@
         const MODE_ICONS = {
             "factory": "conveyor_belt",
             "duo": "group",
+            "arena": "stadium",
             "circuit": "sports_score",
             "sprint": "sprint",
             "golf": "sports_golf",
@@ -2348,7 +2489,8 @@
             document.querySelector("#event-name").textContent = eventName;
             document.querySelector("#event-description").innerHTML = {
                 "factory": "Guess and pass the Wordle around!",
-                "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentTeammate || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
+                "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
+                "arena": "1v1 speed-Wordle tournament!",
                 "circuit": "Balance speed and accuracy!",
                 "sprint": "First to solve nine Wordles wins!",
                 "golf": "Nine Wordles. Fewest guesses wins!",
@@ -2367,12 +2509,6 @@
                         <h2>${eventName} Challenge</h2>
                         <p>Make a guess, then pass the Wordle to the next player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
-                        <h4>Ranking</h4>
-                        Players are ranked by
-                        <ul>
-                            <li>Number of Wordles solved</li>
-                            <li>Time since the challenge started when they last solved a Wordle</li>
-                        </ul>
                         <h4>Time Limit</h4>
                         The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit() / 60000} minutes after half of the players have solved 9 Wordles.
                         <h4>Mechanics</h4>
@@ -2385,16 +2521,29 @@
                     document.querySelector("#help-contents").innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>Solve 9 Wordles with a random partner. First team to do so wins!</p>
-                        ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentTeammate || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
+                        ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentPartner || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
                         ${hardModeDescription}
-                        <h4>Ranking</h4>
-                        Teams are ranked by
-                        <ul>
-                            <li>Number of Wordles solved</li>
-                            <li>Time since the challenge started when they finish their last Wordle</li>
-                        </ul>
                         <h4>Time Limit</h4>
-                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge will end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
+                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles.
+                    `;
+                    break;
+                }
+                case "arena": {
+                    let a = acceleratedTimeLimit() / 60000;
+                    let s = 0;
+                    for (let { score } of playerLeaderboardData.values()) {
+                        s += score[0];
+                    }
+                    document.querySelector("#help-contents").innerHTML = `
+                        <h2>${eventName} Challenge</h2>
+                        <p>Compete in this timed tournament of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
+                        ${hardModeDescription}
+                        <h4>Scoring</h4>
+                        The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
+                        <h4>Time Limit</h4>
+                        The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit() / 60000} minutes total. ${playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}
+                        <h4>Pairing</h4>
+                        Your first duel is randomly matched. Then you'll face opponents with similar rankings. When there's an odd number of players waiting, one player will pair against <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot.
                     `;
                     break;
                 }
@@ -2403,8 +2552,8 @@
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same Wordles, one game at a time. Highest score after 9 games wins!</p>
                         ${hardModeDescription}
-                        <h4>Ranking</h4>
-                        Players are ranked by total score. Your score for each Wordle combines accuracy and speed:
+                        <h4>Scoring</h4>
+                        Your score for each Wordle combines accuracy and speed:
                         <ul>
                             <li style="margin-bottom: 1em">Accuracy: you solved the Wordle in how many guesses
                                 <table style="font-size: 12px">
@@ -2488,7 +2637,7 @@
                             </li>
                         </ul>
                         <h4>Time Limit</h4>
-                        ${initialEventTimeLimit() / 60000} minutes per Wordle. The game will also end ${acceleratedTimeLimit() / 1000} seconds after half of the players have finished the Wordle.
+                        A game ends 30 seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit() / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2497,14 +2646,8 @@
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
                         ${hardModeDescription}
-                        <h4>Ranking</h4>
-                        Players are ranked by:
-                        <ul>
-                            <li>Number of Wordles solved</li>
-                            <li>Time since their first input when they finish their last Wordle</li>
-                        </ul>
                         <h4>Time Limit</h4>
-                        The challenge runs for ${initialEventTimeLimit() / 60000} minutes, but it will also end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
+                        The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit() / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2513,14 +2656,8 @@
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
                         ${hardModeDescription}
-                        <h4>Ranking</h4>
-                        Players are ranked by:
-                        <ul>
-                            <li>Number of Wordles solved</li>
-                            <li>Total number of guesses they make</li>
-                        </ul>
                         <h4>Time Limit</h4>
-                        The challenge runs for ${initialEventTimeLimit() / 60000} minutes, but it will also end ${acceleratedTimeLimit() / 60000} minutes after half of the players have finished the 9 Wordles.
+                        The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit() / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2590,7 +2727,6 @@
                     type: "event-start",
                     eventId: upcomingEvent.id,
                     newUpcomingEvent: createEvent(),
-                    pairing: upcomingEvent.mode === "duo" ? [] : undefined,
                 };
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
@@ -2605,6 +2741,14 @@
                 handlePlayButtonClick();
             }
         });
+
+        let addPlayerWaitingForPairing = (player) => {
+            console.assert(uidByPlayer.has(player), player, uidByPlayer);
+            console.assert(!playersWaitingForPairing.includes(player), player, playersWaitingForPairing);
+            playersWaitingForPairing.push(player);
+            upcomingPairingTime = Math.min(upcomingPairingTime || Infinity, Date.now() + 12000 + Math.random() * 6000);
+            // FIXME Maybe we could just not have a pre-game/post-pairing delay and make pairing happen right when the game starts, and just make new unpaired players (new finishing players) not join the current pairing (to avoid starting a new game too quickly) and setTimeout to start a new round of pairing?
+        };
 
         const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}-${Math.floor(APP_VERSION / 60000)}-`;
         const MAX_PLAYERS_PER_ROOM = 12;
@@ -2621,14 +2765,8 @@
             });
         };
         let getConnectionInitialCommand = (alias) => alias && alias.slice(alias.indexOf("-") + 1);
+        let lobby;
         let room;
-        let _lobby;
-        Object.defineProperty(window, "lobby", {
-            get: () => _lobby,
-            set: (x) => {
-                _lobby = x;
-            },
-        });
         let currentRoomId;
         let searchAndJoinRoom = (autoEnter = false) => {
             lobby = createConnection("lobby", "search");
@@ -2808,7 +2946,9 @@
                 usersOrderedByJoinTime = [];
             }
             room = createConnection(roomId);
-            room.on("error", (data) => console.error("CONN ERROR (ROOM)", data));
+            room.on("error", (data) => {
+                console.error("CONN ERROR (ROOM)", data);
+            });
             let handleRoomFull = (autoEnter) => {
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
                     alert("This room is full.");
@@ -2894,6 +3034,8 @@
                             start: currentEventStartTime - Date.now(),
                             game: currentEvent?.mode === "circuit" ? currentGameIndex : 0,
                             pairing: currentPairing,
+                            waiting: playersWaitingForPairing,
+                            upcomingPairing: upcomingPairingTime - Date.now(),
                             ended: currentEventEnded,
                             upcomingEvent,
                             upcomingStart: upcomingEventStartTime - Date.now(),
@@ -2907,7 +3049,7 @@
                     closeLobbyConnection();
                 }
             });
-            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame }) => {
+            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame, waiting: waitingForPairing, upcomingPairing }) => {
                 if (!uidsWaitingForJoinResponse.has(to)) {
                     return;
                 }
@@ -2937,6 +3079,8 @@
                 currentEventStartTime = Date.now() + parseFloat(start);
                 currentGameIndex = game;
                 currentPairing = pairing;
+                playersWaitingForPairing = waitingForPairing;
+                upcomingPairingTime = Date.now() + parseFloat(upcomingPairing);
                 currentEventEnded = ended;
                 upcomingEvent = newUpcomingEvent;
                 upcomingEventStartTime = Date.now() + upcomingStart;
@@ -3042,8 +3186,8 @@
                 playersAcknowledgedEventStart.set(player, Date.now());
                 let score = initialScore()[currentEvent.mode];
                 addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, false);
-                if (currentEvent.mode === "factory") {
-                    // Potentially show/hide description for the bot
+                if (["factory", "arena"].includes(currentEvent.mode)) {
+                    // Potentially show/hide description for the bot (Factory), or current total score (Arena)
                     showEventInfo();
                 } else if (currentEvent.mode === "duo" && !currentEventEnded && !currentPairing.includes(player)) {
                     let i = currentPairing.indexOf(null);
@@ -3057,7 +3201,7 @@
                     } else {
                         currentPairing[i] = player;
                         if (uid === currentUid) {
-                            currentTeammate = currentPairing[i ^ 1];
+                            currentPartner = currentPairing[i ^ 1];
                             showEventInfo();
                             isCurrentPlayersTurn = false; // Wait for the "enter-response" to tell
                             waitingForEnterResponse = true;
@@ -3069,11 +3213,11 @@
                                 waitingForEnterResponse = false;
                                 if (!suggestedToKickTeammate) {
                                     suggestedToKickTeammate = true;
-                                    kickPlayer(currentTeammate);
+                                    kickPlayer(currentPartner);
                                 }
                             }, MESSAGE_PENDING_TIME_LIMIT);
                         } else if (currentPlayer === currentPairing[i ^ 1]) {
-                            currentTeammate = player;
+                            currentPartner = player;
                             showEventInfo();
                             room.send({
                                 type: "enter-response",
@@ -3094,17 +3238,28 @@
                         populateMiniLeaderboardItem(currentPairing[i ^ 1], document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPairing[i ^ 1])));
                     }
                 }
+                if (currentEvent.mode === "arena") {
+                    if (playerByUid.size === 1 && currentRoomId !== preferredRoomIdFromURLParam) {
+                        currentPairing = [player, null];
+                        if (uid === currentUid) {
+                            target = generateTarget(currentEvent);
+                        }
+                    } else {
+                        playersWaitingForPairing.push(player);
+                    }
+                }
                 if (lobby && playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
                     closeLobbyConnection();
                 }
                 if (uid !== currentUid) {
                     return;
                 }
+                setBoardSize(6, currentEvent.mode === "arena");
                 localStorage.setItem("nickname", currentPlayer);
                 document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
                 if (currentEvent.mode !== "factory") {
                     target = currentEvent.targets[currentGameIndex];
-                } else {
+                } else if (currentEvent.mode !== "arena") {
                     target = generateTarget(currentEvent);
                 }
                 currentPlayerDone = false;
@@ -3126,7 +3281,9 @@
                     currentBoardState = [[currentEvent.opener, v]];
                     loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                     updateCurrentScore(v, true);
-                    currentPlayerStartTime = Date.now();
+                    requestAnimationFrame(() => {
+                        currentPlayerStartTime = Date.now();
+                    });
                 }
                 updateBanner();
             });
@@ -3140,7 +3297,7 @@
                 waitingForEnterResponse = false;
                 clearTimeout(responseTimeoutHandle);
                 responseTimeoutHandle = undefined;
-                console.assert(playerByUid.get(uid) === currentTeammate, uid, currentTeammate);
+                console.assert(playerByUid.get(uid) === currentPartner, uid, currentPartner);
                 currentScore = score;
                 currentPlayerStartTime = Date.now() + teamStart;
                 currentGameIndex = game;
@@ -3150,7 +3307,7 @@
                 isCurrentPlayersTurn = isNewPlayersTurn;
                 playerTurnDueTime = Date.now() + (due || DUO_GUESS_TIME_LIMIT);
             });
-            room.on("event-start", ({ uid, eventId, newUpcomingEvent, pairing, unownedGame }) => {
+            room.on("event-start", ({ uid, date, eventId, newUpcomingEvent, unownedGame }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -3186,27 +3343,25 @@
                     upcomingEvent = newUpcomingEvent;
                     currentGameIndex = 0;
                     currentScore = initialScore()[currentEvent.mode];
+                    setBoardSize(6, currentEvent.mode === "arena");
 
-                    if (currentEvent.mode !== "duo") {
-                        currentTeammate = undefined;
-                        isCurrentPlayersTurn = undefined;
-                        playerTurnDueTime = undefined;
-                        currentPairing = undefined;
-                    } else {
-                        pairing = pairing.filter((p) => playerIds.has(p));
-                        for (let p of playersOrderedByEntrance) {
-                            if (!pairing.includes(p)) {
-                                pairing.push(p);
-                            }
-                        }
-                        console.assert(pairing.length === playerByUid.size, pairing, playerIds);
+                    if (["duo", "arena"].includes(currentEvent.mode)) {
+                        let pairing = shuffled(playerByUid.values(), new Math.seedrandom(date));
+                        console.assert(pairing.length === playerByUid.size, pairing, playerByUid);
                         if (pairing.length & 1) {
                             pairing.push(null);
                         }
                         currentPairing = pairing;
                         let i = pairing.indexOf(currentPlayer);
-                        currentTeammate = pairing[i ^ 1];
-                        isCurrentPlayersTurn = (i & 1) === 0;
+                        currentPartner = pairing[i ^ 1];
+                        isCurrentPlayersTurn = currentEvent.mode === "duo" ? (i & 1) === 0 : undefined;
+                        playersWaitingForPairing = currentEvent.mode === "arena" ? [] : undefined;
+                    } else {
+                        currentPartner = undefined;
+                        isCurrentPlayersTurn = undefined;
+                        playerTurnDueTime = undefined;
+                        currentPairing = undefined;
+                        playersWaitingForPairing = undefined;
                     }
 
                     for (let p of playerIds.keys()) {
@@ -3242,7 +3397,9 @@
                         loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                         updateCurrentScore(v, true);
                         if (currentEvent.mode === "sprint") {
-                            currentPlayerStartTime = Date.now();
+                            requestAnimationFrame(() => {
+                                currentPlayerStartTime = Date.now();
+                            });
                         }
                     }
                     updateBanner();
@@ -3272,7 +3429,7 @@
                     playersGuessedInCurrentEvent.add(player);
                 }
                 if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
-                    // Speed component needs to wait until Score event to be added, in case of a race
+                    // Delayed speed component calculation
                     let playersSolved = 0;
                     for (let { verdict } of playerLeaderboardData.values()) {
                         playersSolved += verdict === "GGGGG";
@@ -3309,7 +3466,7 @@
                     if (!(game === currentGameIndex && numGuesses - 1 === currentBoardState.length)) {
                         return;
                     }
-                    if (player !== currentTeammate) {
+                    if (player !== currentPartner) {
                         return;
                     }
                     let v = judge(guess, target);
@@ -3320,6 +3477,38 @@
                     playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
                 }
                 if (uid === currentUid) {
+                }
+            });
+            room.on("arena-pair", ({ date, eventId, count }) => {
+                if (currentEventEnded || eventId !== currentEvent.id || count < numArenaPairingsDone) {
+                    return;
+                }
+                ++numArenaPairingsDone;
+                if (!playersWaitingForPairing.length) {
+                    return;
+                }
+                let rand = new Math.seedrandom(date);
+                let oddPlayer = playersWaitingForPairing.length & 1 ? playersWaitingForPairing[Math.floor(rand() * playersWaitingForPairing.length)] : undefined;
+                let sortedPlayers = sortMiniLeaderboard();
+                let newPairing = [...currentPairing];
+                let waiting = new Set(playersWaitingForPairing);
+                for (let [p, _] of sortedPlayers) {
+                    if (p === oddPlayer || !waiting.has(p)) {
+                        continue;
+                    }
+                    newPairing.push(p);
+                }
+                if (oddPlayer) {
+                    newPairing.push(oddPlayer, null);
+                }
+                for (let i = newPairing.length - 2; i >= 0; i -= 2) {
+                    if (!newPairing[i] && !newPairing[i ^ 1]) {
+                        newPairing.splice(i, 2);
+                    }
+                }
+                currentPairing = newPairing;
+                playersWaitingForPairing = [];
+                if (waiting.has(currentPlayer)) {
                 }
             });
             room.on("event-end", ({ uid, eventId }) => {
@@ -3430,28 +3619,35 @@
             playerByUid.delete(uidByPlayer.get(player));
             uidByPlayer.delete(player);
             if (currentEvent.mode === "factory") {
-                // Potentially show/hide description for the bot
                 showEventInfo();
-            } else if (currentEvent.mode === "duo") {
+            } else if (["duo", "arena"].includes(currentEvent.mode)) {
                 let i = currentPairing.indexOf(player);
-                let mate = currentPairing[i ^ 1];
-                if (mate) {
-                    if (mate === currentPlayer) {
-                        currentTeammate = null;
-                        showEventInfo();
+                if (i !== -1) {
+                    let partner = currentPairing[i ^ 1];
+                    if (partner) {
+                        if (partner === currentPlayer) {
+                            currentPartner = null;
+                            showEventInfo();
+                        }
+                        currentPairing[i] = null;
+                        populateMiniLeaderboardItem(partner, document.querySelector(`#mini-leaderboard-item-${playerIds.get(partner)}`));
+                        // If there are now two unpaired players, one idea could be to form team with them, but we can't do that easily because we'd have to merge their game and board states
+                    } else {
+                        currentPairing.splice(i & ~1, 2);
                     }
-                    currentPairing[i] = null;
-                    populateMiniLeaderboardItem(mate, document.querySelector(`#mini-leaderboard-item-${playerIds.get(mate)}`));
-                    // If there are now two unpaired players, one idea could be to form team with them, but we can't do that easily because we'd have to merge their game and board states
-                } else {
-                    currentPairing.splice(i & ~1, 2);
+                    console.assert(
+                        currentPairing.every((p) => !p || playerIds.has(p)),
+                        player,
+                        currentPairing,
+                        playerIds,
+                    );
                 }
-                console.assert(
-                    currentPairing.every((p) => !p || playerIds.has(p)),
-                    player,
-                    currentPairing,
-                    playerIds,
-                );
+                if (currentEvent.mode === "arena") {
+                    showEventInfo();
+                    waitingForPairing = waitingForPairing.filter((p) => p !== player);
+                    if (!waitingForPairing.length) {
+                    }
+                }
             }
             checkEventEndOrAcceleration();
         };
@@ -3527,9 +3723,9 @@
                     if (appendedTeammateAlready.has(i)) {
                         continue;
                     }
-                    let mate = currentPairing[currentPairing.indexOf(sortedPlayers[i][0]) ^ 1];
-                    if (mate) {
-                        let j = sortedPlayers.findIndex(([p2, _]) => p2 === mate);
+                    let partner = currentPairing[currentPairing.indexOf(sortedPlayers[i][0]) ^ 1];
+                    if (partner) {
+                        let j = sortedPlayers.findIndex(([p2, _]) => p2 === partner);
                         appendedTeammateAlready.add(j);
                         sortedPlayers[j][0] += " + " + p;
                         sortedPlayers.splice(i, 1);
@@ -3659,7 +3855,7 @@
             updateCountdownInPanel();
             let playConfetti;
             if (currentEvent.mode === "duo") {
-                let a = [currentPlayer, currentTeammate || BOT_NAME];
+                let a = [currentPlayer, currentPartner || BOT_NAME];
                 for (let i = 0; i < 2; ++i) {
                     if (sortedPlayers[0][0] === `${a[i]} + ${a[i ^ 1]}`) {
                         playConfetti = true;
@@ -3687,8 +3883,8 @@
                 });
             }
         };
-        let nextRoundCountdownWordEl = panel.querySelector("#next-round-countdown").querySelector("span");
-        let nextRoundCountdownValueEl = panel.querySelector("#next-round-countdown").querySelector("b");
+        let nextGameCountdownWordEl = panel.querySelector("#next-game-countdown").querySelector("span");
+        let nextGameCountdownValueEl = panel.querySelector("#next-game-countdown").querySelector("b");
         let nextEventCountdownValueEl = panel.querySelector("#next-event-countdown").querySelector("b");
         let updateCountdownInPanel = () => {
             if (!currentEventEnded || !playerByUid.has(currentUid)) {
@@ -3696,8 +3892,8 @@
             }
             let panel = document.querySelector("#between-games-panel");
             if (panel.style.display !== "none") {
-                nextRoundCountdownWordEl.textContent = currentGameIndex === numGames() - 2 ? "Final" : "Next";
-                nextRoundCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
+                nextGameCountdownWordEl.textContent = currentGameIndex === numGames() - 2 ? "Final" : "Next";
+                nextGameCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
             }
             panel = document.querySelector("#between-events-panel");
             if (panel.style.display !== "none") {
@@ -3711,7 +3907,6 @@
                     type: "event-start",
                     eventId: isUpcomingStillCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
                     newUpcomingEvent: isUpcomingStillCircuit ? undefined : createEvent(),
-                    pairing: !isUpcomingStillCircuit && upcomingEvent.mode === "duo" ? shuffled(playerIds.keys()) : undefined,
                 };
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
@@ -3721,11 +3916,12 @@
         };
         setInterval(updateCountdownInPanel, 83);
 
-        let shuffled = (a) => {
+        let shuffled = (a, rand = undefined) => {
+            rand ||= Math.random;
             a = [...a];
             let i = a.length;
             while (i) {
-                let j = Math.floor(Math.random() * i);
+                let j = Math.floor(rand() * i);
                 --i;
                 [a[i], a[j]] = [a[j], a[i]];
             }
