@@ -1297,7 +1297,7 @@
                 "duo": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
                 "circuit": [0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, playedOnHardMode]
                 "sprint": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
-                "golf": [0, 0, 0, 0, 1], // [solved, played, -guesses, -time, playedOnHardMode]
+                "golf": [0, 0, 0, 0, 0, 1], // [solved, played, -guesses, -time, currentGameGuesses, playedOnHardMode]
             };
         };
         const DUO_GUESS_TIME_LIMIT = 30000;
@@ -1347,7 +1347,7 @@
                     return "in " + formatTime(time, true);
                 }
                 case "golf": {
-                    let [solved, played, guesses, time, playedOnHardMode] = score;
+                    let [solved, played, guesses, time, currentGameGuesses, playedOnHardMode] = score;
                     guesses *= -1;
                     time *= -1;
                     return `in ${guesses} guesses`;
@@ -1389,7 +1389,7 @@
                     return `${formatTime(time)} (${solved}/${played})`;
                 }
                 case "golf": {
-                    let [solved, played, guesses, time, playedOnHardMode] = score;
+                    let [solved, played, guesses, time, currentGameGuesses, playedOnHardMode] = score;
                     guesses *= -1;
                     time *= -1;
                     return `${guesses} (${solved}/${played})`;
@@ -1571,7 +1571,7 @@
             bannerLeftInnerTextEl.innerHTML = leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentTeammate || BOT_NAME}</b>` : "";
             let rightText =
                 currentEvent.mode === "golf"
-                    ? -currentScore[2]
+                    ? -currentScore[2] + currentScore[4]
                     : currentEvent.mode === "sprint"
                       ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
                       : currentEvent.mode === "duo"
@@ -1749,11 +1749,13 @@
                 case "golf": {
                     currentScore[0] += verdict === "GGGGG";
                     currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
-                    --currentScore[2];
+                    ++currentScore[4];
                     if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
                         currentScore[3] = -(Date.now() - currentEventStartTime);
+                        currentScore[2] -= currentScore[4];
+                        currentScore[4] = 0;
                     }
-                    currentScore[4] &&= stillHardMode;
+                    currentScore[5] &&= stillHardMode;
                     break;
                 }
             }
@@ -3624,7 +3626,7 @@
                         break;
                     }
                     case "golf": {
-                        let [solved, played, guesses, time, playedOnHardMode] = o.score;
+                        let [solved, played, guesses, time, currentGameGuesses, playedOnHardMode] = o.score;
                         guesses *= -1;
                         time *= -1;
                         scoreText = `${guesses} guesses`;
