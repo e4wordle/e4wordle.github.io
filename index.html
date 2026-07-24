@@ -2355,7 +2355,12 @@
             }[event.mode];
             document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
 
-            let hardModeDescription = event.opener ? `<p>"${event.opener}" is the chosen first guess for every Wordle. Players must play on <em>Hard Mode</em>: ${settings.accessibleColors ? "blue and red" : "yellow and green"} letters must be reused in subsequent guesses, where ${settings.accessibleColors ? "red" : "green"} letters must remain in their revealed positions.</p>` : "";
+            let hardModeDescription = event.opener
+                ? `
+                    <h4>Opener</h4>
+                    <p>"${event.opener}" is the chosen first guess for every Wordle. Players must play on <em>Hard Mode</em>: ${settings.accessibleColors ? "blue and red" : "yellow and green"} letters must be reused in subsequent guesses, where ${settings.accessibleColors ? "red" : "green"} letters must remain in their revealed positions.</p>
+                `
+                : "";
             switch (event.mode) {
                 case "factory": {
                     document.querySelector("#help-contents").innerHTML = `
@@ -3805,13 +3810,13 @@
             }
             b.sort((a, b) => b[0] - a[0]);
             for (let i = b.length - 1; i >= 1; --i) {
-                if (b[i][0] < b[0][0] - (board.length ? 2 : 1) || (b[i][0] <= bestHardModeH && nonHardModeGuesses.has(b[i][1]))) {
+                if (b[i][0] < b[0][0] - (board.length ? 2 : 0.5) || (b[i][0] <= bestHardModeH && nonHardModeGuesses.has(b[i][1]))) {
                     b.splice(i, 1);
                     continue;
                 }
             }
             for (let i = 1; i < b.length; ++i) {
-                b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(board.length ? 36 : 49, b[i][0] - b[0][0]);
+                b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(board.length ? 36 : 64, b[i][0] - b[0][0]);
             }
             b[0][0] = 1;
             let r = Math.random() * b.at(-1)[0];
