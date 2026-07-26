@@ -1,6 +1,6 @@
 <meta charset="UTF-8" />
 <title>e4! Wordle – Competitive Multiplayer Wordle Challenges</title>
-<meta name="description" content="Experience Wordle in six unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
+<meta name="description" content="Experience Wordle in five unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
@@ -478,10 +478,21 @@
     #event-description-button {
         cursor: pointer;
         user-select: none;
+        position: relative;
         .material-symbols-outlined {
             font-size: 18px;
             opacity: 0.5;
         }
+    }
+    #event-description-button::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        bottom: -4px;
+        left: -4px;
+        z-index: 1;
+        cursor: pointer;
     }
     .mobile-button-container {
         display: none;
@@ -573,7 +584,7 @@
         }
     }
     .mini-leaderboard-item:not(.me) {
-        .material-symbols-outlined {
+        .mini-leaderboard-item-rank-info .material-symbols-outlined {
             visibility: hidden;
         }
     }
@@ -593,6 +604,9 @@
         margin-left: -4px;
         font-size: 12px;
         width: 1ch;
+        .material-symbols-outlined {
+            transform: translate(-2px);
+        }
     }
     #progress-bar-background {
         height: 2px;
@@ -1147,8 +1161,17 @@
     <div id="between-games-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
             <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">0</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
-            <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding-left: 10px"></div>
-            <div class="divider"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+                <div style="display: flex; font-size: 12px; padding-left: 10px; margin-bottom: -4px">
+                    <div class="no-wrap" style="width: 128px">Player</div>
+                    <div style="width: 84px; text-align: center">Score</div>
+                    <div style="width: 56px; text-align: center">Guesses</div>
+                    <div style="width: 56px; text-align: center">Time</div>
+                </div>
+                <div class="divider"></div>
+                <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; max-height: 128px; margin: -8px 0; padding: 8px 0px 8px 10px"></div>
+                <div class="divider"></div>
+            </div>
             <div id="leaderboard-your-place" style="font-size: 16px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
@@ -3827,28 +3850,26 @@
             if (startingNewGameInCircuit) {
                 let panel = document.querySelector("#between-games-panel");
                 panel.querySelector("#between-games-panel-round-id").textContent = currentGameIndex + 1;
-                panel.querySelector("#leaderboard").innerHTML = ["header"]
-                    .concat(sortedPlayers.slice(0, 6))
+                let leaderboardEl = panel.querySelector("#leaderboard");
+                leaderboardEl.innerHTML = sortedPlayers
                     .map(
                         // case "circuit":
-                        (o, i) =>
-                            `
-                            <div style="display: flex${!i ? "; font-size: 12px" : ""}">
-                                <div class="no-wrap" style="width: 128px">${!i ? "Player" : `<b>${o[0]}</b>`}</div>
-                                <div style="width: 84px; text-align: center">${
-                                    !i
-                                        ? "Score"
-                                        : `
-                                            ${o[1].score[0]} <span style="font-size: 12px">(+${-o[1].score[4]})</span>
-                                        `
-                                }</div>
-                                <div style="width: 56px; text-align: center">${!i ? "Guess" : o[1].verdict !== "GGGGG" && o[1].numGuesses === gameParams().guessLimit ? X_SYMBOL : o[1].numGuesses}</div>
-                                <div style="width: 56px; text-align: center">${!i ? "Time" : o[1].verdict !== "GGGGG" && o[1].numGuesses < gameParams().guessLimit ? X_SYMBOL : o[1].score[5] ? formatTime(-o[1].score[5], true) : ""}</div>
+                        (o, i) => `
+                            <div style="display: flex">
+                                <div class="no-wrap" style="width: 128px"><b>${o[0]}</b></div>
+                                <div style="width: 84px; text-align: center">
+                                    ${o[1].score[0]} <span style="font-size: 12px">(+${-o[1].score[4]})</span>
+                                </div>
+                                <div style="width: 56px; text-align: center">${o[1].verdict !== "GGGGG" && o[1].numGuesses === gameParams().guessLimit ? X_SYMBOL : o[1].numGuesses}</div>
+                                <div style="width: 56px; text-align: center">${o[1].verdict !== "GGGGG" && o[1].numGuesses < gameParams().guessLimit ? X_SYMBOL : o[1].score[5] ? formatTime(-o[1].score[5], true) : ""}</div>
                             </div>
                         `,
                     )
                     .join("\n");
                 let place = 1 + sortedPlayers.findIndex(([x, y]) => x === currentPlayer);
+                requestAnimationFrame(() => {
+                    leaderboardEl.children[place - 1].scrollIntoView({ block: "center" });
+                });
                 panel.querySelector("#leaderboard-your-place").querySelector("b").innerHTML = `${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup>`;
                 let delta;
                 let otherPlayer;
