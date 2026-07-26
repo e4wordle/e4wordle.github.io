@@ -622,7 +622,7 @@
         position: absolute;
         left: 50%;
         top: 50%;
-        transform: translate(-50%, calc(-50% - 60px));
+        transform: translate(-50%, max(-50% - 60px, -50vh + 24px));
         max-width: calc(100vw - 56px);
         padding: 16px 28px;
         background: var(--main-background-color);
@@ -646,6 +646,45 @@
         .panel-optional {
             display: none;
         }
+    }
+    .mode-button {
+        flex: unset;
+        font-weight: normal;
+        font-size: 10px;
+        height: 52px;
+        width: 52px;
+        > div {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+    }
+    .mode-button:not(.green) {
+        .material-symbols-outlined {
+            font-size: 26px;
+            opacity: 0.625;
+        }
+        .mode-button-name-label {
+            display: none;
+        }
+    }
+    .mode-button.green .material-symbols-outlined {
+        font-size: 22px;
+    }
+    .opener-button {
+        font-weight: normal;
+        min-height: unset !important;
+    }
+    #opener-input:disabled::placeholder,
+    #opener-input:focus::placeholder {
+        color: transparent;
+    }
+    #opener-input::placeholder {
+        text-transform: none;
+    }
+    #start-panel hr {
+        margin: -2px 0;
+        visibility: hidden;
     }
     #help {
         position: absolute;
@@ -1136,7 +1175,68 @@
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
-            <div style="height: 4px"></div>
+            <hr />
+            <div style="display: flex; gap: 36px; display: none">
+                <div style="display: flex; flex-direction: column; align-items: center">
+                    <div style="margin-bottom: 8px">Mode</div>
+                    <div style="display: flex">
+                        <button class="letter key mode-button nonempty">
+                            <div>
+                                <span class="material-symbols-outlined">conveyor_belt</span>
+                                <span class="mode-button-name-label">Factory</span>
+                            </div>
+                        </button>
+                        <button class="letter key mode-button nonempty">
+                            <div>
+                                <span class="material-symbols-outlined">group</span>
+                                <span class="mode-button-name-label">Duo</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div style="display: flex">
+                        <button class="letter key mode-button nonempty">
+                            <div>
+                                <span class="material-symbols-outlined" style="transform: translateX(1px)">sports_score</span>
+                                <span class="mode-button-name-label">Circuit</span>
+                            </div>
+                        </button>
+                        <button class="letter key mode-button nonempty green">
+                            <div>
+                                <span class="material-symbols-outlined">question_exchange</span>
+                                <span class="mode-button-name-label">Random</span>
+                            </div>
+                        </button>
+                        <button class="letter key mode-button nonempty" style="display: none">
+                            <div>
+                                <span class="material-symbols-outlined">stadium</span>
+                                <span class="mode-button-name-label">Arena</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div style="display: flex">
+                        <button class="letter key mode-button nonempty">
+                            <div>
+                                <span class="material-symbols-outlined">sports_golf</span>
+                                <span class="mode-button-name-label">Golf</span>
+                            </div>
+                        </button>
+                        <button class="letter key mode-button nonempty">
+                            <div>
+                                <span class="material-symbols-outlined">sprint</span>
+                                <span class="mode-button-name-label">Sprint</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; width: 96px">
+                    <div style="margin: 2px 0 14px">Opener</div>
+                    <div class="key opener-button">Never</div>
+                    <div class="key opener-button green">Sometimes</div>
+                    <div class="key opener-button">Always</div>
+                    <input id="opener-input" maxlength="5" placeholder="Random" style="text-align: center; text-transform: uppercase; margin: 6px" disabled />
+                </div>
+            </div>
+            <hr />
             <input id="nickname-input" style="width: calc(100% - 4px); font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
             <div style="display: flex; gap: 8px; width: 100%; min-height: 40px">
                 <button id="play-button" class="key green" style="font-size: 16px; font-weight: 600" disabled>Loading...</button>
@@ -3012,10 +3112,12 @@
             room.on("error", (data) => {
                 console.error("CONN ERROR (ROOM)", data);
             });
-            let handleRoomFull = (autoEnter) => {
+            let handleRoomFull = (autoEnter, showAlert = true) => {
                 console.error("ROOM FULL", roomId, autoEnter);
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
-                    alert("This room is full.");
+                    if (showAlert) {
+                        alert("This room is full.");
+                    }
                     room.remove("close", room._closeHandler);
                     isInPrivateRoom = false;
                     updateRoomIdInURL();
@@ -3076,7 +3178,7 @@
                                 return;
                             }
                             waitingForJoinResponse = false;
-                            handleRoomFull(autoEnter);
+                            handleRoomFull(autoEnter, false);
                         }, MESSAGE_PENDING_TIME_LIMIT);
                     }
                     return;
