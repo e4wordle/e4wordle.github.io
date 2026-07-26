@@ -42,6 +42,9 @@
     button {
         color: black;
     }
+    button:disabled {
+        opacity: 0.5;
+    }
     input {
         border: 1px solid hsl(0, 0%, 58.3%);
         outline: none;
@@ -1046,11 +1049,11 @@
             <div id="event-text-container">
                 <div id="event-name-container">
                     <div id="event-name">Welcome</div>
-                    <div id="event-description-button" title="Show rule details">
+                    <div id="event-description-button" title="Show rule details" style="display: none">
                         <span class="material-symbols-outlined">info</span>
                     </div>
                 </div>
-                <div id="event-description">Join a random Wordle challenge!</div>
+                <div id="event-description"></div>
             </div>
             <div class="mobile-button-container">
                 <button class="mobile-button" id="event-description-button-2" title="Rules">
@@ -1121,15 +1124,24 @@
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
             <div style="height: 4px"></div>
             <input id="nickname-input" style="width: calc(100% - 4px); font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
-            <div style="display: flex; gap: 8px; width: 100%">
+            <div style="display: flex; gap: 8px; width: 100%; min-height: 40px">
                 <button id="play-button" class="key green" style="font-size: 16px; font-weight: 600" disabled>Loading...</button>
                 <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
-                    <div style="display: flex; flex-direction: column; gap: 2px">
-                        <b>Invite</b>
-                        <div style="font-size: 10px">Create private room</div>
+                    <div id="private-room-button-create-label">
+                        <div style="display: flex; flex-direction: column; gap: 2px">
+                            <b>Invite</b>
+                            <div style="font-size: 10px">Create private room</div>
+                        </div>
                     </div>
+                    <div id="private-room-button-copy-label" style="display: none">Copy room link</div>
                 </button>
             </div>
+            <div id="private-room-user-count-label" style="display: none; opacity: 0.667"></div>
+        </div>
+    </div>
+    <div id="welcome-panel" style="display: none; max-width: 216px">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+            <div id="welcome-panel-text" style="font-size: 16px; text-align: center"></div>
         </div>
     </div>
     <div id="between-games-panel" style="display: none">
@@ -1373,15 +1385,28 @@
         };
         const DUO_GUESS_TIME_LIMIT = 30000;
         const ARENA_POST_PAIRING_TIMEOUT = 3000;
-        let initialEventTimeLimit = () => {
-            let m = (currentEvent || upcomingEvent).mode;
-            return m === "circuit" ? 120000 : m === "sprint" ? 600000 : 900000;
+        let initialEventTimeLimit = (mode = undefined) => {
+            mode ||= (currentEvent || upcomingEvent).mode;
+            switch (mode) {
+                case "circuit": {
+                    return 120000;
+                }
+                case "sprint": {
+                    return 600000;
+                }
+                case "welcome": {
+                    return 1e18;
+                }
+                default: {
+                    return 900000;
+                }
+            }
         };
-        let acceleratedTimeLimit = () => {
-            let m = (currentEvent || upcomingEvent).mode;
-            return m === "circuit"
+        let acceleratedTimeLimit = (mode = undefined) => {
+            mode ||= (currentEvent || upcomingEvent).mode;
+            return mode === "circuit"
                 ? 31500 // Add a bit of delay for the flipping animation of last guess
-                : m === "arena"
+                : mode === "arena"
                   ? 60000
                   : 180000;
         };
@@ -1492,7 +1517,6 @@
                     return `${guesses} (${solved}/${played})`;
                 }
             }
-            console.assert(false, mode, score);
             return JSON.stringify(score);
         };
         let judge = (guess, target) => {
@@ -1678,6 +1702,9 @@
                 return;
             }
             let mode = currentEvent.mode;
+            if (mode === "welcome") {
+                return;
+            }
             let postGame = postGameDelayTimeout || currentBoardState.at(-1)?.at(1) === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
             bannerLeftTextEl.innerHTML = mode === "arena" ? (currentPartner ? `<span>Duel vs</span> ${currentPartner}` : "") : mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
             let leftIcon = mode === "arena" && playerLeaderboardData.get(currentPartner)?.score?.at(5) ? "mode_heat" : currentPlayerWaitingForOthers ? (mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
@@ -1719,8 +1746,7 @@
                 if (currentEventSuggestedEnded) {
                     return;
                 }
-                currentEventSuggestedEnded = true;
-                room.send({ type: "event-end", eventId: currentEvent.id });
+                suggestToEndEvent();
                 progressBar.style.width = "0";
                 updateBanner();
                 return;
@@ -2328,7 +2354,7 @@
                 letterEl.classList.toggle("yellow", verdict.charAt(i) === "Y");
                 letterEl.classList.toggle("green", verdict.charAt(i) === "G");
             }
-            guessEl.style.display = ["duo", "arena"].includes(currentEvent.mode) ? "none" : "";
+            guessEl.style.display = ["duo", "arena", "welcome"].includes(currentEvent.mode) ? "none" : "";
             guessCountEl.innerHTML = guessCountHTML;
             guessCountEl.style.display =
                 currentEvent.mode === "circuit"
@@ -2456,14 +2482,13 @@
                 let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
                 newOpener = newUseOpener ? targets[Math.floor(Math.random() * targets.length)] : "";
             }
-            let newEvent = { mode: newMode, opener: newOpener };
+            let newEvent = { id: Math.random(), mode: newMode, opener: newOpener };
             if (newMode !== "factory") {
                 let i = indexByTarget.get(newOpener);
                 newEvent.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
                     .fill("")
                     .map(() => generateTarget(newEvent));
             }
-            newEvent.id = Math.random();
             return newEvent;
         };
         let formatEventName = (event) => {
@@ -2481,10 +2506,11 @@
             "circuit": "sports_score",
             "sprint": "sprint",
             "golf": "sports_golf",
+            "welcome": "waving_hand",
         };
         const BOT_NAME = "Rattington";
         let showEventInfo = () => {
-            let event = currentEvent?.mode ? currentEvent : upcomingEvent;
+            let event = currentEvent?.mode && currentEvent?.mode !== "welcome" ? currentEvent : upcomingEvent;
             let eventName = formatEventName(event);
             document.querySelector("#event-name").textContent = eventName;
             document.querySelector("#event-description").innerHTML = {
@@ -2494,8 +2520,10 @@
                 "circuit": "Balance speed and accuracy!",
                 "sprint": "First to solve nine Wordles wins!",
                 "golf": "Nine Wordles. Fewest guesses wins!",
+                "welcome": "Fun Wordle challenges await!",
             }[event.mode];
             document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
+            document.querySelector("#event-description-button").style.display = event.mode === "welcome" ? "none" : "";
 
             let hardModeDescription = event.opener
                 ? `
@@ -2510,7 +2538,7 @@
                         <p>Make a guess, then pass the Wordle to the next player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit() / 60000} minutes after half of the players have solved 9 Wordles.
+                        The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players have solved 9 Wordles.
                         <h4>Mechanics</h4>
                         <p>Each player starts with an assigned random Wordle. An extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the factory in motion.</p>
                         ${playerByUid.size + !playerByUid.has(currentUid) <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
@@ -2524,12 +2552,12 @@
                         ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentPartner || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles.
+                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles.
                     `;
                     break;
                 }
                 case "arena": {
-                    let a = acceleratedTimeLimit() / 60000;
+                    let a = acceleratedTimeLimit(event.mode) / 60000;
                     let s = 0;
                     for (let { score } of playerLeaderboardData.values()) {
                         s += score[0];
@@ -2541,7 +2569,7 @@
                         <h4>Scoring</h4>
                         The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
                         <h4>Time Limit</h4>
-                        The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit() / 60000} minutes total. ${playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}
+                        The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total. ${playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}
                         <h4>Pairing</h4>
                         Your first duel is randomly matched. Then you'll face opponents with similar rankings. When there's an odd number of players waiting, one player will pair against <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot.
                     `;
@@ -2637,7 +2665,7 @@
                             </li>
                         </ul>
                         <h4>Time Limit</h4>
-                        A game ends 30 seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit() / 60000} minutes total.
+                        A game ends 30 seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2647,7 +2675,7 @@
                         <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit() / 60000} minutes total.
+                        The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2657,7 +2685,7 @@
                         <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends ${acceleratedTimeLimit() / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit() / 60000} minutes total.
+                        The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
                     `;
                     break;
                 }
@@ -2665,7 +2693,7 @@
         };
         let showOrHidePanel = (panelToShow) => {
             let wasStartPanelShowing = !document.querySelector("#start-panel").display;
-            for (let panel of ["start-panel", "between-games-panel", "between-events-panel"]) {
+            for (let panel of ["start-panel", "welcome-panel", "between-games-panel", "between-events-panel"]) {
                 document.querySelector("#" + panel).style.display = panel === panelToShow ? "" : "none";
             }
             document.body.classList.toggle("showing-panel", !!panelToShow);
@@ -2754,6 +2782,7 @@
         const MAX_PLAYERS_PER_ROOM = 12;
         const MAX_USERS_PER_ROOM = 36;
         const MAX_REPS_IN_LOBBY = 36;
+        let joinedRoom = false;
         let createConnection = (token, command = undefined) => {
             return connect(SOCKET_ID_PREFIX + token, {
                 announce: true,
@@ -2937,7 +2966,18 @@
         let playersAcknowledgedEventStart = new Map();
         let playersGuessedInCurrentEvent = new Set();
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
+        const POST_WELCOME_DELAY = 4000;
 
+        let resetToInitialEventStates = () => {
+            currentEvent = undefined;
+            if (isInPrivateRoom) {
+                upcomingEvent = { id: -1, mode: "welcome" };
+            }
+            showEventInfo();
+            currentEventEndTime = undefined;
+            currentEventStartTime = undefined;
+            progressBar.style.width = "100%";
+        };
         let joinRoom = (roomId, autoEnter = false) => {
             currentRoomId = roomId;
             if (room) {
@@ -2950,9 +2990,13 @@
                 console.error("CONN ERROR (ROOM)", data);
             });
             let handleRoomFull = (autoEnter) => {
+                console.error("ROOM FULL", roomId, autoEnter);
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
                     alert("This room is full.");
-                    privateRoomButton.style.display = "";
+                    room.remove("close", room._closeHandler);
+                    isInPrivateRoom = false;
+                    updateRoomIdInURL();
+                    updateStartPanel();
                 }
                 room.close();
                 room = undefined;
@@ -2967,6 +3011,7 @@
             // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
             room.on("join", ({ uid, alias, total: newTotalUids, self }) => {
                 totalUsers = newTotalUids - ignoredUids.size;
+                updatePrivateRoomUserCountLabel();
                 usersOrderedByJoinTime.push(uid);
                 currentRoomId = roomId;
                 if (self) {
@@ -2990,8 +3035,12 @@
                         document.querySelector("#mini-leaderboard").innerHTML = "";
                         representRoom();
                         upcomingEvent = createEvent();
+                        if (isInPrivateRoom) {
+                            upcomingEvent = { id: -1, mode: "welcome" };
+                        }
                         showEventInfo();
-                        readyToPlay();
+                        joinedRoom = true;
+                        updateStartPanel();
                         if (autoEnter) {
                             handlePlayButtonClick();
                         }
@@ -3083,7 +3132,7 @@
                 upcomingPairingTime = Date.now() + parseFloat(upcomingPairing);
                 currentEventEnded = ended;
                 upcomingEvent = newUpcomingEvent;
-                upcomingEventStartTime = Date.now() + upcomingStart;
+                upcomingEventStartTime = Date.now() + parseFloat(upcomingStart);
                 currentUnownedFactoryGame = unownedGame;
                 playersAcknowledgedEventStart = new Map(playersAck);
                 playersGuessed = new Set(playersGuessed);
@@ -3103,7 +3152,8 @@
                 for (let c of chat) {
                     addChatMessage(...c);
                 }
-                readyToPlay();
+                joinedRoom = true;
+                updateStartPanel();
                 if (autoEnter) {
                     handlePlayButtonClick();
                 }
@@ -3121,18 +3171,17 @@
                 }
                 usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== uid);
                 totalUsers = newTotalUids - ignoredUids.size;
+                updatePrivateRoomUserCountLabel();
                 let leavingPlayer = playerByUid.get(uid);
                 if (leavingPlayer) {
                     removePlayer(leavingPlayer);
+                } else if (currentEvent.mode === "welcome") {
+                    checkWelcomeEventEnd();
                 }
                 representIfOldest();
                 if (!playerIds.size) {
-                    // Only spectators remain; restore to as if first event hasn't started
-                    currentEvent = undefined;
-                    showEventInfo();
-                    currentEventEndTime = undefined;
-                    currentEventStartTime = undefined;
-                    progressBar.style.width = "100%";
+                    // Only spectators remain
+                    resetToInitialEventStates();
                 }
             });
             room.on("kick", ({ uid, player }) => {
@@ -3247,6 +3296,8 @@
                     } else {
                         playersWaitingForPairing.push(player);
                     }
+                } else if (currentEvent.mode === "welcome") {
+                    checkWelcomeEventEnd();
                 }
                 if (lobby && playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
                     closeLobbyConnection();
@@ -3257,7 +3308,7 @@
                 setBoardSize(6, currentEvent.mode === "arena");
                 localStorage.setItem("nickname", currentPlayer);
                 document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
-                if (currentEvent.mode !== "factory") {
+                if (!["factory", "welcome"].includes(currentEvent.mode)) {
                     target = currentEvent.targets[currentGameIndex];
                 } else if (currentEvent.mode !== "arena") {
                     target = generateTarget(currentEvent);
@@ -3266,7 +3317,7 @@
                 currentPlayerWaitingForOthers = false;
                 currentScore = score;
                 updateBanner();
-                if (currentEventEnded) {
+                if (currentEventEnded || currentEvent.mode === "welcome") {
                     showEventTransitionPanel(true);
                     return;
                 }
@@ -3299,20 +3350,17 @@
                 responseTimeoutHandle = undefined;
                 console.assert(playerByUid.get(uid) === currentPartner, uid, currentPartner);
                 currentScore = score;
-                currentPlayerStartTime = Date.now() + teamStart;
+                currentPlayerStartTime = Date.now() + parseFloat(teamStart);
                 currentGameIndex = game;
                 target = currentEvent.targets[currentGameIndex];
                 currentBoardState = board;
                 loadBoardState(currentBoardState, { fastAnimation: true });
                 isCurrentPlayersTurn = isNewPlayersTurn;
-                playerTurnDueTime = Date.now() + (due || DUO_GUESS_TIME_LIMIT);
+                playerTurnDueTime = Date.now() + (parseFloat(due) || DUO_GUESS_TIME_LIMIT);
             });
             room.on("event-start", ({ uid, date, eventId, newUpcomingEvent, unownedGame }) => {
                 if (ignoredUids.has(uid)) {
                     return;
-                }
-                if (playerByUid.size ? playerByUid.has(currentUid) : uid === currentUid) {
-                    showOrHidePanel(undefined);
                 }
                 upcomingEventSuggestedStarted = false;
                 upcomingEventStartTime = undefined;
@@ -3321,6 +3369,9 @@
                 let startingNewGameInCircuit = eventId >= 1;
                 if (eventId !== (startingNewGameInCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
                     return;
+                }
+                if ((playerByUid.size ? playerByUid.has(currentUid) : uid === currentUid) && upcomingEvent.mode !== "welcome") {
+                    showOrHidePanel(undefined);
                 }
                 playersAcknowledgedEventStart.clear();
                 playersGuessedInCurrentEvent.clear();
@@ -3379,7 +3430,7 @@
                 }
                 showEventInfo();
                 currentEventStartTime = Date.now();
-                if (currentEvent.mode !== "factory") {
+                if (!["factory", "welcome"].includes(currentEvent.mode)) {
                     target = currentEvent.targets[currentGameIndex];
                 } else {
                     target = generateTarget(currentEvent);
@@ -3519,7 +3570,7 @@
                     return;
                 }
                 let showingTargetAlert = false;
-                if (playerByUid.has(currentUid)) {
+                if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
                     if (!currentPlayerDone) {
                         showAlert(`"${target}"`);
@@ -3538,7 +3589,7 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -3576,40 +3627,65 @@
             };
             room.on("close", room._closeHandler);
         };
+        let privateRoomUserCountLabel = document.querySelector("#private-room-user-count-label");
+        let isInPrivateRoom = false;
+        let updatePrivateRoomUserCountLabel = () => {
+            let u = totalUsers || 1;
+            privateRoomUserCountLabel.textContent = `${u} ${u === 1 ? "player" : "players"} in private room`;
+        };
+        let updateStartPanel = () => {
+            playButton.disabled = !joinedRoom;
+            playButton.textContent = !joinedRoom ? "Loading..." : isInPrivateRoom ? ((currentEvent || upcomingEvent).mode === "welcome" ? "Start" : "Join") : "Play";
+            document.querySelector("#private-room-button-create-label").style.display = !isInPrivateRoom ? "" : "none";
+            document.querySelector("#private-room-button-copy-label").style.display = isInPrivateRoom ? "" : "none";
+            privateRoomUserCountLabel.style.display = isInPrivateRoom ? "" : "none";
+            updatePrivateRoomUserCountLabel();
+        };
+        let checkWelcomeEventEnd = () => {
+            if (playerByUid.size === Math.min(totalUsers, MAX_PLAYERS_PER_ROOM)) {
+                suggestToEndEvent();
+            }
+        };
         let preferredRoomIdFromURLParam = +urlParams.get("room") || 0;
         let privateRoomButton = document.querySelector("#private-room-button");
         if (preferredRoomIdFromURLParam) {
             joinRoom(preferredRoomIdFromURLParam);
-            privateRoomButton.style.display = "none";
+            isInPrivateRoom = preferredRoomIdFromURLParam >= 1;
+            updateStartPanel();
         } else {
             searchAndJoinRoom();
         }
 
+        let updateRoomIdInURL = (newRoomId) => {
+            let url = new URL(location.href);
+            if (newRoomId) {
+                url.searchParams.set("room", newRoomId);
+            } else {
+                url.searchParams.delete("room");
+            }
+            history.pushState(null, "", url);
+        };
         privateRoomButton.addEventListener("click", () => {
-            if (validateNickname()) {
+            if (isInPrivateRoom) {
+                navigator.clipboard.writeText(location.href).then(() => {
+                    showAlert("Room link copied");
+                });
                 return;
             }
             closeLobbyConnection();
             let roomId = Math.random() + 1;
-            let url = new URL(location.href);
-            url.searchParams.set("room", roomId);
-            history.pushState(null, "", url);
-            joinRoom(roomId, true);
-            navigator.clipboard.writeText(location.href).then(() => {
-                setTimeout(() => {
-                    showAlert("Room link copied");
-                }, 250);
-            });
+            updateRoomIdInURL(roomId);
+            joinedRoom = false;
+            joinRoom(roomId, false);
+            isInPrivateRoom = true;
+            resetToInitialEventStates();
+            updateStartPanel();
         });
         // Force the browser back button to reload the page, in case a private room was created
         addEventListener("popstate", () => {
             location.reload();
         });
 
-        let readyToPlay = () => {
-            playButton.disabled = false;
-            playButton.textContent = "Play";
-        };
         let removePlayer = (player) => {
             addChatMessage(player, "", "player-leave");
             document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`).remove();
@@ -3677,6 +3753,13 @@
             return [zombies, checkAgainIn];
         };
         let repeatedZombieCheckTimeoutHandle;
+        let suggestToEndEvent = () => {
+            if (currentEventSuggestedEnded) {
+                return;
+            }
+            room.send({ type: "event-end", eventId: currentEvent.id });
+            currentEventSuggestedEnded = true;
+        };
         let checkEventEndOrAcceleration = () => {
             if (currentEventSuggestedEnded || currentEventEnded) {
                 return;
@@ -3691,10 +3774,7 @@
             let [zombies, checkAgainIn] = checkForZombies();
             let activePlayers = playerByUid.size - zombies;
             if (playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
-                if (!currentEventSuggestedEnded) {
-                    room.send({ type: "event-end", eventId: currentEvent.id });
-                    currentEventSuggestedEnded = true;
-                }
+                suggestToEndEvent();
             } else if (playersDone >= activePlayers / 2) {
                 setEventToEndIn(acceleratedTimeLimit());
             }
@@ -3710,6 +3790,10 @@
             }
         };
         let showEventTransitionPanel = (playerJustEntered = false) => {
+            if (currentEvent.mode === "welcome") {
+                showOrHidePanel("welcome-panel");
+                return;
+            }
             let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
             let sortedPlayers = sortMiniLeaderboard();
             if (playerJustEntered && !startingNewGameInCircuit) {
@@ -3887,17 +3971,25 @@
         let nextGameCountdownValueEl = panel.querySelector("#next-game-countdown").querySelector("b");
         let nextEventCountdownValueEl = panel.querySelector("#next-event-countdown").querySelector("b");
         let updateCountdownInPanel = () => {
-            if (!currentEventEnded || !playerByUid.has(currentUid)) {
+            if (!playerByUid.has(currentUid)) {
+                return;
+            }
+            let formatUpcomingStartTime = () => Math.max(Math.ceil((currentEvent.mode === "welcome" && !upcomingEventStartTime ? POST_WELCOME_DELAY : upcomingEventStartTime - Date.now()) / 1000), 0);
+            if (currentEvent.mode !== "welcome" && !currentEventEnded) {
                 return;
             }
             let panel = document.querySelector("#between-games-panel");
             if (panel.style.display !== "none") {
                 nextGameCountdownWordEl.textContent = currentGameIndex === numGames() - 2 ? "Final" : "Next";
-                nextGameCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
+                nextGameCountdownValueEl.textContent = formatUpcomingStartTime();
             }
             panel = document.querySelector("#between-events-panel");
             if (panel.style.display !== "none") {
-                nextEventCountdownValueEl.textContent = Math.max(Math.ceil((upcomingEventStartTime - Date.now()) / 1000), 0);
+                nextEventCountdownValueEl.textContent = formatUpcomingStartTime();
+            }
+            if (currentEvent.mode === "welcome") {
+                let p = totalUsers - playerByUid.size;
+                document.querySelector("#welcome-panel-text").innerHTML = currentEventEnded || !p ? `Challenge starts in <b>${formatUpcomingStartTime()}</b>` : `Waiting for the other ${p} ${p === 1 ? "player" : "players"} to join...`;
             }
 
             if (Date.now() >= upcomingEventStartTime && !upcomingEventSuggestedStarted) {
