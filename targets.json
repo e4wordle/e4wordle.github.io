@@ -1,5 +1,4 @@
-var targets = [
-    //
+[
     "ABACK",
     "ABASE",
     "ABATE",
@@ -1171,7 +1170,6 @@ var targets = [
     "LURCH",
     "LURID",
     "LUSTY",
-    "LYCRA",
     "LYING",
     "LYMPH",
     "LYRIC",
@@ -2323,5 +2321,5 @@ var targets = [
     "YOUTH",
     "ZEBRA",
     "ZESTY",
-    "ZONAL",
-];
+    "ZONAL"
+]

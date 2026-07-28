@@ -1,5 +1,4 @@
-var allowedGuesses = new Set([
-    //
+[
     "AAHED",
     "AALII",
     "AARGH",
@@ -23,7 +22,6 @@ var allowedGuesses = new Set([
     "ABELE",
     "ABERS",
     "ABETS",
-    "ABIES",
     "ABLED",
     "ABLER",
     "ABLES",
@@ -1810,7 +1808,6 @@ var allowedGuesses = new Set([
     "COOMB",
     "COOMS",
     "COOMY",
-    "COONS",
     "COOPS",
     "COOPT",
     "COOST",
@@ -2058,7 +2055,6 @@ var allowedGuesses = new Set([
     "DAFFY",
     "DAGGA",
     "DAGGY",
-    "DAGOS",
     "DAHLS",
     "DAIKO",
     "DAINE",
@@ -3639,7 +3635,6 @@ var allowedGuesses = new Set([
     "GOODS",
     "GOOFS",
     "GOOGS",
-    "GOOKS",
     "GOOKY",
     "GOOLD",
     "GOOLS",
@@ -4740,7 +4735,6 @@ var allowedGuesses = new Set([
     "KIEVE",
     "KIEVS",
     "KIGHT",
-    "KIKES",
     "KIKOI",
     "KILEY",
     "KILIM",
@@ -5391,6 +5385,7 @@ var allowedGuesses = new Set([
     "LYASE",
     "LYCEA",
     "LYCEE",
+    "LYCRA",
     "LYMES",
     "LYNCH",
     "LYNES",
@@ -8653,7 +8648,6 @@ var allowedGuesses = new Set([
     "SPIAL",
     "SPICA",
     "SPICK",
-    "SPICS",
     "SPIDE",
     "SPIER",
     "SPIES",
@@ -10606,5 +10600,5 @@ var allowedGuesses = new Set([
     "ZYGAL",
     "ZYGON",
     "ZYMES",
-    "ZYMIC",
-]);
+    "ZYMIC"
+]

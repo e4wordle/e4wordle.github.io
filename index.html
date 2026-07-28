@@ -1359,10 +1359,9 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@4.2.1/tsparticles.confetti.bundle.min.js"></script>
 <script src="./itty-sockets.js"></script>
-<script src="./targets.js"></script>
-<script src="./allowedGuesses.js"></script>
-<script>
-    const APP_VERSION = Date.parse("2026-07-06 19:40");
+<script type="module">
+    import GUESSES from "./guesses.json" with { type: "json" };
+    import TARGETS from "./targets.json" with { type: "json" };
 
     {
         let urlParams = new URLSearchParams(location.search);
@@ -1487,7 +1486,7 @@
         })();
 
         /** @type {Map<string, number>} */
-        let indexByTarget = new Map(targets.map((t, i) => [t, i]));
+        let indexByTarget = new Map(TARGETS.map((t, i) => [t, i]));
 
         let currentEvent;
         let upcomingEvent;
@@ -1664,9 +1663,7 @@
             return verdict.join("");
         };
         let target = "STYLE";
-        for (let t of targets) {
-            allowedGuesses.add(t);
-        }
+        let allowedGuesses = new Set(GUESSES.concat(TARGETS));
         let currentBoardState = [];
         let currentGuess = "";
 
@@ -2604,7 +2601,7 @@
             } else if (!indexByTarget.has(newOpener)) {
                 let i = !!currentEvent + !!upcomingEvent;
                 let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
-                newOpener = newUseOpener ? targets[Math.floor(Math.random() * targets.length)] : "";
+                newOpener = newUseOpener ? TARGETS[Math.floor(Math.random() * TARGETS.length)] : "";
             }
             let newEvent = { id: Math.random(), mode: newMode, opener: newOpener };
             if (newMode !== "factory") {
@@ -2832,9 +2829,9 @@
             }
             event ||= currentEvent;
             let i = indexByTarget.get(event.opener) || NaN;
-            let j = Math.floor(Math.random() * (targets.length - !isNaN(i)));
+            let j = Math.floor(Math.random() * (TARGETS.length - !isNaN(i)));
             j += j >= i;
-            return targets[j];
+            return TARGETS[j];
         };
         let createUnownedFactoryGame = (addBotGuess = true, event = undefined) => {
             event ||= currentEvent;
@@ -2902,7 +2899,8 @@
             // FIXME Maybe we could just not have a pre-game/post-pairing delay and make pairing happen right when the game starts, and just make new unpaired players (new finishing players) not join the current pairing (to avoid starting a new game too quickly) and setTimeout to start a new round of pairing?
         };
 
-        const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}-${Math.floor(APP_VERSION / 60000)}-`;
+        const APP_VERSION = 1;
+        const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}-${APP_VERSION}-`;
         const MAX_PLAYERS_PER_ROOM = 12;
         const MAX_USERS_PER_ROOM = 36;
         const MAX_REPS_IN_LOBBY = 36;
@@ -4146,7 +4144,7 @@
         let botPlay = (board = undefined, hardMode = undefined) => {
             board ||= currentBoardState;
             let candidateTargets = [];
-            let shuffledTargets = shuffled(targets);
+            let shuffledTargets = shuffled(TARGETS);
             for (let t of shuffledTargets) {
                 let bad = (() => {
                     for (let i = board.length - 1; i >= 0; --i) {

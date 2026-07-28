@@ -2,5 +2,13 @@
     "printWidth": 2147483647,
     "quoteProps": "preserve",
     "singleQuote": false,
-    "tabWidth": 4
+    "tabWidth": 4,
+    "overrides": [
+        {
+            "files": ["guesses.json", "targets.json"],
+            "options": {
+                "printWidth": 0
+            }
+        }
+    ]
 }
