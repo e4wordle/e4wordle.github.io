@@ -3299,7 +3299,7 @@
                 let leavingPlayer = playerByUid.get(uid);
                 if (leavingPlayer) {
                     removePlayer(leavingPlayer);
-                } else if (currentEvent.mode === "welcome") {
+                } else if (currentEvent?.mode === "welcome") {
                     checkWelcomeEventEnd();
                 }
                 representIfOldest();
@@ -3363,7 +3363,19 @@
                     // Potentially show/hide description for the bot (Factory), or current total score (Arena)
                     showEventInfo();
                 } else if (currentEvent.mode === "duo" && !currentEventEnded && !currentPairing.includes(player)) {
-                    let i = currentPairing.indexOf(null);
+                    let i = -1;
+                    // Find a player who's not done or on their last game to be the new player's teammate.
+                    while (true) {
+                        i = currentPairing.indexOf(null, i + 1);
+                        if (i === -1) {
+                            break;
+                        }
+                        let d = playerLeaderboardData.get(currentPairing[i ^ 1]);
+                        // case "duo":
+                        if (d.score[1] < numGames() - 1) {
+                            break;
+                        }
+                    }
                     if (i === -1) {
                         currentPairing.push(player, null);
                         if (uid === currentUid) {
@@ -3474,6 +3486,7 @@
                 responseTimeoutHandle = undefined;
                 console.assert(playerByUid.get(uid) === currentPartner, uid, currentPartner);
                 currentScore = score;
+                playerLeaderboardData.set(currentPlayer, { score, scoreText: formatScore(currentEvent.mode, score), verdict: "", numGuesses: 0, done: false });
                 currentPlayerStartTime = Date.now() + parseFloat(teamStart);
                 currentGameIndex = game;
                 target = currentEvent.targets[currentGameIndex];
@@ -3832,6 +3845,7 @@
                         currentPairing[i] = null;
                         populateMiniLeaderboardItem(partner, document.querySelector(`#mini-leaderboard-item-${playerIds.get(partner)}`));
                         // If there are now two unpaired players, one idea could be to form team with them, but we can't do that easily because we'd have to merge their game and board states
+                        // FIXME: Though it may be viable to apply the above idea if an unpaired player is on their first game and haven't made a guess yet, to join them with another unpaired player without having to worry about merging game states
                     } else {
                         currentPairing.splice(i & ~1, 2);
                     }
