@@ -17,6 +17,9 @@
 <style id="main-styles">
     :root {
         --main-background-color: hsl(0, 0%, 95.8%);
+        --main-foreground-color: hsl(0, 0%, 37.5%);
+        --panel-foreground-color: hsl(0, 0%, 33.3%);
+        --heading-foreground-color: black;
     }
     b {
         font-weight: 600;
@@ -40,7 +43,7 @@
         font-size: 14px;
     }
     button {
-        color: black;
+        color: hsl(0, 0%, 25%);
     }
     button:disabled {
         opacity: 0.5;
@@ -52,7 +55,7 @@
         padding: 2px;
     }
     input::placeholder {
-        color: #00000080;
+        color: gray;
     }
     button {
         cursor: pointer;
@@ -198,6 +201,7 @@
     }
     .guess {
         display: flex;
+        justify-content: center;
     }
     .guess.shaking {
         animation: 667ms Shake;
@@ -299,7 +303,7 @@
     #banner {
         min-height: 24px;
         margin: 4px;
-        opacity: 0.625;
+        color: var(--main-foreground-color);
         font-size: 14px;
         display: flex;
         align-items: center;
@@ -338,6 +342,7 @@
         margin: 2px;
         border: 2px solid transparent;
         background: hsl(0, 0%, 83.3%);
+        color: var(--heading-foreground-color);
         font-size: 14px;
         font-weight: bold;
         display: flex;
@@ -401,6 +406,7 @@
         font-size: 10px;
         font-weight: normal;
         margin: 0;
+        opacity: 0.625;
     }
     .letter.mini.black,
     .letter.mini.yellow,
@@ -439,7 +445,7 @@
         position: fixed;
         padding: 8px;
         background: var(--main-background-color);
-        opacity: 0.625;
+        color: var(--main-foreground-color);
         display: flex;
         flex-direction: column-reverse;
         gap: var(--info-section-gap);
@@ -480,7 +486,7 @@
         position: relative;
         .material-symbols-outlined {
             font-size: 18px;
-            opacity: 0.5;
+            opacity: 0.625;
         }
     }
     #event-description-button::before {
@@ -529,13 +535,13 @@
         background: #00000040;
     }
     .player-join-message {
-        color: hsl(146.2deg, 100%, 16.7%);
+        color: hsl(146.2deg, 16.7%, 50%);
     }
     .player-leave-message {
-        color: hsl(18.8deg, 100%, 16.7%);
+        color: hsl(18.8deg, 16.7%, 50%);
     }
     .player-won-message {
-        color: hsl(48.8deg, 100%, 16.7%);
+        color: hsl(48.8deg, 16.7%, 50%);
     }
     #info-section-1 {
         right: 0;
@@ -609,13 +615,17 @@
     }
     #progress-bar-background {
         height: 2px;
-        background: #00000040;
+        background: hsl(0, 0%, 83.3%);
         position: relative;
     }
     #progress-bar-foreground {
         height: 100%;
-        background: black;
+        background: hsl(0, 0%, 41.7%);
         position: absolute;
+    }
+    .panel {
+        filter: drop-shadow(0 8px 12px #00000060);
+        background: var(--main-background-color);
     }
     #panel {
         position: absolute;
@@ -624,8 +634,6 @@
         transform: translate(-50%, max(-50% - 60px, -50vh + 24px));
         max-width: calc(100vw - 56px);
         padding: 16px 28px;
-        background: var(--main-background-color);
-        filter: drop-shadow(0 8px 12px #00000060);
         z-index: 3;
         display: none;
     }
@@ -681,6 +689,16 @@
     #opener-input::placeholder {
         text-transform: none;
     }
+    .panel {
+        color: var(--panel-foreground-color);
+        th,
+        td {
+            color: var(--panel-foreground-color);
+        }
+    }
+    #start-panel {
+        color: var(--heading-foreground-color);
+    }
     #start-panel .divider {
         margin: -2px 0;
         visibility: hidden;
@@ -690,8 +708,6 @@
         left: 8px;
         bottom: 64px;
         padding: 4px 16px;
-        background: var(--main-background-color);
-        filter: drop-shadow(0 8px 12px #00000060);
         z-index: 4;
         width: 288px;
         max-height: calc(100vh - 88px);
@@ -712,8 +728,6 @@
         right: 8px;
         bottom: 40px;
         padding: 16px;
-        background: var(--main-background-color);
-        filter: drop-shadow(0 8px 12px #00000060);
         z-index: 5;
         width: 288px;
         max-height: calc(100vh - 88px);
@@ -722,14 +736,40 @@
     }
     #help-contents {
         flex: 1;
-        opacity: 0.667;
         overflow: auto;
         margin-bottom: -12px;
         padding-bottom: 12px;
+        .divider {
+            margin: 1em 0;
+            width: calc(100% - 2px);
+        }
+        table {
+            transform: translateX(-1.5em);
+            margin: auto;
+        }
         th,
         td {
             height: 17px;
             width: 61px;
+        }
+        ul,
+        ol {
+            padding-inline-start: 2em;
+        }
+        #help-for-each-guess-description ul {
+            padding-inline-start: 1em;
+        }
+        .gapped > li:not(:last-child) {
+            margin-bottom: 1em;
+        }
+        .row {
+            transform: scale(0.875);
+        }
+        .letter {
+            width: 36px;
+            height: 36px;
+            font-size: 22px;
+            margin: 1px;
         }
     }
     body.showing-help {
@@ -748,7 +788,6 @@
     }
     .settings-label {
         flex: 1;
-        opacity: 0.667;
         display: flex;
         flex-direction: column;
         gap: 2px;
@@ -785,6 +824,7 @@
         justify-content: center;
         align-items: center;
         text-align: center;
+        color: var(--heading-foreground-color);
         padding: 2px;
         overflow: hidden;
         > :nth-child(1) {
@@ -830,7 +870,7 @@
         font-size: 12px;
         text-align: left;
         width: 100%;
-        opacity: 0.667;
+        opacity: 0.833;
     }
     @media (max-width: 864px) {
         body {
@@ -922,6 +962,10 @@
             width: min(384px, calc(100vw - 56px));
             height: fit-content;
         }
+        #help-ok-button,
+        #settings-ok-button {
+            min-height: 32px;
+        }
         body.showing-help,
         body.showing-settings {
             #panel {
@@ -965,28 +1009,31 @@
     @media (prefers-color-scheme: dark) {
         :root {
             --main-background-color: hsl(0, 0%, 6.3%);
+            --main-foreground-color: hsl(0, 0%, 50%);
+            --panel-foreground-color: hsl(0, 0%, 66.7%);
+            --heading-foreground-color: white;
         }
         button {
+            border-color: hsl(0, 0%, 75%);
             background: hsl(0, 0%, 25%);
-            color: #fff;
+            color: hsl(0, 0%, 75%);
         }
         input {
             background: hsl(0, 0%, 8.3%);
-            color: #fff;
+            color: white;
             border-color: hsl(0, 0%, 41.7%);
-        }
-        input::placeholder {
-            color: #ffffff80;
         }
         body {
             background: var(--main-background-color);
-            color: #fff;
+            color: var(--main-foreground-color);
         }
         .letter {
             border-color: hsl(0, 0%, 33.3%);
+            color: white;
         }
         .key {
             background: hsl(0, 0%, 33.3%);
+            color: white;
         }
         .key:active {
             filter: drop-shadow(0 0 8px #000) brightness(112.5%);
@@ -1010,10 +1057,6 @@
         .key.green {
             color: #fff;
         }
-        #banner,
-        .info-section {
-            opacity: 0.5;
-        }
         #alert {
             filter: drop-shadow(0 2px 8px #000);
         }
@@ -1021,30 +1064,32 @@
             background: #ffffff20;
         }
         .player-join-message {
-            color: hsl(146.2deg, 100%, 66.7%);
+            color: hsl(146.2deg, 43.8%, 37.5%);
         }
         .player-leave-message {
-            color: hsl(18.8deg, 100%, 66.7%);
+            color: hsl(18.8deg, 43.8%, 37.5%);
         }
         .player-won-message {
-            color: hsl(48.8deg, 100%, 66.7%);
+            color: hsl(48.8deg, 43.8%, 37.5%);
         }
         #progress-bar-background {
-            background: #ffffff40;
+            background: hsl(0, 0%, 16.7%);
         }
         #progress-bar-foreground {
-            height: 100%;
-            background: white;
-            position: absolute;
+            background: hsl(0, 0%, 58.3%);
         }
-        #panel,
-        #help,
-        #settings {
+        .panel {
             filter: drop-shadow(0 8px 32px #000);
             background: hsl(0, 0%, 12.5%);
         }
+        #start-panel {
+            color: white;
+        }
         .glow-green {
             filter: drop-shadow(0 0 2px hsl(146.2deg, 100%, 75%));
+        }
+        .final-leaderboard-top-item {
+            color: white;
         }
         .final-leaderboard-top-item.rank-1 {
             border-color: hsl(48.8deg, 83.3%, 50%);
@@ -1057,6 +1102,9 @@
         .final-leaderboard-top-item.rank-3 {
             border-color: hsl(18.8deg, 50%, 50%);
             background: hsl(18.8deg, 50%, 33.3%);
+        }
+        #help-contents .letter.black {
+            background: hsl(0, 0%, 25%);
         }
         body.accessible-colors {
             .yellow {
@@ -1171,8 +1219,8 @@
     </div>
 </div>
 <div id="alert"></div>
-<div id="panel">
-    <div id="start-panel" style="width: 252px; /* display: none */">
+<div id="panel" class="panel">
+    <div id="start-panel" style="width: 252px; display: _none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
@@ -1255,12 +1303,12 @@
         </div>
     </div>
     <div id="welcome-panel" style="display: none; max-width: 216px">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div id="welcome-panel-text" style="font-size: 16px; text-align: center"></div>
         </div>
     </div>
     <div id="between-games-panel" style="display: none">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">0</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
                 <div style="display: flex; font-size: 12px; padding-left: 10px; margin-bottom: -4px">
@@ -1281,18 +1329,18 @@
         </div>
     </div>
     <div class="optional-hidden" id="between-duels-panel" style="display: none">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0.667">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div class="divider panel-optional"></div>
             <div class="panel-optional" id="between-duels-your-place" style="font-size: 16px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
-            <p id="next-duel-countdown"></p>
+            <p id="next-duel-countdown">Your next duel starts in <b>10</b></p>
         </div>
     </div>
     <div id="between-events-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
-            <div class="glow-green" id="between-events-panel-title" style="font-weight: bold; font-size: 16px"></div>
-            <div id="between-events-panel-description" style="opacity: 0.5"></div>
+            <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: bold; font-size: 16px"></div>
+            <div id="between-events-panel-description" style="opacity: 0.667"></div>
             <div style="display: flex">
                 <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px"></div>
                 <div class="final-leaderboard-top-item rank-1"></div>
@@ -1300,7 +1348,7 @@
             </div>
             <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
             <div class="divider"></div>
-            <div style="opacity: 0.667; display: flex; flex-direction: column; width: 100%">
+            <div style="display: flex; flex-direction: column; width: 100%">
                 <div id="next-event-countdown">Next up in <b>20</b></div>
                 <div id="next-event-info" style="display: flex; align-items: center; gap: 6px; align-self: center">
                     <span class="material-symbols-outlined">sports_golf</span>
@@ -1310,13 +1358,13 @@
         </div>
     </div>
 </div>
-<div id="help">
+<div id="help" class="panel">
     <div id="help-container">
         <div id="help-contents"></div>
         <button id="help-ok-button">OK</button>
     </div>
 </div>
-<div id="settings">
+<div id="settings" class="panel">
     <div id="settings-container">
         <div class="settings-row">
             <div class="settings-label">
@@ -1942,7 +1990,7 @@
                 for (let j = 0; j < 5; ++j) {
                     let letter = pastGuess.charAt(j);
                     if (verdict.charAt(j) === "G" && nextGuess.charAt(j) !== letter) {
-                        return `${["First", "Second", "Third", "Fourth", "Last"][j]} letter must be "${letter}"`;
+                        return `${["First", "Second", "Third", "Fourth", "Last"][j]} letter must be ${letter}`;
                     }
                     if (verdict.charAt(j) !== "B") {
                         pastCounts[letter] = (pastCounts[letter] || 0) + 1;
@@ -1951,7 +1999,7 @@
                 for (let [letter, pastCount] of Object.entries(pastCounts)) {
                     let currentCount = nextGuess.split(letter).length - 1;
                     if (currentCount < pastCount) {
-                        return `Guess must contain ${pastCount > 1 ? `at least ${["", "", "two", "three"][pastCount]} "${letter}"s` : `"${letter}"`}`;
+                        return `Guess must contain ${pastCount > 1 ? `at least ${["", "", "two", "three"][pastCount]} "${letter}"s` : letter}`;
                     }
                 }
             }
@@ -2205,7 +2253,7 @@
                         }
                         gameDone = true;
                     } else if (currentBoardState.length === guessLimit && i === guessLimit - 1) {
-                        showAlert(`"${target}"`);
+                        showAlert(target);
                         gameDone = true;
                         alertShown = true;
                     }
@@ -2646,6 +2694,7 @@
             document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
             document.querySelector("#event-description-button").style.display = event.mode === "welcome" ? "none" : "";
 
+            let helpContentsEl = document.querySelector("#help-contents");
             let hardModeDescription = event.opener
                 ? `
                     <h4>Opener</h4>
@@ -2654,7 +2703,7 @@
                 : "";
             switch (event.mode) {
                 case "factory": {
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>Make a guess, then pass the Wordle to the next player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
@@ -2667,7 +2716,7 @@
                     break;
                 }
                 case "duo": {
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>Solve 9 Wordles with a random partner. First team to do so wins!</p>
                         ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentPartner || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
@@ -2683,7 +2732,7 @@
                     for (let { score } of playerLeaderboardData.values()) {
                         s += score[0];
                     }
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>Compete in this timed tournament of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
                         ${hardModeDescription}
@@ -2697,14 +2746,14 @@
                     break;
                 }
                 case "circuit": {
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same Wordles, one game at a time. Highest score after 9 games wins!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
                         Your score for each Wordle combines accuracy and speed:
-                        <ul>
-                            <li style="margin-bottom: 1em">Accuracy: you solved the Wordle in how many guesses
+                        <ul class="gapped">
+                            <li>Accuracy: you solved the Wordle in how many guesses
                                 <table style="font-size: 12px">
                                     <thead>
                                         <tr>
@@ -2791,7 +2840,7 @@
                     break;
                 }
                 case "sprint": {
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
                         ${hardModeDescription}
@@ -2801,7 +2850,7 @@
                     break;
                 }
                 case "golf": {
-                    document.querySelector("#help-contents").innerHTML = `
+                    helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
                         ${hardModeDescription}
@@ -2811,6 +2860,31 @@
                     break;
                 }
             }
+            helpContentsEl.innerHTML += `
+                <div class="divider"></div>
+                <h2>How to play Wordle</h2>
+                To solve a Wordle, guess the hidden word in 6 tries. In each guess:
+                <ul class="gapped" id="help-for-each-guess-description">
+                    <li>Enter a 5-letter English word.</li>
+                    <li><p>The color of the tiles will change to compare your guess to the hidden answer. For example:</p>
+                        <div class="guess" style="width: calc(100% - 12px)">
+                            <div class="letter nonempty judged yellow">T</div>
+                            <div class="letter nonempty judged green">W</div>
+                            <div class="letter nonempty judged black">E</div>
+                            <div class="letter nonempty judged black">A</div>
+                            <div class="letter nonempty judged black">K</div>
+                        </div>
+                        <p>means the answer:
+                            <ul>
+                                <li>has a T but not in the first spot</li>
+                                <li>has a W in the second spot</li>
+                                <li>does not contain E, A, or K at all</li>
+                            </ul>
+                        </p>
+                    </li>
+                    <li>Use the clues to tweak your future guesses and narrow down the answer!</li>
+                </ul>
+            `;
         };
         let showOrHidePanel = (panelToShow) => {
             let wasStartPanelShowing = !document.querySelector("#start-panel").display;
@@ -3710,7 +3784,7 @@
                 if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
                     if (!currentPlayerDone) {
-                        showAlert(`"${target}"`);
+                        showAlert(target);
                         showingTargetAlert = true;
                         setTimeout(() => {
                             if (currentEventEnded) {
@@ -3868,7 +3942,7 @@
         let kickPlayer = (player) => room.send({ type: "kick", player });
         let checkForZombies = (kick = false) => {
             let now = Date.now();
-            let firstGuessTimeLimit = currentEvent.opener ? 180000 : 60000; // Players started the event but didn't guess in this time are treated as zombies
+            let firstGuessTimeLimit = currentEvent.opener && currentEvent.mode !== "arena" ? 180000 : 60000; // Players started the event but didn't guess in this time are treated as zombies
             let zombies = 0;
             let checkAgainIn = -Infinity;
             for (let player of playerIds.keys()) {
