@@ -191,7 +191,7 @@
             width: min(calc(100vw / 8), 48px);
         }
     }
-    #board {
+    #player-board {
         margin: auto;
         width: fit-content;
     }
@@ -297,7 +297,7 @@
             }
         }
     }
-    #board.passing {
+    .board.passing {
         animation: BoardPass 167ms;
     }
     #banner {
@@ -1126,8 +1126,8 @@
     <div id="game-keyboard-container">
         <div id="game">
             <div id="board-container">
-                <div id="board"></div>
-                <div id="opponent-board"></div>
+                <div class="board" id="player-board"></div>
+                <div class="board" id="opponent-board"></div>
             </div>
             <div id="banner">
                 <div class="banner-section">
@@ -1151,7 +1151,7 @@
             <div id="event-text-container">
                 <div id="event-name-container">
                     <div id="event-name">Welcome</div>
-                    <div id="event-description-button" title="Show rule details" style="display: none">
+                    <div id="event-description-button" title="Show rule details">
                         <span class="material-symbols-outlined">info</span>
                     </div>
                 </div>
@@ -1340,7 +1340,7 @@
     <div id="between-events-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: bold; font-size: 16px"></div>
-            <div id="between-events-panel-description" style="opacity: 0.667"></div>
+            <div id="between-events-panel-description" style="opacity: 0.75"></div>
             <div style="display: flex">
                 <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px"></div>
                 <div class="final-leaderboard-top-item rank-1"></div>
@@ -1715,34 +1715,28 @@
         let currentBoardState = [];
         let currentGuess = "";
 
-        let animatingRows = new Set();
-        let opponentAnimatingRows = new Set();
-        let isBoardAnimating = () => animatingRows.size > 0;
+        /** @type {Map<number, [string, Set<number>]>} */
+        let animatingGuessesByBoard = new Map();
+        let isBoardAnimating = (boardId) => animatingGuessesByBoard.get(boardId || "player-board")?.size > 0;
         let boardContainerEl = document.querySelector("#board-container");
-        let boardEl = document.querySelector("#board");
-        let setBoardSize = (size, hasOpponentBoard = false) => {
-            boardContainerEl.classList.toggle("has-opponent", hasOpponentBoard);
-            boardEl.innerHTML = "";
+        let playerBoardEl = document.querySelector("#player-board");
+        let opponentBoardEl = document.querySelector("#opponent-board");
+        let createBoard = (el, size) => {
+            el.innerHTML = "";
             for (let i = 0; i < size; ++i) {
-                let guessEl = boardEl.appendChild(document.createElement("div"));
+                let guessEl = el.appendChild(document.createElement("div"));
                 guessEl.classList.add("guess");
                 guessEl.id = `guess-${i}`;
                 for (let j = 0; j < 5; ++j) {
-                    guessEl.innerHTML += `<div class="letter" id="letter-${i}-${j}"></div>`;
+                    guessEl.innerHTML += `<div class="letter"></div>`;
                 }
             }
-            animatingRows.clear();
-            let opponentBoardEl = document.querySelector("#opponent-board");
-            opponentBoardEl.innerHTML = "";
-            for (let i = 0; i < size; ++i) {
-                let guessEl = opponentBoardEl.appendChild(document.createElement("div"));
-                guessEl.classList.add("guess");
-                guessEl.id = `opponent-guess-${i}`;
-                for (let j = 0; j < 5; ++j) {
-                    guessEl.innerHTML += `<div class="letter" id="opponent-letter-${i}-${j}"></div>`;
-                }
-            }
-            opponentAnimatingRows.clear();
+            animatingGuessesByBoard.set(el.id, new Set());
+        };
+        let resetGameBoard = (size, hasOpponentBoard = false) => {
+            boardContainerEl.classList.toggle("has-opponent", hasOpponentBoard);
+            createBoard(playerBoardEl, size);
+            createBoard(opponentBoardEl, size);
             opponentBoardEl.style.display = hasOpponentBoard ? "" : "none";
             document.querySelector("#mini-leaderboard-container").classList.toggle("short", hasOpponentBoard);
         };
@@ -2188,6 +2182,7 @@
         let loadedState = [];
         let loadBoardState = (state, options = {}) => {
             options = {
+                boardEl: undefined,
                 fastAnimation: false,
                 noAnimation: false,
                 keyboardColorState: undefined,
@@ -2197,7 +2192,8 @@
             };
             state = structuredClone(state);
             loadedState = structuredClone(state);
-            let { fastAnimation, noAnimation, keyboardColorState, boardPassAnimation } = options;
+            let { boardEl, fastAnimation, noAnimation, keyboardColorState, boardPassAnimation } = options;
+            boardEl ||= playerBoardEl;
             if (boardPassAnimation) {
                 boardEl.classList.remove("passing");
                 void boardEl.offsetWidth;
@@ -2218,11 +2214,12 @@
             let { guessLimit } = gameParams();
             console.assert(state.length <= guessLimit);
             for (let i = 0; i < guessLimit; ++i) {
-                let handleRowFlipEnd = () => {
+                let guessEl = boardEl.children[i];
+                let handleGuessFlipEnd = () => {
                     if (JSON.stringify(loadedState[i]) !== JSON.stringify(state[i])) {
                         return;
                     }
-                    animatingRows.delete(i);
+                    animatingGuessesByBoard.get(boardEl.id).delete(i);
                     if (currentEvent.mode === "factory" && !isBoardAnimating() && verdict !== "GGGGG" && !waitingForScoreAfterGuessInFactoryTimeoutHandle) {
                         if (!waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
                             loadUnownedFactoryGameState();
@@ -2244,7 +2241,7 @@
                         }
                         if (!fastAnimation) {
                             for (let j = 0; j < 5; ++j) {
-                                let letterEl = document.querySelector(`#letter-${i}-${j}`);
+                                let letterEl = guessEl.children[j];
                                 letterEl.classList.remove("bouncing");
                                 void letterEl.offsetWidth;
                                 letterEl.classList.add("bouncing");
@@ -2322,13 +2319,13 @@
 
                 let [guess, verdict] = state[i] || ["", ""];
                 for (let j = 0; j < 5; ++j) {
-                    let letterEl = document.querySelector(`#letter-${i}-${j}`);
+                    let letterEl = guessEl.children[j];
                     let letter = guess.charAt(j);
                     let color = verdict.charAt(j);
 
                     let needsFlip = letterEl.classList.contains("judged") !== !!color;
                     if (needsFlip && !noAnimation) {
-                        animatingRows.add(i);
+                        animatingGuessesByBoard.get(boardEl.id).add(i);
                         if (color && !letterEl.textContent && !fastAnimation) {
                             // Allow a pre-judged word to be filled in with letters immediately (under fixed-opener mode), but don't allow clearing the board to immediately lose its letters
                             letterEl.textContent = letter;
@@ -2361,7 +2358,7 @@
                             let handleFlipEnd = () => {
                                 letterEl.classList.remove("flipping");
                                 if (j === 4) {
-                                    handleRowFlipEnd();
+                                    handleGuessFlipEnd();
                                 }
                             };
                             if (animation) {
@@ -2373,7 +2370,7 @@
                         letterEl.addEventListener("animationstart", checkToAddColor, { once: true });
                     } else if (noAnimation || !letterEl.classList.contains("flipping")) {
                         if (noAnimation) {
-                            animatingRows.delete(i);
+                            animatingGuessesByBoard.get(boardEl.id).delete(i);
                             letterEl.classList.remove("flipping");
                             letterEl.classList.remove("bouncing");
                         }
@@ -2593,7 +2590,7 @@
 
         initializeSettings();
         initializeKeyboard();
-        setBoardSize(6);
+        resetGameBoard(6);
         initializeChat();
         initializeLeaderboard();
 
@@ -2652,7 +2649,7 @@
                 newOpener = newUseOpener ? TARGETS[Math.floor(Math.random() * TARGETS.length)] : "";
             }
             let newEvent = { id: Math.random(), mode: newMode, opener: newOpener };
-            if (newMode !== "factory") {
+            if (!["factory", "arena"].includes(newMode)) {
                 let i = indexByTarget.get(newOpener);
                 newEvent.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
                     .fill("")
@@ -2692,9 +2689,9 @@
                 "welcome": "Fun Wordle challenges await!",
             }[event.mode];
             document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
-            document.querySelector("#event-description-button").style.display = event.mode === "welcome" ? "none" : "";
 
             let helpContentsEl = document.querySelector("#help-contents");
+            helpContentsEl.innerHTML = "";
             let hardModeDescription = event.opener
                 ? `
                     <h4>Opener</h4>
@@ -2860,8 +2857,10 @@
                     break;
                 }
             }
+            if (helpContentsEl.innerHTML) {
+                helpContentsEl.innerHTML += '<div class="divider"></div>';
+            }
             helpContentsEl.innerHTML += `
-                <div class="divider"></div>
                 <h2>How to play Wordle</h2>
                 To solve a Wordle, guess the hidden word in 6 tries. In each guess:
                 <ul class="gapped" id="help-for-each-guess-description">
@@ -2897,13 +2896,14 @@
             }
         };
         let playButton = document.querySelector("#play-button");
-        let generateTarget = (event = undefined) => {
+        let generateTarget = (event = undefined, rand = undefined) => {
             if (isDev && (DEFAULT_NUM_GAMES !== 9 || numGames() !== 9)) {
                 return "SAINT";
             }
             event ||= currentEvent;
+            rand ||= Math.random;
             let i = indexByTarget.get(event.opener) || NaN;
-            let j = Math.floor(Math.random() * (TARGETS.length - !isNaN(i)));
+            let j = Math.floor(rand() * (TARGETS.length - !isNaN(i)));
             j += j >= i;
             return TARGETS[j];
         };
@@ -2965,10 +2965,10 @@
             }
         });
 
-        let addPlayerWaitingForPairing = (player) => {
+        let addPlayerWaitingForPairing = (player, time) => {
             console.assert(uidByPlayer.has(player), player, uidByPlayer);
-            console.assert(!playersWaitingForPairing.includes(player), player, playersWaitingForPairing);
-            playersWaitingForPairing.push(player);
+            console.assert(!playersWaitingForPairing.find(([t, p]) => p === player), player, playersWaitingForPairing);
+            playersWaitingForPairing.push([time, player]);
             upcomingPairingTime = Math.min(upcomingPairingTime || Infinity, Date.now() + 12000 + Math.random() * 6000);
             // FIXME Maybe we could just not have a pre-game/post-pairing delay and make pairing happen right when the game starts, and just make new unpaired players (new finishing players) not join the current pairing (to avoid starting a new game too quickly) and setTimeout to start a new round of pairing?
         };
@@ -3401,7 +3401,7 @@
                 }
                 representIfOldest();
             });
-            room.on("enter", ({ uid, player, eventId }) => {
+            room.on("enter", ({ uid, date, player, eventId }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -3504,7 +3504,7 @@
                             target = generateTarget(currentEvent);
                         }
                     } else {
-                        playersWaitingForPairing.push(player);
+                        addPlayerWaitingForPairing(player, date);
                     }
                 } else if (currentEvent.mode === "welcome") {
                     checkWelcomeEventEnd();
@@ -3515,13 +3515,15 @@
                 if (uid !== currentUid) {
                     return;
                 }
-                setBoardSize(6, currentEvent.mode === "arena");
+                resetGameBoard(6, currentEvent.mode === "arena");
                 localStorage.setItem("nickname", currentPlayer);
                 document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
-                if (!["factory", "welcome"].includes(currentEvent.mode)) {
-                    target = currentEvent.targets[currentGameIndex];
-                } else if (currentEvent.mode !== "arena") {
+                if (currentEvent.mode === "arena") {
+                    target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
+                } else if (["factory", "welcome"].includes(currentEvent.mode)) {
                     target = generateTarget(currentEvent);
+                } else {
+                    target = currentEvent.targets[currentGameIndex];
                 }
                 currentPlayerDone = false;
                 currentPlayerWaitingForOthers = false;
@@ -3605,7 +3607,7 @@
                     upcomingEvent = newUpcomingEvent;
                     currentGameIndex = 0;
                     currentScore = initialScore()[currentEvent.mode];
-                    setBoardSize(6, currentEvent.mode === "arena");
+                    resetGameBoard(6, currentEvent.mode === "arena");
 
                     if (["duo", "arena"].includes(currentEvent.mode)) {
                         let pairing = shuffled(playerByUid.values(), new Math.seedrandom(date));
@@ -3641,10 +3643,12 @@
                 }
                 showEventInfo();
                 currentEventStartTime = Date.now();
-                if (!["factory", "welcome"].includes(currentEvent.mode)) {
-                    target = currentEvent.targets[currentGameIndex];
-                } else {
+                if (currentEvent.mode === "arena") {
+                    target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
+                } else if (["factory", "welcome"].includes(currentEvent.mode)) {
                     target = generateTarget(currentEvent);
+                } else {
+                    target = currentEvent.targets[currentGameIndex];
                 }
                 currentPlayerDone = false;
                 currentPlayerWaitingForOthers = false;
@@ -3750,10 +3754,11 @@
                     return;
                 }
                 let rand = new Math.seedrandom(date);
-                let oddPlayer = playersWaitingForPairing.length & 1 ? playersWaitingForPairing[Math.floor(rand() * playersWaitingForPairing.length)] : undefined;
+                let oddPlayer = playersWaitingForPairing.length & 1 ? playersWaitingForPairing[Math.floor(rand() * playersWaitingForPairing.length)][1] : undefined;
                 let sortedPlayers = sortMiniLeaderboard();
                 let newPairing = [...currentPairing];
-                let waiting = new Set(playersWaitingForPairing);
+                const MIN_WAIT_TIME = 5000; // To ensure players always get a break (and time to read the results panel) before their next duel
+                let waiting = new Set(playersWaitingForPairing.filter(([t, p]) => t < date - MIN_WAIT_TIME).map(([t, p]) => p));
                 for (let [p, _] of sortedPlayers) {
                     if (p === oddPlayer || !waiting.has(p)) {
                         continue;
@@ -3769,8 +3774,12 @@
                     }
                 }
                 currentPairing = newPairing;
-                playersWaitingForPairing = [];
+                playersWaitingForPairing = playersWaitingForPairing.filter(([t, p]) => t >= date - MIN_WAIT_TIME);
                 if (waiting.has(currentPlayer)) {
+                    currentPartner = newPairing[newPairing.indexOf(currentPlayer) ^ 1];
+                    target = generateTarget(currentEvent, rand);
+                    currentPlayerWaitingForOthers = false;
+                    currentPlayerStartTime = Date.now();
                 }
             });
             room.on("event-end", ({ uid, eventId }) => {
