@@ -1596,9 +1596,6 @@
             };
         })();
 
-        /** @type {Map<string, number>} */
-        let indexByTarget = new Map(TARGETS.map((t, i) => [t, i]));
-
         let currentEvent;
         let upcomingEvent;
         let currentGameIndex;
@@ -1620,6 +1617,9 @@
         const DUO_GUESS_TIME_LIMIT = 30000;
         const ARENA_POST_PAIRING_TIMEOUT = 3000;
         let initialEventTimeLimit = (mode = undefined) => {
+            if (numGames() > 18) {
+                return 1 << 30;
+            }
             mode ||= (currentEvent || upcomingEvent).mode;
             switch (mode) {
                 case "circuit": {
@@ -1777,6 +1777,37 @@
         let currentBoardState = [];
         let currentOpponentBoardState;
         let currentGuess = "";
+
+        let allowedTargets = TARGETS;
+        let initializeSpecialTargetSet = () => {
+            let stateString = urlParams.get("state");
+            if (!stateString) {
+                return;
+            }
+            let t = new Set();
+            try {
+                for (let a of stateString.split(";")) {
+                    let b = a.split(",");
+                    for (let w of TARGETS) {
+                        (() => {
+                            for (let i = 0; i < b.length; i += 2) {
+                                if (judge(b[i].toUpperCase(), w) !== b[i + 1].toUpperCase()) {
+                                    return;
+                                }
+                            }
+                            t.add(w);
+                        })();
+                    }
+                }
+            } catch (e) {
+                alert(e.message);
+                return;
+            }
+            allowedTargets = [...t].sort();
+        };
+        initializeSpecialTargetSet();
+        /** @type {Map<string, number>} */
+        let indexByTarget = new Map(allowedTargets.map((t, i) => [t, i]));
 
         /** @type {Map<number, [string, Set<number>]>} */
         let animatingGuessesByBoard = new Map();
@@ -3074,15 +3105,12 @@
         };
         let playButton = document.querySelector("#play-button");
         let generateTarget = (event = undefined, rand = undefined) => {
-            if (isDev && (DEFAULT_NUM_GAMES !== 9 || numGames() !== 9)) {
-                return "SAINT";
-            }
             event ||= currentEvent;
             rand ||= Math.random;
             let i = indexByTarget.get(event.opener) || NaN;
-            let j = Math.floor(rand() * (TARGETS.length - !isNaN(i)));
+            let j = Math.floor(rand() * (allowedTargets.length - !isNaN(i)));
             j += j >= i;
-            return TARGETS[j];
+            return allowedTargets[j];
         };
         let createUnownedFactoryGame = (addBotGuess = true, event = undefined) => {
             event ||= currentEvent;
@@ -4577,7 +4605,9 @@
             showOrHideOpponentBoard(false);
             showOrHidePanel("between-duels-panel");
             let panelEl = document.querySelector("#between-duels-panel");
-            panelEl.classList.toggle("optional-hidden", playerJustEntered);
+            if (playerJustEntered || !options.placeAndDeltaOnly) {
+                panelEl.classList.toggle("optional-hidden", playerJustEntered);
+            }
             if (playerJustEntered) {
                 updateCountdownInPanel();
                 return;
