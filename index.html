@@ -2144,13 +2144,13 @@
         };
         /** @type {HTMLElement} */
         let alertEl = document.querySelector("#alert");
-        let showAlert = (text) => {
+        let showAlert = (html) => {
             alertEl.classList.remove("visible");
             void alertEl.offsetWidth;
             alertEl.classList.add("visible");
-            alertEl.textContent = text;
+            alertEl.innerHTML = html;
         };
-        // Returns a description for why the guess didn't fit Hard Mode
+        // Returns an HTML description for why the guess didn't fit Hard Mode
         let checkHardMode = (nextGuess) => {
             for (let i = currentBoardState.length - 1; i >= 0; --i) {
                 let [pastGuess, verdict] = currentBoardState[i];
@@ -2158,7 +2158,7 @@
                 for (let j = 0; j < 5; ++j) {
                     let letter = pastGuess.charAt(j);
                     if (verdict.charAt(j) === "G" && nextGuess.charAt(j) !== letter) {
-                        return `${["First", "Second", "Third", "Fourth", "Last"][j]} letter must be ${letter}`;
+                        return `${["First", "Second", "Third", "Fourth", "Last"][j]} letter must be <b>${letter}</b>`;
                     }
                     if (verdict.charAt(j) !== "B") {
                         pastCounts[letter] = (pastCounts[letter] || 0) + 1;
@@ -2167,7 +2167,7 @@
                 for (let [letter, pastCount] of Object.entries(pastCounts)) {
                     let currentCount = nextGuess.split(letter).length - 1;
                     if (currentCount < pastCount) {
-                        return `Guess must contain ${pastCount > 1 ? `at least ${["", "", "two", "three"][pastCount]} "${letter}"s` : letter}`;
+                        return `Guess must contain ${pastCount > 1 ? `at least ${["", "", "two", "three"][pastCount]} "<b>${letter}</b>"s` : `<b>${letter}</b>`}`;
                     }
                 }
             }
@@ -2287,15 +2287,15 @@
                 if (currentBoardState.length === gameParams().guessLimit || (currentBoardState.length && currentBoardState.at(-1)[1] === "GGGGG")) {
                     return;
                 }
-                let hardModeErrorText;
-                if (currentGuess.length !== 5 || !allowedGuesses.has(currentGuess) || ((hardModeErrorText = checkHardMode(currentGuess)) && (settings.alwaysHardMode || gameParams().hardMode))) {
+                let hardModeErrorHTML;
+                if (currentGuess.length !== 5 || !allowedGuesses.has(currentGuess) || ((hardModeErrorHTML = checkHardMode(currentGuess)) && (settings.alwaysHardMode || gameParams().hardMode))) {
                     let guessEl = document.querySelector(`#guess-${currentBoardState.length}`);
                     guessEl.classList.remove("shaking");
                     void guessEl.offsetWidth;
                     guessEl.classList.toggle("fast", gameParams().fastAnimation);
                     guessEl.classList.add("shaking");
-                    if (hardModeErrorText) {
-                        showAlert(hardModeErrorText);
+                    if (hardModeErrorHTML) {
+                        showAlert(hardModeErrorHTML);
                     }
                     return;
                 }
@@ -2309,7 +2309,7 @@
                 let verdict = judge(currentGuess, target);
                 currentBoardState.push([currentGuess, verdict]);
                 currentGuess = "";
-                updateCurrentScore(verdict, !hardModeErrorText);
+                updateCurrentScore(verdict, !hardModeErrorHTML);
                 if (currentEvent.mode === "factory") {
                     waitingForScoreAfterGuessInFactoryTimeoutHandle = setTimeout(() => {
                         waitingForScoreAfterGuessInFactoryTimeoutHandle = undefined;
@@ -2437,7 +2437,7 @@
                         }
                         gameDone = true;
                     } else if (currentBoardState.length === guessLimit && i === guessLimit - 1) {
-                        showAlert(target);
+                        showAlert(`<b>${target}</b>`);
                         gameDone = true;
                         alertShown = true;
                     }
@@ -3083,9 +3083,9 @@
                         </div>
                         <p>means the answer:
                             <ul>
-                                <li>has a T but not in the first spot</li>
-                                <li>has a W in the second spot</li>
-                                <li>does not contain E, A, or K at all</li>
+                                <li>has a <b>T</b> but not in the first spot</li>
+                                <li>has a <b>W</b> in the second spot</li>
+                                <li>does not contain <b>E</b>, <b>A</b>, or <b>K</b> at all</li>
                             </ul>
                         </p>
                     </li>
@@ -3415,10 +3415,10 @@
             room.on("error", (data) => {
                 console.error("CONN ERROR (ROOM)", data);
             });
-            let handleRoomFull = (autoEnter, showAlert = true) => {
+            let handleRoomFull = (autoEnter, showShowAlert = true) => {
                 console.error("ROOM FULL", roomId, autoEnter);
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
-                    alert(showAlert ? "This room is full." : "Failed to connect to the private room.");
+                    alert(showShowAlert ? "This room is full." : "Failed to connect to the private room.");
                     room.remove("close", room._closeHandler);
                     isInPrivateRoom = false;
                     updateRoomIdInURL();
@@ -4168,7 +4168,7 @@
                 if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
                     if (currentEvent.mode === "arena" ? currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone) {
-                        showAlert(target);
+                        showAlert(`<b>${target}</b>`);
                         showingTargetAlert = true;
                         setTimeout(() => {
                             if (currentEventEnded) {
