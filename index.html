@@ -2356,10 +2356,10 @@
             }
             target = factoryGameToShowAfterAnimation.target;
             currentBoardState = factoryGameToShowAfterAnimation.board;
-            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer && (playerByUid.size === 1 || Math.random() < 0.5)) {
-                // Make a bot guess sometimes so the player doesn't get bored from only solving Wordles passed to themselves
+            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer) {
+                // Make a bot guess so the player doesn't get bored from only solving Wordles passed to themselves
                 let g;
-                if (currentBoardState.length < gameParams().guessLimit - 1 && ((g = botPlay()), g !== target)) {
+                if (currentBoardState.length < gameParams().guessLimit - 1 && ((g = botPlay({ worse: playerByUid.size > 1 })), g !== target)) {
                     currentBoardState.push([g, judge(g, target)]);
                 }
             }
