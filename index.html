@@ -3319,6 +3319,7 @@
                     }
                     case "search": {
                         usersWaitingForSearchResponse.add(uid);
+                        let eventProgress = !currentEvent ? 1 : currentEventEnded ? 0 : currentEvent.mode === "circuit" ? currentGameIndex / numGames() : 1 - (currentEventEndTime - Date.now()) / initialEventTimeLimit(currentEvent.mode); // The sooner the event is going to end, the later (less likely hopefully) to admit the new user
                         setTimeout(() => {
                             if (!usersWaitingForSearchResponse.has(uid)) {
                                 return;
@@ -3328,7 +3329,7 @@
                                 to: uid,
                                 roomId: currentRoomId,
                             });
-                        }, Math.random() * 500);
+                        }, eventProgress * 750);
                         break;
                     }
                 }
@@ -4197,7 +4198,7 @@
                     }
                 }
                 let isUpcomingEventNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
-                if (playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
+                if (currentEvent.mode !== "welcome" && playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
                     checkForZombies(true);
                 }
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
