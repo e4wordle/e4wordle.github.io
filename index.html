@@ -43,7 +43,20 @@
         font-size: 14px;
     }
     button {
+        user-select: none;
+        appearance: none;
+        -webkit-appearance: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        cursor: pointer;
+        border: 1px solid hsl(0, 0%, 58.3%);
         color: hsl(0, 0%, 25%);
+        background: hsl(0, 0%, 91.7%);
+        padding: 4px 6px;
+    }
+    button:active {
+        filter: brightness(112.5%);
     }
     button:disabled {
         opacity: 0.5;
@@ -52,13 +65,10 @@
         border: 1px solid hsl(0, 0%, 58.3%);
         outline: none;
         flex: 1;
-        padding: 2px;
+        padding: 4px;
     }
     input::placeholder {
         color: gray;
-    }
-    button {
-        cursor: pointer;
     }
     button .material-symbols-outlined {
         font-size: 14px;
@@ -565,7 +575,7 @@
     }
     #mini-leaderboard-container.short {
         .auto-blur-section {
-            max-height: calc(100vh - ((100vh - 120px) / 2 + 112px) - 54px - 48px); /* Just below opponent's board */
+            max-height: calc(100vh - ((100vh - 120px) / 2 + 120px) - 54px - 48px); /* Just below opponent's board */
         }
     }
     #mini-leaderboard {
@@ -935,6 +945,7 @@
         }
         .info-section {
             position: unset;
+            padding: 6px;
         }
         #info-section-0,
         #info-section-1 {
@@ -947,7 +958,7 @@
         .mobile-button-container {
             display: flex;
             margin-top: 2px;
-            gap: 2px;
+            gap: 4px;
             max-height: 48px;
         }
         .mobile-button {
@@ -1050,8 +1061,8 @@
             --heading-foreground-color: white;
         }
         button {
-            border-color: hsl(0, 0%, 75%);
-            background: hsl(0, 0%, 25%);
+            border-color: hsl(0, 0%, 41.7%);
+            background: hsl(0, 0%, 20.8%);
             color: hsl(0, 0%, 75%);
         }
         input {
@@ -1142,6 +1153,11 @@
             border-color: hsl(18.8deg, 50%, 50%);
             background: hsl(18.8deg, 50%, 33.3%);
         }
+        .panel button:not(.letter, .key) {
+            border-color: hsl(0, 0%, 50%);
+            color: white;
+            background: hsl(0, 0%, 25%);
+        }
         .panel .letter:not(.judged) {
             border-color: hsl(0, 0%, 41.7%);
         }
@@ -1210,8 +1226,8 @@
                     <span class="material-symbols-outlined">settings</span>
                 </button>
                 <!-- <button id="hint-button-2" title="Hint">
-                <span class="material-symbols-outlined">lightbulb</span>
-            </button> -->
+                    <span class="material-symbols-outlined">lightbulb</span>
+                </button> -->
                 <button class="mobile-button" id="leaderboard-button-2" title="Toggle full leaderboard">
                     <span class="material-symbols-outlined">leaderboard</span>
                 </button>
@@ -1226,7 +1242,7 @@
                 </div>
                 <div id="chat-message-container" style="display: flex; flex-direction: column; gap: 8px; padding-right: 4px"></div>
             </div>
-            <div style="display: flex; gap: 2px">
+            <div style="display: flex; gap: 3px">
                 <button id="hide-chat-button" title="Hide Chat">
                     <span class="material-symbols-outlined">chat_bubble</span>
                 </button>
