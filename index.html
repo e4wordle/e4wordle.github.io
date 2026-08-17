@@ -58,6 +58,7 @@
     button:active {
         filter: brightness(112.5%);
     }
+    input:disabled,
     button:disabled {
         opacity: 0.5;
     }
@@ -213,10 +214,10 @@
         display: flex;
         justify-content: center;
     }
-    .guess.shaking {
+    .shaking {
         animation: 667ms Shake;
     }
-    .guess.shaking.fast {
+    .shaking.fast {
         animation: 250ms ShakeFast;
     }
     .guess.failed {
@@ -366,6 +367,9 @@
         -webkit-user-select: none;
         -webkit-touch-callout: none;
         position: relative;
+    }
+    button.key {
+        margin: unset;
     }
     .key::before {
         content: "";
@@ -671,9 +675,10 @@
         }
     }
     .mode-button {
+        margin: 2px !important;
         flex: unset;
         font-weight: normal;
-        font-size: 10px;
+        font-size: 10px !important;
         height: 52px;
         width: 52px;
         > div {
@@ -685,7 +690,7 @@
     .mode-button:not(.green) {
         .material-symbols-outlined {
             font-size: 26px;
-            opacity: 0.625;
+            opacity: 0.75;
         }
         .mode-button-name-label {
             display: none;
@@ -696,13 +701,15 @@
     }
     .opener-button {
         font-weight: normal;
+        font-size: unset !important;
         min-height: unset !important;
     }
-    #opener-input:disabled::placeholder,
-    #opener-input:focus::placeholder {
+    #customization-panel-opener-input:disabled,
+    #customization-panel-opener-input:disabled::placeholder,
+    #customization-panel-opener-input:focus::placeholder {
         color: transparent;
     }
-    #opener-input::placeholder {
+    #customization-panel-opener-input::placeholder {
         text-transform: none;
     }
     .panel {
@@ -717,9 +724,12 @@
     #start-panel {
         color: var(--heading-foreground-color);
     }
-    #start-panel .divider {
-        margin: -2px 0;
-        visibility: hidden;
+    #start-panel,
+    #customization-panel {
+        .divider {
+            margin: -2px 0;
+            visibility: hidden;
+        }
     }
     #help {
         position: absolute;
@@ -1281,22 +1291,39 @@
 </div>
 <div id="alert"></div>
 <div id="panel" class="panel">
-    <div id="start-panel" style="width: 252px; /* display: none */">
+    <div id="start-panel" style="width: 252px; margin: 8px -4px; display: _none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
             <div class="divider"></div>
-            <div style="display: flex; gap: 36px; display: none">
+            <input id="nickname-input" style="width: 100%; font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
+            <div style="display: flex; gap: 12px; width: 100%">
+                <button id="play-button" class="key green" style="min-height: 40px; font-size: 16px; font-weight: 600" disabled>Loading...</button>
+                <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
+                    <div style="display: flex; flex-direction: column; gap: 2px">
+                        <b style="font-size: 13px">Invite</b>
+                        <div style="font-size: 10px">Create private room</div>
+                    </div>
+                </button>
+                <button class="key" id="copy-room-link-button" style="display: none; font-weight: normal; font-size: 14px">Copy room link</button>
+            </div>
+            <div id="private-room-user-count-label" style="display: none; opacity: 0.667"></div>
+        </div>
+    </div>
+    <div id="customization-panel" style="width: 312px; margin: 8px -4px; display: none">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
+            <h3 style="font-weight: normal">Customize Challenge to Play</h3>
+            <div style="display: flex; gap: 36px">
                 <div style="display: flex; flex-direction: column; align-items: center">
                     <div style="margin-bottom: 8px">Mode</div>
                     <div style="display: flex">
-                        <button class="letter key mode-button nonempty">
+                        <button class="letter key mode-button judged nonempty green" id="customization-panel-mode-button-factory">
                             <div>
                                 <span class="material-symbols-outlined">conveyor_belt</span>
                                 <span class="mode-button-name-label">Factory</span>
                             </div>
                         </button>
-                        <button class="letter key mode-button nonempty">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-duo">
                             <div>
                                 <span class="material-symbols-outlined">group</span>
                                 <span class="mode-button-name-label">Duo</span>
@@ -1304,65 +1331,57 @@
                         </button>
                     </div>
                     <div style="display: flex">
-                        <button class="letter key mode-button nonempty">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-circuit">
                             <div>
-                                <span class="material-symbols-outlined" style="transform: translateX(1px)">sports_score</span>
+                                <span class="material-symbols-outlined" style="zoom: 1.125; transform: translateX(1px)">sports_score</span>
                                 <span class="mode-button-name-label">Circuit</span>
                             </div>
                         </button>
-                        <button class="letter key mode-button nonempty green">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-random">
                             <div>
                                 <span class="material-symbols-outlined">question_exchange</span>
                                 <span class="mode-button-name-label">Random</span>
                             </div>
                         </button>
-                        <button class="letter key mode-button nonempty" style="display: none">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-arena">
                             <div>
-                                <span class="material-symbols-outlined">swords</span>
+                                <span class="material-symbols-outlined" style="zoom: 0.917; transform: translateY(1px)">swords</span>
                                 <span class="mode-button-name-label">Arena</span>
                             </div>
                         </button>
                     </div>
                     <div style="display: flex">
-                        <button class="letter key mode-button nonempty">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-golf">
                             <div>
                                 <span class="material-symbols-outlined">sports_golf</span>
                                 <span class="mode-button-name-label">Golf</span>
                             </div>
                         </button>
-                        <button class="letter key mode-button nonempty">
+                        <button class="letter key mode-button judged nonempty" id="customization-panel-mode-button-sprint">
                             <div>
-                                <span class="material-symbols-outlined">sprint</span>
+                                <span class="material-symbols-outlined" style="transform: translateY(1px)">sprint</span>
                                 <span class="mode-button-name-label">Sprint</span>
                             </div>
                         </button>
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column; width: 96px">
-                    <div style="margin: 2px 0 14px">Opener</div>
-                    <div class="key opener-button">Never</div>
-                    <div class="key opener-button green">Sometimes</div>
-                    <div class="key opener-button">Always</div>
-                    <input id="opener-input" maxlength="5" placeholder="Random" style="text-align: center; text-transform: uppercase; margin: 6px" disabled />
+                    <div style="margin: 0 0 16px">Opener</div>
+                    <div class="key opener-button" id="customization-panel-opener-button-never">Never</div>
+                    <div class="key opener-button green" id="customization-panel-opener-button-sometimes">Sometimes</div>
+                    <div class="key opener-button" id="customization-panel-opener-button-always">Always</div>
+                    <input id="customization-panel-opener-input" maxlength="5" placeholder="Random" style="text-align: center; text-transform: uppercase; margin: 6px" />
                 </div>
             </div>
             <div class="divider"></div>
-            <input id="nickname-input" style="width: calc(100% - 4px); font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
-            <div style="display: flex; gap: 8px; width: 100%; min-height: 40px">
-                <button id="play-button" class="key green" style="font-size: 16px; font-weight: 600" disabled>Loading...</button>
-                <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
-                    <div id="private-room-button-create-label">
-                        <div style="display: flex; flex-direction: column; gap: 2px">
-                            <b>Invite</b>
-                            <div style="font-size: 10px">Create private room</div>
-                        </div>
-                    </div>
-                    <div id="private-room-button-copy-label" style="display: none">Copy room link</div>
-                </button>
+            <div class="divider"></div>
+            <div style="width: 100%; display: flex; gap: 12px">
+                <button id="customization-panel-cancel-button" style="flex: 0.5; padding: 8px; font-weight: normal">Cancel</button>
+                <button id="customization-panel-create-button" class="key green" style="padding: 8px; font-size: 14px">Create Private Room</button>
             </div>
-            <div id="private-room-user-count-label" style="display: none; opacity: 0.667"></div>
         </div>
     </div>
+    <!-- Welcome panel refers to the one showing "Challenge starts in X" in a private room -->
     <div id="welcome-panel" style="display: none; max-width: 216px">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div id="welcome-panel-text" style="font-size: 16px; text-align: center"></div>
@@ -3114,7 +3133,7 @@
         };
         let showOrHidePanel = (panelToShow) => {
             let wasStartPanelShowing = !document.querySelector("#start-panel").display;
-            for (let panel of ["start-panel", "welcome-panel", "between-games-panel", "between-events-panel", "between-duels-panel"]) {
+            for (let panel of ["start-panel", "customization-panel", "welcome-panel", "between-games-panel", "between-events-panel", "between-duels-panel"]) {
                 document.querySelector("#" + panel).style.display = panel === panelToShow ? "" : "none";
             }
             document.body.classList.toggle("showing-panel", !!panelToShow);
@@ -3441,7 +3460,7 @@
                     alert(showShowAlert ? "This room is full." : "Failed to connect to the private room.");
                     room.remove("close", room._closeHandler);
                     isInPrivateRoom = false;
-                    updateRoomIdInURL();
+                    updateRoomConfigInURL();
                     updateStartPanel();
                 }
                 room.close();
@@ -4253,8 +4272,8 @@
         let updateStartPanel = () => {
             playButton.disabled = !joinedRoom;
             playButton.textContent = !joinedRoom ? "Loading..." : isInPrivateRoom ? ((currentEvent || upcomingEvent).mode === "welcome" ? "Start" : "Join") : "Play";
-            document.querySelector("#private-room-button-create-label").style.display = !isInPrivateRoom ? "" : "none";
-            document.querySelector("#private-room-button-copy-label").style.display = isInPrivateRoom ? "" : "none";
+            privateRoomButton.style.display = !isInPrivateRoom ? "" : "none";
+            copyRoomLinkButton.style.display = isInPrivateRoom ? "" : "none";
             privateRoomUserCountLabel.style.display = isInPrivateRoom ? "" : "none";
             updatePrivateRoomUserCountLabel();
         };
@@ -4265,6 +4284,7 @@
         };
         let preferredRoomIdFromURLParam = +urlParams.get("room") || 0;
         let privateRoomButton = document.querySelector("#private-room-button");
+        let copyRoomLinkButton = document.querySelector("#copy-room-link-button");
         if (preferredRoomIdFromURLParam) {
             joinRoom(preferredRoomIdFromURLParam);
             isInPrivateRoom = preferredRoomIdFromURLParam >= 1;
@@ -4273,31 +4293,87 @@
             searchAndJoinRoom();
         }
 
-        let updateRoomIdInURL = (newRoomId) => {
+        let updateRoomConfigInURL = (options = {}) => {
+            options = {
+                mode: undefined,
+                opener: undefined,
+                room: undefined,
+                ...options,
+            };
             let url = new URL(location.href);
-            if (newRoomId) {
-                url.searchParams.set("room", newRoomId);
-            } else {
-                url.searchParams.delete("room");
+            for (let [k, v] of Object.entries(options)) {
+                if (v !== undefined) {
+                    url.searchParams.set(k, v);
+                } else {
+                    url.searchParams.delete(v);
+                }
             }
+            urlParams = url.searchParams;
             history.pushState(null, "", url);
         };
         privateRoomButton.addEventListener("click", () => {
-            if (isInPrivateRoom) {
-                navigator.clipboard.writeText(location.href).then(() => {
-                    showAlert("Room link copied");
-                });
-                return;
-            }
-            closeLobbyConnection();
-            let roomId = Math.random() + 1;
-            updateRoomIdInURL(roomId);
-            joinedRoom = false;
-            joinRoom(roomId, false);
-            isInPrivateRoom = true;
-            resetToInitialEventStates();
-            updateStartPanel();
+            updateCustomizationPanel();
+            showOrHidePanel("customization-panel");
         });
+        copyRoomLinkButton.addEventListener("click", () => {
+            navigator.clipboard.writeText(location.href).then(() => {
+                showAlert("Room link copied");
+            });
+        });
+        let customizationPanelSelectedMode = "random";
+        let customizationPanelSelectedOpener = "sometimes";
+        let customizationPanelOpenerInput = document.querySelector("#customization-panel-opener-input");
+        let updateCustomizationPanel = (() => {
+            const CUSTOMIZATION_MODES = ["factory", "duo", "arena", "circuit", "sprint", "golf", "random"];
+            for (let mode of CUSTOMIZATION_MODES) {
+                document.querySelector("#customization-panel-mode-button-" + mode).addEventListener("click", () => {
+                    customizationPanelSelectedMode = mode;
+                    updateCustomizationPanel();
+                });
+            }
+            const CUSTOMIZATION_OPENERS = ["never", "sometimes", "always"];
+            for (let opener of CUSTOMIZATION_OPENERS) {
+                document.querySelector("#customization-panel-opener-button-" + opener).addEventListener("click", () => {
+                    customizationPanelSelectedOpener = opener;
+                    updateCustomizationPanel();
+                });
+            }
+            document.querySelector("#customization-panel-cancel-button").addEventListener("click", () => {
+                showOrHidePanel("start-panel");
+            });
+            document.querySelector("#customization-panel-create-button").addEventListener("click", () => {
+                let opener = customizationPanelOpenerInput.value.toUpperCase();
+                if (opener && customizationPanelSelectedOpener === "always" && !allowedGuesses.has(opener)) {
+                    customizationPanelOpenerInput.classList.remove("shaking");
+                    void customizationPanelOpenerInput.offsetWidth;
+                    customizationPanelOpenerInput.classList.add("shaking");
+                    return;
+                }
+                closeLobbyConnection();
+                let roomId = Math.random() + 1;
+                updateRoomConfigInURL({
+                    room: roomId,
+                    mode: customizationPanelSelectedMode === "random" ? undefined : customizationPanelSelectedMode,
+                    opener: customizationPanelSelectedOpener === "sometimes" ? undefined : customizationPanelSelectedOpener === "never" ? "none" : allowedGuesses.has(opener) ? opener.toLowerCase() : "random",
+                });
+                joinedRoom = false;
+                joinRoom(roomId, false);
+                isInPrivateRoom = true;
+                resetToInitialEventStates();
+                updateStartPanel();
+                showOrHidePanel("start-panel");
+            });
+            return () => {
+                for (let mode of CUSTOMIZATION_MODES) {
+                    document.querySelector("#customization-panel-mode-button-" + mode).classList.toggle("green", mode === customizationPanelSelectedMode);
+                }
+                for (let opener of CUSTOMIZATION_OPENERS) {
+                    document.querySelector("#customization-panel-opener-button-" + opener).classList.toggle("green", opener === customizationPanelSelectedOpener);
+                }
+                customizationPanelOpenerInput.disabled = customizationPanelSelectedOpener !== "always";
+                customizationPanelOpenerInput.classList.remove("shaking");
+            };
+        })();
         // Force the browser back button to reload the page, in case a private room was created
         addEventListener("popstate", () => {
             location.reload();
