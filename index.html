@@ -24,6 +24,9 @@
     b {
         font-weight: 600;
     }
+    i {
+        font-weight: 300;
+    }
     .no-wrap {
         white-space: nowrap;
         overflow: hidden;
@@ -49,13 +52,15 @@
         -webkit-tap-highlight-color: transparent;
         -webkit-user-select: none;
         -webkit-touch-callout: none;
-        cursor: pointer;
         border: 1px solid hsl(0, 0%, 58.3%);
         color: hsl(0, 0%, 25%);
         background: hsl(0, 0%, 91.7%);
-        padding: 4px 6px;
+        padding: 6px;
     }
-    button:active {
+    button:enabled {
+        cursor: pointer;
+    }
+    button:not(.key):enabled:active {
         filter: brightness(112.5%);
     }
     input:disabled,
@@ -495,7 +500,7 @@
     #event-description {
         font-size: 12px;
     }
-    #event-description-button {
+    .event-description-button {
         cursor: pointer;
         user-select: none;
         -webkit-user-select: none;
@@ -505,7 +510,7 @@
             opacity: 0.625;
         }
     }
-    #event-description-button::before {
+    .event-description-button::before {
         content: "";
         position: absolute;
         top: -4px;
@@ -514,6 +519,10 @@
         left: -4px;
         z-index: 1;
         cursor: pointer;
+    }
+    #event-description-button-2 {
+        display: none;
+        transform: scale(1.125) translate(-2px, 2px);
     }
     .mobile-button-container {
         display: none;
@@ -569,7 +578,7 @@
         display: flex;
         flex-direction: row;
         justify-content: flex-end;
-        gap: 6px;
+        gap: 4px;
     }
     #mini-leaderboard-container {
         margin-bottom: calc(-1 * var(--info-section-gap));
@@ -712,6 +721,9 @@
     #customization-panel-opener-input::placeholder {
         text-transform: none;
     }
+    #global-leaderboard-panel-mode-section button:not(.green) span {
+        opacity: 0.75;
+    }
     .panel {
         max-height: calc(100vh - 88px);
         overflow: auto;
@@ -724,22 +736,60 @@
     #start-panel {
         color: var(--heading-foreground-color);
     }
-    #start-panel,
-    #customization-panel {
-        .divider {
-            margin: -2px 0;
-            visibility: hidden;
+    #start-panel-heading.clickable {
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: pointer;
+    }
+    #global-leaderboard {
+        position: absolute;
+        bottom: 64px;
+        padding: 24px;
+        z-index: 4;
+        display: none;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, max(-50% - 60px, -50vh + 24px));
+        height: fit-content;
+        max-height: calc(100vh - 88px);
+    }
+    #global-leaderboard-header,
+    .global-leaderboard-item,
+    #global-leaderboard-footer {
+        display: flex;
+        text-align: center;
+        > div:nth-child(1) {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            .final-leaderboard-top-item {
+                width: 6px;
+                height: 6px;
+            }
         }
+        > div {
+            position: relative;
+            .material-symbols-outlined {
+                position: absolute;
+                font-size: 11px;
+            }
+        }
+    }
+    #global-leaderboard-header b {
+        font-weight: normal;
+    }
+    .global-leaderboard-mode-button {
+        padding: 0;
     }
     #help {
         position: absolute;
         left: 8px;
         bottom: 64px;
-        padding: 4px 16px;
+        padding: 16px;
+        padding-top: 0;
         z-index: 4;
         width: 288px;
         display: none;
-        padding-bottom: 12px;
     }
     #help-container {
         display: flex;
@@ -747,7 +797,6 @@
         overflow: hidden;
         max-height: inherit;
         gap: 12px;
-        margin-top: -4px;
     }
     #settings {
         position: absolute;
@@ -762,7 +811,6 @@
         flex: 1;
         overflow: auto;
         margin-bottom: -12px;
-        padding-bottom: 12px;
         .divider {
             margin: 1em 0;
             width: calc(100% - 2px);
@@ -806,6 +854,15 @@
             display: unset;
         }
     }
+    body.showing-global-leaderboard {
+        #global-leaderboard {
+            display: unset;
+        }
+        #game-keyboard-container {
+            opacity: 0.417;
+            pointer-events: none;
+        }
+    }
     .settings-row {
         display: flex;
         align-items: center;
@@ -817,7 +874,7 @@
         gap: 2px;
     }
     .settings-description {
-        font-size: 10px;
+        font-size: 11px;
     }
     #settings-container {
         display: flex;
@@ -840,25 +897,33 @@
         position: relative;
         width: 96px;
         height: 96px;
-        margin: 4px;
         border: 2px solid;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
         justify-content: center;
         align-items: center;
         text-align: center;
         color: var(--heading-foreground-color);
         padding: 2px;
         overflow: hidden;
+        > div {
+            max-width: 100%;
+            line-height: 1;
+            padding-block: 1px;
+            margin-block: -1px;
+        }
         > :nth-child(1) {
             font-size: 14px;
             font-weight: bold;
-            max-height: 36px;
-            overflow: hidden;
+            max-height: 2em;
+            margin-top: 2px;
             span {
                 font-size: 14px;
             }
+        }
+        > :nth-child(2) {
+            line-height: unset;
         }
         > .material-symbols-outlined {
             position: absolute;
@@ -889,6 +954,13 @@
     .final-leaderboard-top-item.rank-3 {
         border-color: hsl(18.8deg, 50%, 37.5%);
         background: hsl(18.8deg, 50%, 58.3%);
+    }
+    /* FIXME: Implement the record indicator */
+    #final-leaderboard-record-indicator {
+        color: hsl(48.8deg, 83.3%, 25%);
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 4px;
     }
     #final-leaderboard-hard-mode-description {
         font-size: 12px;
@@ -946,7 +1018,7 @@
         #keyboard {
             padding: 0 4px 12px;
         }
-        .key {
+        .key:not(button) {
             min-height: 48px;
             font-size: 16px;
         }
@@ -964,6 +1036,9 @@
         }
         #event-description-button {
             display: none;
+        }
+        #event-description-button-2 {
+            display: unset;
         }
         .mobile-button-container {
             display: flex;
@@ -1008,20 +1083,31 @@
                 display: unset;
             }
         }
+        #panel,
         #help,
-        #settings {
+        #settings,
+        #global-leaderboard {
+            transform: translate(-50%, max(-50% - 60px, -50vh + 24px));
+        }
+        #help,
+        #settings,
+        #global-leaderboard {
             left: 50%;
             top: 50%;
-            transform: translate(-50%, -50%);
-            width: min(384px, calc(100vw - 56px));
             height: fit-content;
+            max-height: calc(100vh - 128px);
+        }
+        #help,
+        #settings {
+            width: min(384px, calc(100vw - 56px));
         }
         #help-ok-button,
         #settings-ok-button {
             min-height: 32px;
         }
         body.showing-help,
-        body.showing-settings {
+        body.showing-settings,
+        body.showing-global-leaderboard {
             #panel {
                 display: unset;
             }
@@ -1069,6 +1155,9 @@
             --main-foreground-color: hsl(0, 0%, 50%);
             --panel-foreground-color: hsl(0, 0%, 66.7%);
             --heading-foreground-color: white;
+        }
+        i {
+            font-weight: 200;
         }
         button {
             border-color: hsl(0, 0%, 41.7%);
@@ -1163,6 +1252,9 @@
             border-color: hsl(18.8deg, 50%, 50%);
             background: hsl(18.8deg, 50%, 33.3%);
         }
+        #final-leaderboard-record-indicator {
+            color: hsl(48.8deg, 100%, 66.7%);
+        }
         .panel button:not(.letter, .key) {
             border-color: hsl(0, 0%, 50%);
             color: white;
@@ -1222,44 +1314,47 @@
             <div id="event-text-container">
                 <div id="event-name-container">
                     <div id="event-name">Welcome</div>
-                    <div id="event-description-button" title="Show rule details">
+                    <div class="event-description-button clickable" id="event-description-button" title="Show rule details">
+                        <span class="material-symbols-outlined">info</span>
+                    </div>
+                    <div class="event-description-button clickable" id="event-description-button-2" title="Show rule details">
                         <span class="material-symbols-outlined">info</span>
                     </div>
                 </div>
                 <div id="event-description"></div>
             </div>
             <div class="mobile-button-container">
-                <button class="mobile-button" id="event-description-button-2" title="Rules">
-                    <span class="material-symbols-outlined">info_i</span>
+                <button class="mobile-button" id="global-leaderboard-button-2" title="Leaderboard">
+                    <span class="material-symbols-outlined">trophy</span>
                 </button>
                 <button class="mobile-button" id="settings-button-2" title="Settings">
                     <span class="material-symbols-outlined">settings</span>
                 </button>
+                <button class="mobile-button" id="mini-leaderboard-button-2" title="Show player progress">
+                    <span class="material-symbols-outlined">bar_chart</span>
+                </button>
                 <!-- <button id="hint-button-2" title="Hint">
                     <span class="material-symbols-outlined">lightbulb</span>
                 </button> -->
-                <button class="mobile-button" id="leaderboard-button-2" title="Toggle full leaderboard">
-                    <span class="material-symbols-outlined">leaderboard</span>
-                </button>
             </div>
         </div>
         <div id="chat" style="display: flex; flex-direction: column; font-size: 14px">
             <div class="auto-blur-section" id="chat-section" style="max-height: 37.5vh; overflow: auto; padding-bottom: 12px">
                 <div class="blurry-top">
-                    <div class="expand-button" id="chat-expand-button" style="width: 100%; text-align: center">
+                    <div class="expand-button clickable" id="chat-expand-button" style="width: 100%; text-align: center">
                         <span class="material-symbols-outlined" style="font-size: 24px">arrow_drop_up</span>
                     </div>
                 </div>
                 <div id="chat-message-container" style="display: flex; flex-direction: column; gap: 8px; padding-right: 4px"></div>
             </div>
-            <div style="display: flex; gap: 3px">
+            <div style="display: flex; gap: 4px">
                 <button id="hide-chat-button" title="Hide Chat">
                     <span class="material-symbols-outlined">chat_bubble</span>
                 </button>
                 <button id="show-chat-button" title="Show Chat" style="display: none">
                     <span class="material-symbols-outlined">chat_bubble_off</span>
                 </button>
-                <input id="chat-input" placeholder="Join a game before chatting" maxlength="144" />
+                <input id="chat-input" placeholder="Start the game to chat" maxlength="144" />
                 <button id="send-chat-button" title="Send">
                     <span class="material-symbols-outlined">send</span>
                 </button>
@@ -1268,11 +1363,14 @@
     </div>
     <div class="info-section" id="info-section-1">
         <div id="widget-container-1">
+            <button id="global-leaderboard-button" title="Leaderboard">
+                <span class="material-symbols-outlined">trophy</span>
+            </button>
             <button id="settings-button" title="Settings">
                 <span class="material-symbols-outlined">settings</span>
             </button>
-            <button id="leaderboard-button" title="Toggle full leaderboard">
-                <span class="material-symbols-outlined">leaderboard</span>
+            <button id="mini-leaderboard-button" title="Toggle player progress">
+                <span class="material-symbols-outlined">bar_chart</span>
             </button>
             <button id="full-screen-button" title="Toggle full-screen">
                 <span class="material-symbols-outlined">crop_free</span>
@@ -1291,29 +1389,42 @@
 </div>
 <div id="alert"></div>
 <div id="panel" class="panel">
-    <div id="start-panel" style="width: 252px; margin: 8px -4px; display: _none">
+    <div id="start-panel" style="width: 252px; margin: 8px -4px 0; display: _none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
-            <h1 style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
-            <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; opacity: 0.5"><em>Compete against other avid Wordlers in rotating challenges</em></h2>
-            <div class="divider"></div>
+            <h1 id="start-panel-heading" style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
+            <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; color: var(--panel-foreground-color)"><i id="start-panel-description">Compete against other avid Wordlers in rotating challenges</i></h2>
+            <div></div>
             <input id="nickname-input" style="width: 100%; font-size: 16px; padding: 8px" maxlength="18" placeholder="Nickname" />
             <div style="display: flex; gap: 12px; width: 100%">
                 <button id="play-button" class="key green" style="min-height: 40px; font-size: 16px; font-weight: 600" disabled>Loading...</button>
-                <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
-                    <div style="display: flex; flex-direction: column; gap: 2px">
-                        <b style="font-size: 13px">Invite</b>
-                        <div style="font-size: 10px">Create private room</div>
-                    </div>
-                </button>
                 <button class="key" id="copy-room-link-button" style="display: none; font-weight: normal; font-size: 14px">Copy room link</button>
             </div>
-            <div id="private-room-user-count-label" style="display: none; opacity: 0.667"></div>
+            <div id="start-panel-extra-options" style="width: 100%">
+                <div style="display: flex; gap: 12px; width: 100%">
+                    <button id="private-room-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
+                        <div style="display: flex; flex-direction: column; gap: 2px">
+                            <b style="font-size: 13px">Invite</b>
+                            <div style="font-size: 10px">Create private room</div>
+                        </div>
+                    </button>
+                    <button id="start-panel-global-leaderboard-button" class="key" style="font-weight: normal; font-size: 14px; padding: 4px">
+                        <div style="display: flex; flex-direction: column; gap: 2px">
+                            <b style="font-size: 13px">Leaderboard</b>
+                            <div style="font-size: 10px">Top players & records</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div id="start-panel-bottom-label" style="font-size: 12px; color: var(--panel-foreground-color)">
+                <!-- You are in <b>3<sup>rd</sup></b> place on daily leaderboard -->
+                <b>–</b> players competed today
+            </div>
         </div>
     </div>
-    <div id="customization-panel" style="width: 312px; margin: 8px -4px; display: none">
+    <div id="customization-panel" style="width: 288px; margin: 8px -4px; display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
-            <h3 style="font-weight: normal">Customize Challenge to Play</h3>
-            <div style="display: flex; gap: 36px">
+            <h3 style="font-weight: normal; margin-block: 0.5em">Customize Challenge to Play</h3>
+            <div style="display: flex; gap: 24px">
                 <div style="display: flex; flex-direction: column; align-items: center">
                     <div style="margin-bottom: 8px">Mode</div>
                     <div style="display: flex">
@@ -1373,11 +1484,11 @@
                     <input id="customization-panel-opener-input" maxlength="5" placeholder="Random" style="text-align: center; text-transform: uppercase; margin: 6px" />
                 </div>
             </div>
-            <div class="divider"></div>
-            <div class="divider"></div>
+            <div id="customization-panel-description"></div>
+            <div></div>
             <div style="width: 100%; display: flex; gap: 12px">
-                <button id="customization-panel-cancel-button" style="flex: 0.5; padding: 8px; font-weight: normal">Cancel</button>
-                <button id="customization-panel-create-button" class="key green" style="padding: 8px; font-size: 14px">Create Private Room</button>
+                <button id="customization-panel-cancel-button" style="flex: 0.5; font-weight: normal">Cancel</button>
+                <button id="customization-panel-create-button" class="key green" style="padding: 6px; font-size: 14px">Create Private Room</button>
             </div>
         </div>
     </div>
@@ -1391,7 +1502,7 @@
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">0</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
-                <div style="display: flex; font-size: 12px; padding-left: 8px; margin-bottom: -4px">
+                <div style="display: flex; font-size: 11px; padding-left: 8px; margin-bottom: -4px">
                     <div class="no-wrap" style="width: 124px">Player</div>
                     <div style="width: 84px; text-align: center">Score</div>
                     <div style="width: 56px; text-align: center">Guesses</div>
@@ -1408,7 +1519,7 @@
             <p id="next-game-countdown"><span>Next</span> game starts in <b>10</b></p>
         </div>
     </div>
-    <div id="between-duels-panel" style="display: none; margin: -8px 0">
+    <div id="between-duels-panel" style="display: none; margin: -8px -4px">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <h3 class="panel-optional" style="font-weight: normal">&emsp; Duel <span class="material-symbols-outlined" style="transform: translateY(3px)">swords</span> Results</h3>
             <div class="panel-optional" style="display: flex; gap: 24px; margin-top: -8px">
@@ -1424,23 +1535,26 @@
                 </div>
             </div>
             <div class="divider panel-optional"></div>
-            <div class="panel-optional" id="between-duels-your-place" style="font-size: 16px">
+            <div class="panel-optional" id="between-duels-your-place" style="font-size: 16px; margin-bottom: -4px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
             <div class="panel-optional" id="between-duels-delta"></div>
             <p id="next-duel-countdown"></p>
         </div>
     </div>
-    <div id="between-events-panel" style="display: none">
+    <div id="between-events-panel" style="display: none; margin: 8px -4px">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
-            <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: bold; font-size: 16px"></div>
-            <div id="between-events-panel-description" style="opacity: 0.75"></div>
-            <div style="display: flex">
+            <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: 600; font-size: 16px">So-and-so won!</div>
+            <div id="between-events-panel-description" style="opacity: 0.75">"SWIFT" Sprint</div>
+            <div style="display: flex; gap: 8px; margin-block: 8px">
                 <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px"></div>
                 <div class="final-leaderboard-top-item rank-1"></div>
                 <div class="final-leaderboard-top-item rank-3" style="margin-top: 24px"></div>
             </div>
             <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
+            <div class="divider"></div>
+            <div id="final-leaderboard-your-place" style="margin-top: -2px"></div>
+            <div id="final-leaderboard-xp-description" style="font-size: 12px; margin-top: -8px"></div>
             <div class="divider"></div>
             <div style="display: flex; flex-direction: column; width: 100%">
                 <div id="next-event-countdown">Next up in <b>20</b></div>
@@ -1449,6 +1563,77 @@
                     <b>"SWIFT" Golf</b>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+<div id="global-leaderboard" class="panel">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%">
+        <h3 style="font-weight: normal; margin-block: 0.5em">Daily Duo Leaderboard</h3>
+        <div style="width: 100%; display: _none">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+                <div id="global-leaderboard-header" class="global-leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -4px"></div>
+                <div class="divider"></div>
+                <div style="height: 183px; display: flex; flex-direction: column; gap: 8px">
+                    <div id="global-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin: -9px 0; padding: 8px 0px; flex: 1; width: 332px"></div>
+                    <div class="divider"></div>
+                    <div id="global-leaderboard-footer" class="global-leaderboard-item" style="display: flex"></div>
+                    <div id="global-leaderboard-score-description" style="font-size: 11px; height: 14px; text-align: center">Your XP for each challenge = Wordles solved + Players outranked</div>
+                    <div id="global-leaderboard-hard-mode-description" style="font-size: 11px; height: 14px; display: none; text-align: center"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 11px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
+                </div>
+            </div>
+        </div>
+        <div style="width: 100%; display: none">
+            <div style="display: flex; width: 100%; gap: 4px">
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: start; gap: 8px">
+                    <div style="margin-inline: auto">Normal</div>
+                    <div class="final-leaderboard-top-item rank-1" style="height: 48px; width: calc(100% - 12px); margin: 0; display: flex; flex-direction: column; gap: 8px; position: relative">
+                        <div style="display: flex; width: calc(100% - 8px); justify-content: space-between">
+                            <div style="font-size: 12px"><b>e4 + Rattington</b></div>
+                            <div style="font-size: 12px; font-weight: normal"></div>
+                        </div>
+                        <div style="display: flex; width: calc(100% - 8px); justify-content: space-between">
+                            <div style="font-size: 12px">2:42</div>
+                            <div style="font-size: 12px; font-weight: normal">2h ago</div>
+                        </div>
+                        <span class="material-symbols-outlined" style="position: absolute; top: 0; right: 0">asterisk</span>
+                    </div>
+                    <div class="final-leaderboard-top-item rank-2 empty" style="height: 48px; width: calc(100% - 12px); margin: 0"></div>
+                    <div class="final-leaderboard-top-item rank-3 empty" style="height: 48px; width: calc(100% - 12px); margin: 0"></div>
+                </div>
+                <div style="width: 1px; background: gray"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: end; gap: 8px">
+                    <div style="margin-inline: auto">With Opener</div>
+                    <div class="final-leaderboard-top-item rank-1 empty" style="height: 48px; width: calc(100% - 12px); margin: 0"></div>
+                    <div class="final-leaderboard-top-item rank-2 empty" style="height: 48px; width: calc(100% - 12px); margin: 0"></div>
+                    <div class="final-leaderboard-top-item rank-3 empty" style="height: 48px; width: calc(100% - 12px); margin: 0"></div>
+                </div>
+            </div>
+        </div>
+        <div id="global-leaderboard-panel-mode-section" style="display: flex; gap: 4px; width: 100%">
+            <button id="global-leaderboard-day-button" class="key" style="font-weight: normal; font-size: 14px">Day</button>
+            <button id="global-leaderboard-week-button" class="key" style="font-weight: normal; font-size: 14px">Week</button>
+            <div style="flex: 1"></div>
+            <button id="global-leaderboard-overall-button" class="key" style="font-weight: normal; font-size: 14px">XP</button>
+            <button class="key global-leaderboard-mode-button" id="global-leaderboard-golf-button">
+                <span class="material-symbols-outlined" style="font-size: 18px">sports_golf</span>
+            </button>
+            <button class="key global-leaderboard-mode-button" id="global-leaderboard-sprint-button">
+                <span class="material-symbols-outlined" style="font-size: 18px">sprint</span>
+            </button>
+            <button class="key global-leaderboard-mode-button" id="global-leaderboard-factory-button">
+                <span class="material-symbols-outlined" style="font-size: 18px">conveyor_belt</span>
+            </button>
+            <button class="key global-leaderboard-mode-button" id="global-leaderboard-duo-button">
+                <span class="material-symbols-outlined" style="font-size: 18px">group</span>
+            </button>
+        </div>
+        <div></div>
+        <div style="display: flex; gap: 6px; width: 100%; justify-content: space-between; align-items: flex-end">
+            <button id="global-leaderboard-ok-button" style="font-weight: normal; font-size: 14px; min-width: 102px; padding-block: 10px">OK</button>
+            <div id="global-leaderboard-participation">
+                <div style="font-size: 13px; display: flex; gap: 4px; align-items: center">Participate on leaderboard <button class="key" id="global-leaderboard-participate-button" style="font-weight: normal; font-size: 12px; min-height: unset; height: 33px; width: 33px"></button></div>
+            </div>
+            <div id="global-leaderboard-no-participation-description" style="font-size: 11px; display: flex; gap: 4px; align-items: center">Participation is disabled in private rooms</div>
         </div>
     </div>
 </div>
@@ -1495,6 +1680,10 @@
                 <div class="key settings-toggle">On</div>
             </div>
         </div>
+        <div class="divider"></div>
+        <div class="settings-row">
+            <a href="https://forms.gle/54ZcAX12BYGhy6Lf6" target="_blank" rel="noopener noreferrer" style="margin: auto; color: var(--panel-foreground-color); font-size: 12px">Provide feedback</a>
+        </div>
         <button id="settings-ok-button">OK</button>
     </div>
 </div>
@@ -1519,12 +1708,12 @@
         let numGames = () => (isDev || totalUsers === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
 
         let settings;
-        const SETTINGS_VERSION = 1;
         let initializeSettings = () => {
             try {
                 settings = JSON.parse(localStorage.getItem("settings"));
             } catch {}
-            if (!(settings?.version >= SETTINGS_VERSION)) {
+            const SETTINGS_VERSION = 1;
+            if (settings?.version !== SETTINGS_VERSION) {
                 localStorage.removeItem("settings");
                 settings = {
                     version: SETTINGS_VERSION,
@@ -1532,8 +1721,10 @@
                     alwaysHardMode: false,
                     sound: false,
                     accessibleColors: false,
+                    withdrawFromGlobalLeaderboard: false,
                 };
             }
+            localStorage.setItem("settings", JSON.stringify(settings));
             let toggleSettings = () => {
                 document.body.classList.toggle("showing-settings");
             };
@@ -1541,10 +1732,11 @@
             document.querySelector("#settings-ok-button").addEventListener("click", toggleSettings);
             document.querySelector("#settings-button-2").addEventListener("click", () => {
                 document.body.classList.remove("showing-help");
+                document.body.classList.remove("showing-global-leaderboard");
                 toggleSettings();
             });
-            let setButtonColor = (el, isGreen) => {
-                el.classList.toggle("green", isGreen);
+            let setButtonColor = (el, on, color = "green") => {
+                el.classList.toggle(color, on);
             };
 
             let alwaysHardModeEl = document.querySelector("#settings-item-always-hard-mode");
@@ -1606,6 +1798,256 @@
                 toggleSound(true)();
                 playAudio("score");
             });
+
+            // Global leaderboard panel
+            let globalLeaderboardParticipateButton = document.querySelector("#global-leaderboard-participate-button");
+            let setGlobalLeaderboardParticipateButtonColorAndText = () => {
+                setButtonColor(globalLeaderboardParticipateButton, !settings.withdrawFromGlobalLeaderboard);
+                globalLeaderboardParticipateButton.textContent = settings.withdrawFromGlobalLeaderboard ? "No" : "Yes";
+            };
+            let withdrawTimeout;
+            globalLeaderboardParticipateButton.addEventListener("click", () => {
+                settings.withdrawFromGlobalLeaderboard = !settings.withdrawFromGlobalLeaderboard;
+                localStorage.setItem("settings", JSON.stringify(settings));
+                setGlobalLeaderboardParticipateButtonColorAndText();
+                if (document.body.classList.contains("showing-global-leaderboard")) {
+                    updateGlobalLeaderboardPanel();
+                }
+                clearTimeout(withdrawTimeout);
+                withdrawTimeout = setTimeout(() => {
+                    if (playerByUid.has(currentUid)) {
+                        room.send({ type: "update-withdrawal", withdrawn: settings.withdrawFromGlobalLeaderboard });
+                    }
+                }, 1000);
+            });
+            setGlobalLeaderboardParticipateButtonColorAndText();
+        };
+        let globalLeaderboardData;
+        let cacheGlobalLeaderboard = () => {
+            localStorage.setItem(
+                "lastFetchedGlobalLeaderboardData",
+                JSON.stringify({
+                    version: GLOBAL_LEADERBOARD_VERSION,
+                    date: Date.now(),
+                    ...globalLeaderboardData,
+                }),
+            );
+        };
+        const GLOBAL_LEADERBOARD_BACKEND_URL = urlParams.has("no-leaderboard") ? "" : "https://script.google.com/macros/s/AKfycbwGaMe_oCsIycXZJ64S-y7PsoMzsq4JtdU4YT7O5C5oFnYwyAuO5VcnQXfHMLdr8BEtcg/exec";
+        let fetchGlobalLeaderboardData = async () => {
+            let url = new URL(GLOBAL_LEADERBOARD_BACKEND_URL);
+            if (isDev) {
+                url.searchParams.set("dev", 1);
+            }
+            let newData = await (await fetch(url)).json();
+            if (newData.date <= globalLeaderboardData?.date) {
+                return;
+            }
+            handleReceivedGlobalLeaderboardData(newData);
+        };
+        let handleReceivedGlobalLeaderboardData = (newData) => {
+            globalLeaderboardData = newData;
+            cacheGlobalLeaderboard();
+            if (document.querySelector("#start-panel").style.display !== "none") {
+                updateStartPanel();
+            }
+            if (document.body.classList.contains("showing-global-leaderboard")) {
+                updateGlobalLeaderboardPanel();
+            }
+        };
+        const GLOBAL_LEADERBOARD_VERSION = 1 + isDev * 0.5;
+        let globalLeaderboardPanelSelectedPeriod = "day";
+        let globalLeaderboardPanelSelectedMode = "overall";
+        let updateGlobalLeaderboardPanel;
+        const GLOBAL_LEADERBOARD_PERIODS = ["day", "week"];
+        const GLOBAL_LEADERBOARD_MODES = ["overall", "factory", "duo", "golf", "sprint"];
+        let initializeGlobalLeaderboard = () => {
+            let lastFetchedGlobalLeaderboardData;
+            try {
+                lastFetchedGlobalLeaderboardData = JSON.parse(localStorage.getItem("lastFetchedGlobalLeaderboardData"));
+            } catch (e) {
+                console.error(e);
+            }
+            if (lastFetchedGlobalLeaderboardData?.version !== GLOBAL_LEADERBOARD_VERSION || lastFetchedGlobalLeaderboardData.date < Date.now() - (isDev ? 12500 : 25000)) {
+                localStorage.removeItem("lastFetchedGlobalLeaderboardData");
+                lastFetchedGlobalLeaderboardData = undefined;
+            }
+            if (lastFetchedGlobalLeaderboardData) {
+                globalLeaderboardData = lastFetchedGlobalLeaderboardData;
+            } else {
+                fetchGlobalLeaderboardData();
+            }
+            let toggleGlobalLeaderboard = () => {
+                updateGlobalLeaderboardPanel();
+                document.body.classList.toggle("showing-global-leaderboard");
+                document.querySelector("#global-leaderboard-table").scrollTo(0, 0);
+            };
+            document.querySelector("#start-panel-global-leaderboard-button").addEventListener("click", toggleGlobalLeaderboard);
+            document.querySelector("#global-leaderboard-button").addEventListener("click", toggleGlobalLeaderboard);
+            document.querySelector("#global-leaderboard-button-2").addEventListener("click", () => {
+                document.body.classList.remove("showing-help");
+                document.body.classList.remove("showing-settings");
+                toggleGlobalLeaderboard();
+            });
+            document.querySelector("#global-leaderboard-ok-button").addEventListener("click", toggleGlobalLeaderboard);
+            for (let p of GLOBAL_LEADERBOARD_PERIODS) {
+                document.querySelector(`#global-leaderboard-${p}-button`).addEventListener("click", () => {
+                    globalLeaderboardPanelSelectedPeriod = p;
+                    updateGlobalLeaderboardPanel();
+                });
+            }
+            for (let m of GLOBAL_LEADERBOARD_MODES) {
+                document.querySelector(`#global-leaderboard-${m}-button`).addEventListener("click", () => {
+                    globalLeaderboardPanelSelectedMode = m;
+                    updateGlobalLeaderboardPanel();
+                });
+            }
+            updateGlobalLeaderboardPanel = () => {
+                let panel = document.querySelector("#global-leaderboard");
+                panel.querySelector("h3").textContent = `${globalLeaderboardPanelSelectedPeriod === "day" ? "Daily" : "Weekly"} ${formatEventName({ mode: globalLeaderboardPanelSelectedMode })} Leaderboard`;
+                for (let p of GLOBAL_LEADERBOARD_PERIODS) {
+                    document.querySelector(`#global-leaderboard-${p}-button`).classList.toggle("green", p === globalLeaderboardPanelSelectedPeriod);
+                }
+                for (let m of GLOBAL_LEADERBOARD_MODES) {
+                    document.querySelector(`#global-leaderboard-${m}-button`).classList.toggle("green", m === globalLeaderboardPanelSelectedMode);
+                }
+                let itemEl = (a, i) => {
+                    let medalHTML = i >= 0 && i < 3 ? `<div class="final-leaderboard-top-item rank-${i + 1}"></div>` : "";
+                    let asterisk = !isNaN(i) && a[3] ? `<span class="material-symbols-outlined">asterisk</span>` : "";
+                    let _formatNumber = (x, s = 1) => (typeof x === "string" ? x : (x * s).toLocaleString("en-US"));
+                    let _formatTime = (t, s = 1) => (typeof t === "string" ? t : formatTime(t * s * 1000, true));
+                    let _formatTimeAgo = (t, s = 1) => {
+                        if (typeof t === "string") {
+                            return t;
+                        }
+                        t *= s;
+                        t = Date.now() - t;
+                        if (t < 60000) {
+                            return "Now";
+                        }
+                        if (t < 3600000) {
+                            return `${Math.floor(t / 60000)}m ago`;
+                        }
+                        if (t < 86400000) {
+                            return `${Math.floor(t / 3600000)}h ago`;
+                        }
+                        return `${Math.floor(t / 86400000)}d ago`;
+                    };
+                    let _formatPlayTime = (t) => {
+                        if (typeof t === "string") {
+                            return t;
+                        }
+                        t = Math.max(t, 60);
+                        if (t < 3600) {
+                            let m = Math.floor(t / 60);
+                            return `${m} min`;
+                        }
+                        return `${Math.floor(t / 3600)}h ${Math.floor((t % 3600) / 60)}m`;
+                    };
+                    switch (globalLeaderboardPanelSelectedMode) {
+                        case "overall": {
+                            return `
+                                <div style="width: 130px">
+                                    ${medalHTML}
+                                    <b class="no-wrap">${a[0]}</b>
+                                </div>
+                                <div style="width: 64px">${_formatNumber(a[2])}</div>
+                                <div style="width: 64px">${_formatNumber(a[3])}</div>
+                                <div style="width: 74px">${(globalLeaderboardPanelSelectedPeriod === "day" ? _formatTimeAgo : _formatPlayTime)(a[4])}</div>
+                            `;
+                        }
+                        case "factory": {
+                            return `
+                                <div style="width: 130px">
+                                    ${medalHTML}
+                                    <b class="no-wrap">${a[0]}</b>
+                                </div>
+                                <div style="width: 64px">${a[1]}</div>
+                                <div style="width: 64px">${_formatTime(a[2], -1)}</div>
+                                <div style="width: 74px">${_formatTimeAgo(a[3], -1)}</div>
+                            `;
+                        }
+                        case "duo": {
+                            return `
+                                <div style="width: 194px">
+                                    ${medalHTML}
+                                    <b class="no-wrap">${a[0]}</b>
+                                </div>
+                                <div style="width: 64px">${_formatTime(a[2], -1)}</div>
+                                <div style="width: 74px">${_formatTimeAgo(a[3], -1)}</div>
+                            `;
+                        }
+                        case "golf": {
+                            return `
+                                <div style="width: 130px">
+                                    ${medalHTML}
+                                    <b class="no-wrap">${a[0]}</b>
+                                </div>
+                                <div style="width: 64px">${a[1]}</div>
+                                <div style="width: 64px">
+                                    ${_formatNumber(a[2], -1)}
+                                    ${asterisk}
+                                </div>
+                                <div style="width: 74px">${_formatTimeAgo(a[4], -1)}</div>
+                            `;
+                        }
+                        case "sprint": {
+                            return `
+                                <div style="width: 130px">
+                                    ${medalHTML}
+                                    <b class="no-wrap">${a[0]}</b>
+                                </div>
+                                <div style="width: 64px">${a[1]}</div>
+                                <div style="width: 64px">
+                                    ${_formatTime(a[2], -1)}
+                                    ${asterisk}
+                                </div>
+                                <div style="width: 74px">${_formatTimeAgo(a[4], -1)}</div>
+                            `;
+                        }
+                    }
+                };
+                let items = structuredClone(globalLeaderboardData?.[globalLeaderboardPanelSelectedPeriod]?.[globalLeaderboardPanelSelectedMode] || []);
+                if (settings.withdrawFromGlobalLeaderboard) {
+                    let lastUsedName = currentPlayer || localStorage.getItem("nickname");
+                    items = items.filter(({ player, team }) => (team?.length === 1 ? team[0] : player) !== lastUsedName);
+                }
+                const HEADERS = {
+                    "overall": ["Player", "(Opener)", "Total XP", "Challenges", globalLeaderboardPanelSelectedPeriod === "day" ? "Last played" : "Playtime"],
+                    "factory": ["Player", "Opener", "Time", "Achieved"],
+                    "duo": ["Team", "(Opener)", "Time", "Achieved"],
+                    "golf": ["Player", "Opener", "Guesses", "", "Achieved"],
+                    "sprint": ["Player", "Opener", "Time", "", "Achieved"],
+                };
+                document.querySelector("#global-leaderboard-header").innerHTML = itemEl(HEADERS[globalLeaderboardPanelSelectedMode], undefined);
+                document.querySelector("#global-leaderboard-table").innerHTML = items
+                    .map(
+                        ({ player, team, opener, score }, i) => `
+                            <div class="global-leaderboard-item">
+                                ${itemEl([player ? player : [team[0], team[1] || BOT_NAME].join(" + "), opener || "–", ...score], i)}
+                            </div>
+                        `,
+                    )
+                    .join("");
+                let footerEl = document.querySelector("#global-leaderboard-footer");
+                // FIXME: Implement footer, by first maintaining self's records in localStorage
+                // if (tableData.at(-1).length) {
+                //     let y = JSON.stringify(tableData.at(-1).slice(1));
+                //     footerEl.style.display = "";
+                //     footerEl.innerHTML = itemEl(["You", ...tableData.at(-1).slice(1)], settings.withdrawFromGlobalLeaderboard ? -1 : tableData.findIndex((x) => JSON.stringify(x.slice(1)) === y));
+                // } else {
+                //     footerEl.style.display = "none";
+                // }
+                document.querySelector("#global-leaderboard-score-description").style.display = globalLeaderboardPanelSelectedMode === "overall" ? "" : "none";
+                document.querySelector("#global-leaderboard-hard-mode-description").style.display = ["golf", "sprint"].includes(globalLeaderboardPanelSelectedMode) ? "" : "none";
+                document.querySelector("#global-leaderboard-participation").style.display = isInPrivateRoom ? "none" : "";
+                document.querySelector("#global-leaderboard-no-participation-description").style.display = isInPrivateRoom ? "" : "none";
+            };
+            setInterval(() => {
+                if (document.body.classList.contains("showing-global-leaderboard")) {
+                    updateGlobalLeaderboardPanel(); // Only to update the relative times ("x minutes ago" displays)
+                }
+            }, 30000);
         };
 
         let playAudio = (() => {
@@ -1647,7 +2089,7 @@
                 "factory": [0, 0], // [solved, -time]
                 "duo": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
                 "arena": [0, 0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, solved, played, hasStreak, -roundScore, -roundTime, playedOnHardMode]
-                "circuit": [0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, playedOnHardMode]
+                "circuit": [0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, solved, playedOnHardMode]
                 "sprint": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
                 "golf": [0, 0, 0, 0, 0, 1], // [solved, played, -guesses, -time, currentGameGuesses, playedOnHardMode]
             };
@@ -1676,7 +2118,7 @@
         };
         let acceleratedTimeLimit = (mode = undefined) => {
             mode ||= (currentEvent || upcomingEvent).mode;
-            return mode === "circuit" ? 30000 : mode === "arena" ? 120000 : 180000;
+            return mode === "circuit" ? 30000 : mode === "arena" ? (isDev ? 0 : 120000) : 180000;
         };
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
@@ -1698,7 +2140,84 @@
         let waitingForScoreAfterGuessInFactory;
         let waitingForScoreAfterGuessInFactoryTimeoutHandle;
         const FAST_ANIMATION_MODES = ["duo", "arena", "sprint"];
-        let gameParams = () => ({ guessLimit: 6, fastAnimation: FAST_ANIMATION_MODES.includes(currentEvent?.mode), hardMode: !!currentEvent?.opener });
+        let gameParams = () => ({
+            guessLimit: 6,
+            fastAnimation: FAST_ANIMATION_MODES.includes(currentEvent?.mode),
+            hardMode: !!currentEvent?.opener,
+        });
+        let getShortScoreForGlobalLeaderboard = (mode, score) => {
+            switch (mode) {
+                case "factory": {
+                    let [solved, time] = score;
+                    time *= -1;
+                    return {
+                        score: [-Math.floor(time / 1000)],
+                        solved,
+                        failed: solved < numGames(),
+                        playtime: Math.round(time / 1000),
+                    };
+                }
+                case "duo": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    return {
+                        score: [-Math.floor(time / 1000)],
+                        solved,
+                        failed: solved < numGames(),
+                        playtime: Math.round(time / 1000),
+                    };
+                }
+                case "arena": {
+                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return {
+                        score: [eventScore, playedOnHardMode],
+                        solved,
+                        failed: false,
+                        playtime: Math.round(totalTime / 1000),
+                    };
+                }
+                case "circuit": {
+                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, solved, playedOnHardMode] = score;
+                    averageTime *= -1;
+                    totalTime *= -1;
+                    roundScore *= -1;
+                    roundTime *= -1;
+                    return {
+                        score: [eventScore, playedOnHardMode],
+                        solved,
+                        failed: solved < numGames(),
+                        playtime: Math.round(totalTime / 1000),
+                    };
+                }
+                case "sprint": {
+                    let [solved, played, time, playedOnHardMode] = score;
+                    time *= -1;
+                    return {
+                        score: [-Math.floor(time / 1000), playedOnHardMode],
+                        solved,
+                        failed: solved < numGames(),
+                        playtime: Math.round(time / 1000),
+                    };
+                }
+                case "golf": {
+                    let [solved, played, guesses, time, currentGameGuesses, playedOnHardMode] = score;
+                    guesses *= -1;
+                    time *= -1;
+                    return {
+                        score: [-guesses, playedOnHardMode],
+                        solved,
+                        failed: solved < numGames(),
+                        playtime: Math.round(time / 1000),
+                    };
+                }
+            }
+            console.assert(false, mode, score);
+            return score;
+        };
         let formatShortScoreDescription = (mode, score) => {
             switch (mode) {
                 case "factory": {
@@ -1720,7 +2239,7 @@
                     return `with ${eventScore} ${score === 1 ? "point" : "points"}`;
                 }
                 case "circuit": {
-                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
+                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, solved, playedOnHardMode] = score;
                     averageTime *= -1;
                     totalTime *= -1;
                     roundScore *= -1;
@@ -1769,7 +2288,7 @@
                     return eventScore.toString();
                 }
                 case "circuit": {
-                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = score;
+                    let [eventScore, averageTime, totalTime, played, roundScore, roundTime, solved, playedOnHardMode] = score;
                     averageTime *= -1;
                     totalTime *= -1;
                     roundScore *= -1;
@@ -1976,6 +2495,18 @@
             document.addEventListener("gesturestart", (e) => e.preventDefault());
             document.addEventListener("gesturechange", (e) => e.preventDefault());
             document.addEventListener("gestureend", (e) => e.preventDefault());
+            // let lastTouchTime = 0;
+            // document.addEventListener(
+            //     "touchstart",
+            //     (e) => {
+            //         let now = Date.now();
+            //         if (now - lastTouchTime <= 500 && !(["BUTTON", "INPUT"].includes(e.target.tagName) || e.target.classList.contains("key") || e.target.classList.contains("clickable"))) {
+            //             e.preventDefault();
+            //         }
+            //         lastTouchTime = now;
+            //     },
+            //     { passive: false },
+            // );
         };
         /** @type {HTMLElement} */
         let bannerEl = document.querySelector("#banner");
@@ -1987,13 +2518,22 @@
             if (asScore && !ms) {
                 return "--";
             }
-            let m = Math.floor(ms / 60000);
+            let h = Math.floor(ms / 3600000);
+            let m = Math.floor((ms % 3600000) / 60000);
             let s = Math.floor((ms % 60000) / 1000);
             if (!asScore) {
-                return m + ":" + `${s}`.padStart(2, "0");
+                if (h) {
+                    return h + ":" + `${m}`.padStart(2, "0") + ":" + `${s}`.padStart(2, "0");
+                } else {
+                    return m + ":" + `${s}`.padStart(2, "0");
+                }
             }
             let t = `${Math.floor((ms % 60000) / 100)}`.padStart(3, "0");
-            return m + ":" + t.slice(0, -1) + (ms >= 10000 ? "" : "." + t.slice(-1));
+            if (h) {
+                return h + ":" + `${m}`.padStart(2, "0") + ":" + t.slice(0, -1) + (ms >= 10000 ? "" : "." + t.slice(-1));
+            } else {
+                return m + ":" + t.slice(0, -1) + (ms >= 10000 ? "" : "." + t.slice(-1));
+            }
         };
         let bannerLeftTextEl = bannerEl.querySelector("#banner-left-text");
         let bannerLeftIconEl = bannerEl.querySelector("#banner-left-icon");
@@ -2251,7 +2791,8 @@
                         ++currentScore[3];
                         currentScore[1] = currentScore[2] / currentScore[3];
                     }
-                    currentScore[6] &&= stillHardMode;
+                    currentScore[6] += verdict === "GGGGG";
+                    currentScore[7] &&= stillHardMode;
                     break;
                 }
                 case "sprint": {
@@ -2302,14 +2843,12 @@
                 });
                 playAudio("score");
             }
-            if (!(currentEvent.mode === "factory" && currentEvent.opener && currentBoardState.length === 1)) {
-                room.send(message);
-            }
+            room.send(message);
         };
         const ENTER_KEY = "0";
         const BACKSPACE_KEY = "1";
         let inputKey = (key) => {
-            if (document.body.classList.contains("showing-panel")) {
+            if (document.body.classList.contains("showing-panel") || document.body.classList.contains("showing-global-leaderboard")) {
                 return;
             }
             if (currentEventEnded || isCurrentPlayersTurn === false || waitingForScoreAfterGuessInFactory === true || factoryGameToShowAfterAnimation || waitingForScoreAfterGuessInFactoryTimeoutHandle) {
@@ -2696,18 +3235,17 @@
         let playerLeaderboardData = new Map();
         let shouldShowLeaderboard = true;
         localStorage.removeItem("showLeaderboard"); // Clean up stale setting. FIXME: Remove this after a while
-        let initializeLeaderboard = () => {
+        let initializeMiniLeaderboard = () => {
             let handleToggle = () => {
-                if (playerByUid.size) {
-                    shouldShowLeaderboard = !shouldShowLeaderboard;
-                }
+                shouldShowLeaderboard = !shouldShowLeaderboard;
                 document.querySelector("#mini-leaderboard").classList.toggle("me-only", !shouldShowLeaderboard);
                 for (let [player, id] of playerIds) {
                     document.querySelector(`#mini-leaderboard-item-${id}`).classList.toggle("hidden", !shouldShowLeaderboard);
                 }
+                document.querySelector("#mini-leaderboard-button").children[0].textContent = shouldShowLeaderboard ? "bar_chart" : "bar_chart_off";
             };
-            document.querySelector("#leaderboard-button").addEventListener("click", handleToggle);
-            document.querySelector("#leaderboard-button-2").addEventListener("click", () => {
+            document.querySelector("#mini-leaderboard-button").addEventListener("click", handleToggle);
+            document.querySelector("#mini-leaderboard-button-2").addEventListener("click", () => {
                 document.body.scrollTo({ top: window.innerHeight * 0.75, behavior: "smooth" });
             });
         };
@@ -2799,51 +3337,56 @@
             guessCountEl.classList.add("mini-leaderboard-item-guess-count");
             populateMiniLeaderboardItem(player, leaderBoardItem);
         };
-        let sortMiniLeaderboard = (currentPlayerScoreOverride) => {
+        let compareArrays = (a, b) => {
+            let n = Math.min(a.length, b.length);
+            for (let i = 0; i < n; ++i) {
+                if (a[i] < b[i]) {
+                    return -1;
+                }
+                if (a[i] > b[i]) {
+                    return 1;
+                }
+            }
+            return a.length - b.length;
+        };
+        let sortMiniLeaderboard = (currentPlayerScoreOverride, sortOnly = false) => {
             let sortedPlayers = [...playerLeaderboardData].sort((a, b) => {
                 a = a[1].score;
                 b = b[1].score;
-                let n = Math.min(a.length, b.length);
-                for (let i = 0; i < n; ++i) {
-                    if (a[i] < b[i]) {
-                        return 1;
-                    }
-                    if (a[i] > b[i]) {
-                        return -1;
-                    }
-                }
-                return b.length - a.length || (a[0] < b[0] ? -1 : +(a[0] > b[0]));
+                return compareArrays(b, a) || (a[0] < b[0] ? -1 : +(a[0] > b[0]));
             });
+            if (sortOnly) {
+                return sortedPlayers;
+            }
             let i = -1;
             for (let el of document.querySelector("#mini-leaderboard").children) {
                 ++i;
                 let p = sortedPlayers[i][0];
                 populateMiniLeaderboardItem(p, el, (p === currentPlayer && currentPlayerScoreOverride) || sortedPlayers[i][1]);
             }
-            // document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPlayer)).scrollIntoView({ behavior: "smooth", block: "center", container: "nearest" });
+            // document.querySelector("#mini-leaderboard-item-" + playerIds.get(currentPlayer)).scrollIntoView({ behavior: "smooth", block: "center", container: "nearest" }); // FIXME: WebKit doesn't support this yet
             return sortedPlayers;
         };
 
         initializeSettings();
+        initializeGlobalLeaderboard();
         initializeKeyboard();
         initializeGameBoard(6);
         showOrHideOpponentBoard(false);
         initializeChat();
-        initializeLeaderboard();
+        initializeMiniLeaderboard();
 
         let toggleHelp = () => {
-            if (!document.body.classList.contains("showing-help") && !(currentEvent || upcomingEvent)) {
-                return;
-            }
             document.body.classList.toggle("showing-help");
             document.querySelector("#help-contents").scrollTo(0, 0);
         };
         document.querySelector("#event-description-button").addEventListener("click", toggleHelp);
-        document.querySelector("#help-ok-button").addEventListener("click", toggleHelp);
         document.querySelector("#event-description-button-2").addEventListener("click", () => {
             document.body.classList.remove("showing-settings");
+            document.body.classList.remove("showing-global-leaderboard");
             toggleHelp();
         });
+        document.querySelector("#help-ok-button").addEventListener("click", toggleHelp);
         document.querySelector("#full-screen-button").addEventListener("click", () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
@@ -2921,7 +3464,7 @@
         };
         const BOT_NAME = "Rattington";
         let showEventInfo = () => {
-            let event = currentEvent?.mode && currentEvent?.mode !== "welcome" ? currentEvent : upcomingEvent;
+            let event = (currentEvent?.mode && currentEvent?.mode !== "welcome" ? currentEvent : upcomingEvent) || { id: -1, mode: "welcome" };
             let eventName = formatEventName(event);
             document.querySelector("#event-name").textContent = eventName;
             document.querySelector("#event-description").innerHTML = {
@@ -2931,7 +3474,7 @@
                 "circuit": "Balance speed and accuracy!",
                 "sprint": "First to solve nine Wordles wins!",
                 "golf": "Nine Wordles. Fewest guesses wins!",
-                "welcome": "Fun Wordle challenges await!",
+                "welcome": "",
             }[event.mode];
             document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
 
@@ -3132,6 +3675,7 @@
             `;
         };
         let showOrHidePanel = (panelToShow) => {
+            document.body.classList.remove("showing-global-leaderboard");
             let wasStartPanelShowing = !document.querySelector("#start-panel").display;
             for (let panel of ["start-panel", "customization-panel", "welcome-panel", "between-games-panel", "between-events-panel", "between-duels-panel"]) {
                 document.querySelector("#" + panel).style.display = panel === panelToShow ? "" : "none";
@@ -3186,6 +3730,7 @@
                 room.send({
                     type: "enter",
                     player: currentPlayer,
+                    withdraw: settings.withdrawFromGlobalLeaderboard,
                     eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
                 });
             } else {
@@ -3239,7 +3784,7 @@
         setInterval(checkUpcomingPairing, 125);
 
         const APP_VERSION = 1;
-        const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}-${APP_VERSION}-`;
+        const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}${APP_VERSION}-`;
         const MAX_PLAYERS_PER_ROOM = 12;
         const MAX_USERS_PER_ROOM = 36;
         const MAX_REPS_IN_LOBBY = 36;
@@ -3427,6 +3972,7 @@
         // Zombie (either dead socket or player leaving tab open but not playing) detection
         let playersAcknowledgedEventStart = new Map();
         let playersGuessedInCurrentEvent = new Set();
+        let playersWithdrawnFromGlobalLeaderboard = new Set();
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
         const POST_WELCOME_DELAY = 4000;
         const MIN_ARENA_BETWEEN_DUEL_TIME = 4000; // To ensure players always get a break (and time to read the results panel) before their next duel
@@ -3454,10 +4000,12 @@
             room.on("error", (data) => {
                 console.error("CONN ERROR (ROOM)", data);
             });
-            let handleRoomFull = (autoEnter, showShowAlert = true) => {
+            let handleRoomFull = (autoEnter) => {
                 console.error("ROOM FULL", roomId, autoEnter);
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
-                    alert(showShowAlert ? "This room is full." : "Failed to connect to the private room.");
+                    if (isInPrivateRoom) {
+                        alert("This private room is full.");
+                    }
                     room.remove("close", room._closeHandler);
                     isInPrivateRoom = false;
                     updateRoomConfigInURL();
@@ -3474,9 +4022,9 @@
                 }
             };
             // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
-            room.on("join", ({ uid, alias, total: newTotalUids, self }) => {
+            room.on("join", ({ uid, alias, total: newTotalUids, self, users: onlineUids }) => {
                 totalUsers = newTotalUids - ignoredUids.size;
-                updatePrivateRoomUserCountLabel();
+                updateStartPanelUserCountLabel();
                 usersOrderedByJoinTime.push(uid);
                 currentRoomId = roomId;
                 if (self) {
@@ -3493,6 +4041,7 @@
                         uidByPlayer = new Map();
                         playersAcknowledgedEventStart = new Map();
                         playersGuessedInCurrentEvent = new Set();
+                        playersWithdrawnFromGlobalLeaderboard = new Set();
                         document.querySelector("#chat-message-container").innerHTML = "";
                         chatMessages = [];
                         playerIds = new Map();
@@ -3518,7 +4067,21 @@
                                 return;
                             }
                             waitingForJoinResponse = false;
-                            handleRoomFull(autoEnter, false);
+                            if (isInPrivateRoom) {
+                                // Treat existing users as zombies and take over the room
+                                for (let { uid: u } of onlineUids) {
+                                    if (u !== currentUid) {
+                                        ignoredUids.add(u);
+                                    }
+                                }
+                                totalUsers = newTotalUids - ignoredUids.size;
+                                upcomingEvent = { id: -1, mode: "welcome" };
+                                showEventInfo();
+                                joinedRoom = true;
+                                updateStartPanel();
+                            } else {
+                                handleRoomFull(autoEnter);
+                            }
                         }, MESSAGE_PENDING_TIME_LIMIT);
                     }
                     return;
@@ -3539,8 +4102,9 @@
                             players: [...playerByUid],
                             entrance: [...playersOrderedByEntrance],
                             users: [...usersOrderedByJoinTime],
-                            playersAck: [...playersAcknowledgedEventStart],
-                            playersGuessed: [...playersGuessedInCurrentEvent],
+                            ack: [...playersAcknowledgedEventStart],
+                            guessed: [...playersGuessedInCurrentEvent],
+                            withdrawn: [...playersWithdrawnFromGlobalLeaderboard],
                             leaderboard: [...playerLeaderboardData],
                             chat: chatMessages,
                             currentEvent,
@@ -3563,7 +4127,7 @@
                     closeLobbyConnection();
                 }
             });
-            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, playersAck, playersGuessed, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame, waiting: waitingForPairing, upcomingPairing }) => {
+            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, ack, guessed, withdrawn, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame, waiting: waitingForPairing, upcomingPairing }) => {
                 if (!uidsWaitingForJoinResponse.has(to)) {
                     return;
                 }
@@ -3578,7 +4142,7 @@
                     handleRoomFull(autoEnter);
                     return;
                 }
-                if (!(ignore && players && entrance && playersAck && playersGuessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
+                if (!(ignore && players && entrance && ack && guessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
                     // Invalid
                     handleRoomFull(autoEnter);
                     return;
@@ -3599,8 +4163,9 @@
                 upcomingEvent = newUpcomingEvent;
                 upcomingEventStartTime = Date.now() + parseFloat(upcomingStart);
                 currentUnownedFactoryGame = unownedGame;
-                playersAcknowledgedEventStart = new Map(playersAck);
-                playersGuessedInCurrentEvent = new Set(playersGuessed);
+                playersAcknowledgedEventStart = new Map(ack);
+                playersGuessedInCurrentEvent = new Set(guessed);
+                playersWithdrawnFromGlobalLeaderboard = new Set(withdrawn);
                 showEventInfo();
                 if (currentEventStartTime) {
                     lastProgressBarWidth = (100 * (currentEventEndTime - Date.now())) / (currentEventEndTime - currentEventStartTime);
@@ -3618,6 +4183,7 @@
                     addChatMessage(...c);
                 }
                 joinedRoom = true;
+                totalUsers = users.length;
                 updateStartPanel();
                 if (autoEnter) {
                     handlePlayButtonClick();
@@ -3636,7 +4202,7 @@
                 }
                 usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== uid);
                 totalUsers = newTotalUids - ignoredUids.size;
-                updatePrivateRoomUserCountLabel();
+                updateStartPanelUserCountLabel();
                 let leavingPlayer = playerByUid.get(uid);
                 if (leavingPlayer) {
                     removePlayer(leavingPlayer);
@@ -3668,7 +4234,7 @@
                 }
                 representIfOldest();
             });
-            room.on("enter", ({ uid, date, player, eventId }) => {
+            room.on("enter", ({ uid, date, player, withdraw, eventId }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -3698,6 +4264,9 @@
                 uidByPlayer.set(player, uid);
                 playersOrderedByEntrance.push(player);
                 playersAcknowledgedEventStart.set(player, Date.now());
+                if (withdraw) {
+                    playersWithdrawnFromGlobalLeaderboard.add(player);
+                }
                 let score = initialScore()[currentEvent.mode];
                 let isWaitingForPairing = currentEvent.mode === "arena";
                 addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, isWaitingForPairing);
@@ -3719,7 +4288,7 @@
                         }
                     }
                     if (i === -1) {
-                        let j = new Math.seedrandom(date)() < 0.5;
+                        let j = isDev || new Math.seedrandom(date)() < 0.5;
                         if (j) {
                             currentPairing.push(player, null);
                         } else {
@@ -3783,7 +4352,7 @@
                     return;
                 }
                 localStorage.setItem("nickname", currentPlayer);
-                document.querySelector("#chat-input").placeholder = "Please be nice in chat!";
+                document.querySelector("#chat-input").placeholder = "Please be nice in the chat!";
                 if (currentEvent.mode === "arena") {
                     target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
                 } else if (["factory", "welcome"].includes(currentEvent.mode)) {
@@ -3885,7 +4454,7 @@
                         let pairing = shuffled(playerByUid.values(), rand);
                         console.assert(pairing.length === playerByUid.size, pairing, playerByUid);
                         if (pairing.length & 1) {
-                            if (rand() < 0.5) {
+                            if (isDev || rand() < 0.5) {
                                 pairing.push(null);
                             } else {
                                 pairing.splice(-1, 0, null);
@@ -3951,7 +4520,7 @@
                         showOrHideOpponentBoard(currentEvent.mode === "arena");
                         currentPlayerStartTime = Date.now();
                         currentOpponentBoardState = [];
-                        if (!currentPartner && currentEvent.opener) {
+                        if (currentEvent.opener) {
                             currentOpponentBoardState = structuredClone(currentBoardState);
                             loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
                         }
@@ -3960,7 +4529,12 @@
                     updateBanner();
                 } else if (uid === currentUid) {
                     // Current player is the only user who just pressed play to started the first event
-                    room.send({ type: "enter", player: currentPlayer, eventId });
+                    room.send({
+                        type: "enter",
+                        player: currentPlayer,
+                        withdraw: settings.withdrawFromGlobalLeaderboard,
+                        eventId,
+                    });
                 }
             });
             room.on("event-start-ack", ({ uid, eventId }) => {
@@ -4064,6 +4638,9 @@
                 checkEventEndOrAcceleration();
                 switch (currentEvent.mode) {
                     case "factory": {
+                        if (currentEvent.opener && !playersGuessedInCurrentEvent.has(player)) {
+                            break;
+                        }
                         // Load next board only now for up-to-date unowned game
                         if (uid === currentUid) {
                             waitingForScoreAfterGuessInFactory = undefined;
@@ -4073,6 +4650,7 @@
                             }
                         }
                         currentUnownedFactoryGame = newUnownedGame;
+                        break;
                     }
                     case "duo": {
                         if (!(game === currentGameIndex && numGuesses - 1 === currentBoardState.length)) {
@@ -4091,9 +4669,10 @@
                         updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
                         isCurrentPlayersTurn = true;
                         playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                        break;
                     }
                     case "arena": {
-                        if (player === currentPartner) {
+                        if (player === currentPartner && !(currentEvent.opener && numGuesses === 1)) {
                             currentOpponentBoardState.push([guess, verdict]);
                             loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
                             if (document.querySelector("#between-duels-panel").style.display !== "none") {
@@ -4187,14 +4766,25 @@
                     currentBoardState = [[currentEvent.opener, v]];
                     loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                     updateCurrentScore(v, true);
-                    if (!currentPartner) {
-                        currentOpponentBoardState = structuredClone(currentBoardState);
-                        loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
-                    }
+                    currentOpponentBoardState = structuredClone(currentBoardState);
+                    loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
                 }
                 lastOpponentGuessTime = Date.now();
                 showOrHideOpponentBoard(currentEvent.mode === "arena");
                 playAudio("event-start");
+            });
+            room.on("update-withdrawal", ({ uid, withdrawn }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                let player = playerByUid.get(uid);
+                if (player) {
+                    if (withdrawn) {
+                        playersWithdrawnFromGlobalLeaderboard.add(player);
+                    } else {
+                        playersWithdrawnFromGlobalLeaderboard.delete(player);
+                    }
+                }
             });
             room.on("event-end", ({ uid, eventId }) => {
                 if (ignoredUids.has(uid)) {
@@ -4220,10 +4810,45 @@
                 if (currentEvent.mode !== "welcome" && playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
                     checkForZombies(true);
                 }
+                if (!isInPrivateRoom && !isUpcomingEventNewGameInCircuit && currentEvent.mode !== "welcome" && uid === currentUid) {
+                    // This event-end message's sender reports score data to the global leaderboard since they're the most likely to be available, having suggested the event's ending
+                    (async () => {
+                        let sortedPlayers = getSortedPlayersAndScoresForEventEnd(false, true);
+                        let body = {
+                            dev: isDev,
+                            mode: currentEvent.mode,
+                            opener: currentEvent.opener || "",
+                            items: [],
+                        };
+                        let outranked = 0;
+                        for (let i = sortedPlayers.length - 1; i >= 0; --i) {
+                            let [displayName, leaderboardData, players] = sortedPlayers[i];
+                            let { score, solved, failed, playtime } = getShortScoreForGlobalLeaderboard(currentEvent.mode, leaderboardData.score);
+                            let xp = solved + outranked;
+                            let item = { score, failed, xp, playtime };
+                            if (currentEvent.mode === "duo") {
+                                item.team = players.map((p) => ({ player: p, visible: !playersWithdrawnFromGlobalLeaderboard.has(p) }));
+                            } else {
+                                item.player = players[0];
+                                item.visible = !playersWithdrawnFromGlobalLeaderboard.has(players[0]);
+                            }
+                            body.items.push(item);
+                            outranked += players.length;
+                        }
+                        let newData = await (
+                            await fetch(GLOBAL_LEADERBOARD_BACKEND_URL, {
+                                method: "POST",
+                                body: JSON.stringify(body),
+                            })
+                        ).json();
+                        handleReceivedGlobalLeaderboardData(newData);
+                        room.send({ type: "global-leaderboard-update", data: globalLeaderboardData });
+                    })();
+                }
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 20 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -4248,6 +4873,15 @@
                 }
                 representIfOldest();
             });
+            room.on("global-leaderboard-update", ({ uid, data }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (uid === currentUid || data.date <= globalLeaderboardData?.date) {
+                    return;
+                }
+                handleReceivedGlobalLeaderboardData(data);
+            });
             room.on("extra-reps", ({ uid, count }) => {
                 if (ignoredUids.has(uid)) {
                     return;
@@ -4263,19 +4897,31 @@
             };
             room.on("close", room._closeHandler);
         };
-        let privateRoomUserCountLabel = document.querySelector("#private-room-user-count-label");
+        let startPanelHeading = document.querySelector("#start-panel-heading");
+        startPanelHeading.addEventListener("click", () => {
+            if (isInPrivateRoom) {
+                location.href = location.origin;
+            }
+        });
+        let startPanelBottomLabel = document.querySelector("#start-panel-bottom-label");
         let isInPrivateRoom = false;
-        let updatePrivateRoomUserCountLabel = () => {
-            let u = totalUsers || 1;
-            privateRoomUserCountLabel.textContent = `${u} ${u === 1 ? "player" : "players"} in private room`;
+        let updateStartPanelUserCountLabel = () => {
+            if (isInPrivateRoom) {
+                let u = joinedRoom ? totalUsers || 1 : "–";
+                startPanelBottomLabel.innerHTML = `<b>${u}</b> ${u === 1 ? "player" : "players"} in private room`;
+            } else {
+                let u = globalLeaderboardData ? globalLeaderboardData?.day?.players || 0 : "–";
+                startPanelBottomLabel.innerHTML = `<b>${u}</b> ${u === 1 ? "player" : "players"} competed today`;
+            }
         };
         let updateStartPanel = () => {
+            startPanelHeading.classList.toggle("clickable", isInPrivateRoom);
+            document.querySelector("#start-panel-description").textContent = isInPrivateRoom ? "Invite friends or practice solo in your private room" : "Compete against other avid Wordlers in rotating challenges";
             playButton.disabled = !joinedRoom;
             playButton.textContent = !joinedRoom ? "Loading..." : isInPrivateRoom ? ((currentEvent || upcomingEvent).mode === "welcome" ? "Start" : "Join") : "Play";
-            privateRoomButton.style.display = !isInPrivateRoom ? "" : "none";
+            document.querySelector("#start-panel-extra-options").style.display = !isInPrivateRoom ? "" : "none";
             copyRoomLinkButton.style.display = isInPrivateRoom ? "" : "none";
-            privateRoomUserCountLabel.style.display = isInPrivateRoom ? "" : "none";
-            updatePrivateRoomUserCountLabel();
+            updateStartPanelUserCountLabel();
         };
         let checkWelcomeEventEnd = () => {
             if (playerByUid.size === Math.min(totalUsers, MAX_PLAYERS_PER_ROOM)) {
@@ -4286,12 +4932,13 @@
         let privateRoomButton = document.querySelector("#private-room-button");
         let copyRoomLinkButton = document.querySelector("#copy-room-link-button");
         if (preferredRoomIdFromURLParam) {
-            joinRoom(preferredRoomIdFromURLParam);
             isInPrivateRoom = preferredRoomIdFromURLParam >= 1;
+            joinRoom(preferredRoomIdFromURLParam);
             updateStartPanel();
-        } else {
+        } else if (!urlParams.has("no-connect")) {
             searchAndJoinRoom();
         }
+        showEventInfo();
 
         let updateRoomConfigInURL = (options = {}) => {
             options = {
@@ -4372,6 +5019,18 @@
                 }
                 customizationPanelOpenerInput.disabled = customizationPanelSelectedOpener !== "always";
                 customizationPanelOpenerInput.classList.remove("shaking");
+                let descriptionEl = document.querySelector("#customization-panel-description");
+                const DESCRIPTION_BY_MODE = {
+                    "factory": "Guess and pass the Wordle around",
+                    "duo": "Solve with a partner",
+                    "circuit": "Balance speed and accuracy",
+                    "random": "All challenges, shuffled",
+                    "arena": "1v1 Wordle tournament",
+                    "golf": "Fewest guesses wins",
+                    "sprint": "Fastest time wins",
+                };
+                descriptionEl.innerHTML = `<i>${DESCRIPTION_BY_MODE[customizationPanelSelectedMode]}</i>`;
+                descriptionEl.style.visibility = customizationPanelSelectedMode === "random" ? "hidden" : "";
             };
         })();
         // Force the browser back button to reload the page, in case a private room was created
@@ -4385,6 +5044,9 @@
             playerIds.delete(player);
             playersOrderedByEntrance.splice(playersOrderedByEntrance.indexOf(player), 1);
             playerLeaderboardData.delete(player);
+            playersAcknowledgedEventStart.delete(player);
+            playersGuessedInCurrentEvent.delete(player);
+            playersWithdrawnFromGlobalLeaderboard.delete(player);
             playerByUid.delete(uidByPlayer.get(player));
             uidByPlayer.delete(player);
             if (currentEvent.mode === "factory") {
@@ -4480,7 +5142,7 @@
             let activePlayers = playerByUid.size - zombies;
             if (currentEvent.mode !== "arena" && playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
                 suggestToEndEvent();
-            } else if (currentEvent.mode === "arena" ? totalPlayerScore() >= 3 * playerByUid.size : playersDone >= activePlayers / 2) {
+            } else if (currentEvent.mode === "arena" ? totalPlayerScore() >= (numGames() / 3) * playerByUid.size : playersDone >= activePlayers / 2) {
                 setEventToEndIn(acceleratedTimeLimit());
             }
             if (Number.isFinite(checkAgainIn)) {
@@ -4494,36 +5156,34 @@
                 }, checkAgainIn);
             }
         };
-        let computePlaceAndDelta = (sortedPlayers) => {
-            let place = 1 + sortedPlayers.findIndex(([x, y]) => x === currentPlayer);
-            let placeHTML = `${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup>`;
+        let computePlaceAndDelta = (sortedPlayersWithTeamsCombined, playerJustEntered) => {
+            let place = 1 + sortedPlayersWithTeamsCombined.findIndex((x) => x[2].includes(currentPlayer));
+            let placeHTML = `You are in <b>${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup></b> place`;
             let delta;
             let otherPlayer;
-            if (playerByUid.size > 1) {
+            if (!playerJustEntered && playerByUid.size > 1) {
                 if (place === 1) {
-                    delta = sortedPlayers[1][1].score[0] - currentScore[0];
-                    otherPlayer = sortedPlayers[1][0];
+                    delta = sortedPlayersWithTeamsCombined[1][1].score[0] - currentScore[0];
+                    otherPlayer = sortedPlayersWithTeamsCombined[1][0];
                 } else {
-                    delta = sortedPlayers[place - 2][1].score[0] - currentScore[0];
-                    otherPlayer = sortedPlayers[place - 2][0];
+                    delta = sortedPlayersWithTeamsCombined[place - 2][1].score[0] - currentScore[0];
+                    otherPlayer = sortedPlayersWithTeamsCombined[place - 2][0];
                 }
             }
-            let deltaHTML = playerByUid.size > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
-            return { place, placeHTML, delta, deltaHTML };
-        };
-        let showEventTransitionPanel = (playerJustEntered = false) => {
-            if (currentEvent.mode === "welcome") {
-                showOrHidePanel("welcome-panel");
-                return;
+            let deltaHTML = !playerJustEntered && playerByUid.size > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
+            let solved = getShortScoreForGlobalLeaderboard(currentEvent.mode, sortedPlayersWithTeamsCombined[place - 1][1].score).solved;
+            let xp = solved;
+            for (let i = place; i < sortedPlayersWithTeamsCombined.length; ++i) {
+                xp += sortedPlayersWithTeamsCombined[i][2].length;
             }
-            showOrHideOpponentBoard(false);
-            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
-            let sortedPlayers = sortMiniLeaderboard();
-            if (playerJustEntered && !startingNewGameInCircuit) {
-                sortedPlayers = sortedPlayers.filter(([p, _]) => p !== currentPlayer);
+            return { place, placeHTML, delta, deltaHTML, xp, solved };
+        };
+        let getSortedPlayersAndScoresForEventEnd = (playerJustEntered = false, sortOnly = false) => {
+            let sortedPlayers = structuredClone(sortMiniLeaderboard(undefined, sortOnly)).map((x) => [...x, [x[0]]]);
+            if (playerJustEntered) {
+                sortedPlayers = sortedPlayers.filter(([p]) => p !== currentPlayer);
             }
             if (currentEvent.mode === "duo") {
-                sortedPlayers = structuredClone(sortedPlayers);
                 let appendedTeammateAlready = new Set();
                 for (let i = sortedPlayers.length - 1; i >= 0; --i) {
                     let p = sortedPlayers[i][0];
@@ -4535,12 +5195,23 @@
                         let j = sortedPlayers.findIndex(([p2, _]) => p2 === partner);
                         appendedTeammateAlready.add(j);
                         sortedPlayers[j][0] += " + " + p;
+                        sortedPlayers[j][2].push(p);
                         sortedPlayers.splice(i, 1);
                     } else {
                         sortedPlayers[i][0] += " + " + BOT_NAME;
                     }
                 }
             }
+            return sortedPlayers;
+        };
+        let showEventTransitionPanel = (playerJustEntered = false) => {
+            if (currentEvent.mode === "welcome") {
+                showOrHidePanel("welcome-panel");
+                return;
+            }
+            showOrHideOpponentBoard(false);
+            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            let sortedPlayers = getSortedPlayersAndScoresForEventEnd(playerJustEntered);
             if (!startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
                 addChatMessage(sortedPlayers[0][0], `won ${formatEventName(currentEvent)} ${formatShortScoreDescription(currentEvent.mode, sortedPlayers[0][1].score)}`, "player-won");
             }
@@ -4566,11 +5237,11 @@
                         `,
                     )
                     .join("\n");
-                let { place, placeHTML, delta, deltaHTML } = computePlaceAndDelta(sortedPlayers);
+                let { place, placeHTML, delta, deltaHTML } = computePlaceAndDelta(sortedPlayers, playerJustEntered);
                 requestAnimationFrame(() => {
                     leaderboardEl.children[place - 1].scrollIntoView({ block: "center" });
                 });
-                panel.querySelector("#leaderboard-your-place").querySelector("b").innerHTML = placeHTML;
+                panel.querySelector("#leaderboard-your-place").innerHTML = !playerJustEntered && playerByUid.size > 1 ? placeHTML : "";
                 panel.querySelector("#leaderboard-delta").innerHTML = deltaHTML;
                 panel.querySelector("#leaderboard-delta").display = delta ? "" : "none";
                 showOrHidePanel("between-games-panel");
@@ -4591,7 +5262,7 @@
                 let [p, o] = sortedPlayers[i];
                 let scoreText;
                 let scoreText2;
-                let hardMode = !currentEvent.opener && currentEvent.mode !== "factory";
+                let hardMode = !currentEvent.opener && !["factory", "duo"].includes(currentEvent.mode);
                 switch (currentEvent.mode) {
                     case "factory": {
                         let [solved, time] = o.score;
@@ -4617,7 +5288,7 @@
                         break;
                     }
                     case "circuit": {
-                        let [eventScore, averageTime, totalTime, played, roundScore, roundTime, playedOnHardMode] = o.score;
+                        let [eventScore, averageTime, totalTime, played, roundScore, roundTime, solved, playedOnHardMode] = o.score;
                         averageTime *= -1;
                         totalTime *= -1;
                         roundScore *= -1;
@@ -4652,29 +5323,40 @@
                     <div>${p}</div>
                     <div>
                         ${scoreText}
-                        ${scoreText2 ? `<div style="font-size: 10px">${scoreText2}</div>` : ""}
+                        ${scoreText2 ? `<div style="font-size: 11px">${scoreText2}</div>` : ""}
+                        ${0 ? `<div id="final-leaderboard-record-indicator">Weekly Record</div>` : ""}
                     </div>
                     ${hardMode ? '<span class="material-symbols-outlined">asterisk</span>' : ""}
                 `;
             }
             panel.querySelector("#final-leaderboard-hard-mode-description").style.display = anyHardMode ? "" : "none";
+            let { placeHTML, xp, solved } = computePlaceAndDelta(sortedPlayers);
+            panel.querySelector("#final-leaderboard-your-place").innerHTML = placeHTML.replace(/are/, "finished");
+            let xpEl = panel.querySelector("#final-leaderboard-xp-description");
+            xpEl.textContent = `(+${xp} XP)`;
+            xpEl.style.display = isInPrivateRoom ? "none" : "";
             let nextEventInfoEl = panel.querySelector("#next-event-info");
             nextEventInfoEl.querySelector("span").textContent = MODE_ICONS[upcomingEvent.mode];
             nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
             showOrHidePanel("between-events-panel");
             updateCountdownInPanel();
-            let playConfetti;
-            if (currentEvent.mode === "duo") {
-                let a = [currentPlayer, currentPartner || BOT_NAME];
-                for (let i = 0; i < 2; ++i) {
-                    if (sortedPlayers[0][0] === `${a[i]} + ${a[i ^ 1]}`) {
-                        playConfetti = true;
-                        break;
+            let playConfetti = (() => {
+                if (currentEvent.mode === "duo") {
+                    let a = [currentPlayer, currentPartner || BOT_NAME];
+                    for (let i = Math.min(sortedPlayers.length, 3) - 1; i >= 0; --i) {
+                        for (let j = 0; j < 2; ++j) {
+                            if (sortedPlayers[i][0] === `${a[j]} + ${a[j ^ 1]}`) {
+                                return true;
+                            }
+                        }
                     }
                 }
-            } else {
-                playConfetti = sortedPlayers[0][0] === currentPlayer;
-            }
+                for (let i = Math.min(sortedPlayers.length, 3) - 1; i >= 0; --i) {
+                    if (sortedPlayers[i][0] === currentPlayer) {
+                        return true;
+                    }
+                }
+            })();
             if (playConfetti) {
                 let colors = ["#d2b200", "#57ac78"];
                 confetti({
@@ -4732,8 +5414,8 @@
                     (playerWon ? playerBottomEl : opponentBottomEl).innerHTML += !playerWon && !currentPartner ? "" : ` <div style="font-size: 12px; display: flex">(${addedScore === 2 ? `<span class="material-symbols-outlined glow-red" style="font-size: 14px; margin-inline: -2px -1px">mode_heat</span> ` : ""}+${addedScore})</div>`;
                 }
             }
-            let { placeHTML, deltaHTML } = computePlaceAndDelta(sortMiniLeaderboard());
-            panelEl.querySelector("#between-duels-your-place").querySelector("b").innerHTML = placeHTML;
+            let { placeHTML, deltaHTML } = computePlaceAndDelta(getSortedPlayersAndScoresForEventEnd(playerJustEntered));
+            panelEl.querySelector("#between-duels-your-place").innerHTML = playerByUid.size > 1 ? placeHTML : "";
             panelEl.querySelector("#between-duels-delta").innerHTML = deltaHTML;
             updateCountdownInPanel();
         };
