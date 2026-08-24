@@ -763,7 +763,8 @@
             gap: 6px;
             align-items: center;
             .final-leaderboard-top-item {
-                width: 6px;
+                min-width: 6px;
+                max-width: 6px;
                 height: 6px;
             }
         }
@@ -955,7 +956,6 @@
         border-color: hsl(18.8deg, 50%, 37.5%);
         background: hsl(18.8deg, 50%, 58.3%);
     }
-    /* FIXME: Implement the record indicator */
     #final-leaderboard-record-indicator {
         color: hsl(48.8deg, 83.3%, 25%);
         font-size: 11px;
@@ -1829,7 +1829,7 @@
                 JSON.stringify({
                     version: GLOBAL_LEADERBOARD_VERSION,
                     date: Date.now(),
-                    ...globalLeaderboardData,
+                    data: globalLeaderboardData,
                 }),
             );
         };
@@ -1873,7 +1873,7 @@
                 lastFetchedGlobalLeaderboardData = undefined;
             }
             if (lastFetchedGlobalLeaderboardData) {
-                globalLeaderboardData = lastFetchedGlobalLeaderboardData;
+                globalLeaderboardData = lastFetchedGlobalLeaderboardData.data;
             } else {
                 fetchGlobalLeaderboardData();
             }
@@ -1947,7 +1947,7 @@
                     switch (globalLeaderboardPanelSelectedMode) {
                         case "overall": {
                             return `
-                                <div style="width: 130px">
+                                <div style="width: 130px" title="${a[0]}">
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
@@ -1958,7 +1958,7 @@
                         }
                         case "factory": {
                             return `
-                                <div style="width: 130px">
+                                <div style="width: 130px" title="${a[0]}">
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
@@ -1969,7 +1969,7 @@
                         }
                         case "duo": {
                             return `
-                                <div style="width: 194px">
+                                <div style="width: 194px" title="${a[0]}">
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
@@ -1979,7 +1979,7 @@
                         }
                         case "golf": {
                             return `
-                                <div style="width: 130px">
+                                <div style="width: 130px" title="${a[0]}">
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
@@ -1993,7 +1993,7 @@
                         }
                         case "sprint": {
                             return `
-                                <div style="width: 130px">
+                                <div style="width: 130px" title="${a[0]}">
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
@@ -2008,9 +2008,12 @@
                     }
                 };
                 let items = structuredClone(globalLeaderboardData?.[globalLeaderboardPanelSelectedPeriod]?.[globalLeaderboardPanelSelectedMode] || []);
+                let lastUsedName = currentPlayer || localStorage.getItem("nickname");
+                let playerIndex = items.findIndex(({ player, team }) => (player ? player === lastUsedName : team?.length === 1 && team[0] === lastUsedName));
+                let playerItem = items[playerIndex];
                 if (settings.withdrawFromGlobalLeaderboard) {
-                    let lastUsedName = currentPlayer || localStorage.getItem("nickname");
                     items = items.filter(({ player, team }) => (team?.length === 1 ? team[0] : player) !== lastUsedName);
+                    playerIndex = Infinity;
                 }
                 const HEADERS = {
                     "overall": ["Player", "(Opener)", "Total XP", "Challenges", globalLeaderboardPanelSelectedPeriod === "day" ? "Last played" : "Playtime"],
@@ -2030,14 +2033,14 @@
                     )
                     .join("");
                 let footerEl = document.querySelector("#global-leaderboard-footer");
-                // FIXME: Implement footer, by first maintaining self's records in localStorage
-                // if (tableData.at(-1).length) {
-                //     let y = JSON.stringify(tableData.at(-1).slice(1));
-                //     footerEl.style.display = "";
-                //     footerEl.innerHTML = itemEl(["You", ...tableData.at(-1).slice(1)], settings.withdrawFromGlobalLeaderboard ? -1 : tableData.findIndex((x) => JSON.stringify(x.slice(1)) === y));
-                // } else {
-                //     footerEl.style.display = "none";
-                // }
+                // FIXME: Properly implement footer by maintaining self's records in localStorage instead of searching from the leaderboard, in case the player is outside the leaderboard range to be able to still show their record
+                if (playerIndex !== -1) {
+                    let { opener, team, score } = playerItem;
+                    footerEl.style.display = "";
+                    footerEl.innerHTML = itemEl([`You${team ? ` + ${BOT_NAME}` : ""}`, opener || "–", ...score], playerIndex);
+                } else {
+                    footerEl.style.display = "none";
+                }
                 document.querySelector("#global-leaderboard-score-description").style.display = globalLeaderboardPanelSelectedMode === "overall" ? "" : "none";
                 document.querySelector("#global-leaderboard-hard-mode-description").style.display = ["golf", "sprint"].includes(globalLeaderboardPanelSelectedMode) ? "" : "none";
                 document.querySelector("#global-leaderboard-participation").style.display = isInPrivateRoom ? "none" : "";
@@ -4848,7 +4851,7 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 20 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 0 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -4934,10 +4937,10 @@
         if (preferredRoomIdFromURLParam) {
             isInPrivateRoom = preferredRoomIdFromURLParam >= 1;
             joinRoom(preferredRoomIdFromURLParam);
-            updateStartPanel();
         } else if (!urlParams.has("no-connect")) {
             searchAndJoinRoom();
         }
+        updateStartPanel();
         showEventInfo();
 
         let updateRoomConfigInURL = (options = {}) => {
@@ -5161,7 +5164,7 @@
             let placeHTML = `You are in <b>${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup></b> place`;
             let delta;
             let otherPlayer;
-            if (!playerJustEntered && playerByUid.size > 1) {
+            if (!playerJustEntered && sortedPlayersWithTeamsCombined.length > 1) {
                 if (place === 1) {
                     delta = sortedPlayersWithTeamsCombined[1][1].score[0] - currentScore[0];
                     otherPlayer = sortedPlayersWithTeamsCombined[1][0];
@@ -5170,7 +5173,7 @@
                     otherPlayer = sortedPlayersWithTeamsCombined[place - 2][0];
                 }
             }
-            let deltaHTML = !playerJustEntered && playerByUid.size > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
+            let deltaHTML = !playerJustEntered && sortedPlayersWithTeamsCombined.length > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
             let solved = getShortScoreForGlobalLeaderboard(currentEvent.mode, sortedPlayersWithTeamsCombined[place - 1][1].score).solved;
             let xp = solved;
             for (let i = place; i < sortedPlayersWithTeamsCombined.length; ++i) {
@@ -5318,20 +5321,44 @@
                     }
                 }
                 anyHardMode ||= hardMode;
+                let record = (() => {
+                    if (i > 0 || isInPrivateRoom || !globalLeaderboardData) {
+                        return undefined;
+                    }
+                    let mode = currentEvent.mode;
+                    if (!["factory", "duo", "golf", "sprint"].includes(mode)) {
+                        return undefined;
+                    }
+                    let { score, failed } = getShortScoreForGlobalLeaderboard(mode, o.score);
+                    if (failed) {
+                        return undefined;
+                    }
+                    if (compareArrays(score, globalLeaderboardData?.week?.[mode]?.[0]?.score || []) > 0) {
+                        return "Weekly";
+                    }
+                    if (compareArrays(score, globalLeaderboardData?.day?.[mode]?.[0]?.score || []) > 0) {
+                        return "Daily";
+                    }
+                    return undefined;
+                })();
                 el.classList.toggle("smaller-text", currentEvent.mode === "duo");
                 el.innerHTML = `
                     <div>${p}</div>
                     <div>
                         ${scoreText}
                         ${scoreText2 ? `<div style="font-size: 11px">${scoreText2}</div>` : ""}
-                        ${0 ? `<div id="final-leaderboard-record-indicator">Weekly Record</div>` : ""}
+                        ${record ? `<div id="final-leaderboard-record-indicator">${record} Record</div>` : ""}
                     </div>
                     ${hardMode ? '<span class="material-symbols-outlined">asterisk</span>' : ""}
                 `;
             }
             panel.querySelector("#final-leaderboard-hard-mode-description").style.display = anyHardMode ? "" : "none";
             let { placeHTML, xp, solved } = computePlaceAndDelta(sortedPlayers);
-            panel.querySelector("#final-leaderboard-your-place").innerHTML = placeHTML.replace(/are/, "finished");
+            if (currentEvent.mode === "duo") {
+                panel.querySelector("#final-leaderboard-your-place").innerHTML = placeHTML.replace(/You are/, "Your team finished");
+            } else {
+                panel.querySelector("#final-leaderboard-your-place").innerHTML = placeHTML.replace(/are/, "finished");
+            }
             let xpEl = panel.querySelector("#final-leaderboard-xp-description");
             xpEl.textContent = `(+${xp} XP)`;
             xpEl.style.display = isInPrivateRoom ? "none" : "";
