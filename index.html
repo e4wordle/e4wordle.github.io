@@ -1682,6 +1682,17 @@
         </div>
         <div class="divider"></div>
         <div class="settings-row">
+            <div class="settings-label">
+                <div>Notifications</div>
+                <div class="settings-description">To get ready for a new challenge</div>
+            </div>
+            <div class="settings-toggle-container" id="settings-item-notifications">
+                <div class="key settings-toggle">Off</div>
+                <div class="key settings-toggle">On</div>
+            </div>
+        </div>
+        <div class="divider"></div>
+        <div class="settings-row">
             <a href="https://forms.gle/54ZcAX12BYGhy6Lf6" target="_blank" rel="noopener noreferrer" style="margin: auto; color: var(--panel-foreground-color); font-size: 12px">Provide feedback</a>
         </div>
         <button id="settings-ok-button">OK</button>
@@ -1721,6 +1732,7 @@
                     alwaysHardMode: false,
                     sound: false,
                     accessibleColors: false,
+                    notifications: false,
                     withdrawFromGlobalLeaderboard: false,
                 };
             }
@@ -1799,6 +1811,41 @@
                 playAudio("score");
             });
 
+            let notificationsEl = document.querySelector("#settings-item-notifications");
+            let toggleNotifications =
+                (value, showAlert = true) =>
+                () => {
+                    if (value) {
+                        switch (Notification.permission) {
+                            case "granted": {
+                                break;
+                            }
+                            case "denied": {
+                                alert("Permission is denied. Please check your browser settings.");
+                                value = false;
+                                break;
+                            }
+                            case "default": {
+                                (async () => {
+                                    let permission = await Notification.requestPermission();
+                                    toggleNotifications(permission === "granted")();
+                                    if (showAlert && permission === "granted") {
+                                        showNotification("Notification is on", "You'll be notified for upcoming challenges while the game is in background.");
+                                    }
+                                })();
+                                return;
+                            }
+                        }
+                    }
+                    settings.notifications = value;
+                    localStorage.setItem("settings", JSON.stringify(settings));
+                    setButtonColor(notificationsEl.children[0], !value);
+                    setButtonColor(notificationsEl.children[1], value);
+                };
+            toggleNotifications(!!settings.notifications, false)();
+            notificationsEl.children[0].addEventListener("click", toggleNotifications(false));
+            notificationsEl.children[1].addEventListener("click", toggleNotifications(true));
+
             // Global leaderboard panel
             let globalLeaderboardParticipateButton = document.querySelector("#global-leaderboard-participate-button");
             let setGlobalLeaderboardParticipateButtonColorAndText = () => {
@@ -1822,6 +1869,17 @@
             });
             setGlobalLeaderboardParticipateButtonColorAndText();
         };
+        let showNotification = (title, body) => {
+            if (!settings.notifications) {
+                return;
+            }
+            let notification = new Notification(title, { body, icon: location.origin + "/favicon.png" });
+            notification.addEventListener("click", () => {
+                parent.focus();
+                notification.close();
+            });
+        };
+
         let globalLeaderboardData;
         let cacheGlobalLeaderboard = () => {
             localStorage.setItem(
@@ -4352,6 +4410,11 @@
                 if (lobby && playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
                     closeLobbyConnection();
                 }
+                if (!playerByUid.has(currentUid) && playerByUid.size === 1) {
+                    if (document.visibilityState === "hidden") {
+                        showNotification("Player joined", `${player} is playing. Come join them!`);
+                    }
+                }
                 if (uid !== currentUid) {
                     return;
                 }
@@ -4819,6 +4882,9 @@
                 let showingTargetAlert = false;
                 if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
+                    if (document.visibilityState === "hidden") {
+                        showNotification(`${formatEventName(currentEvent)} is over`, "Come get ready for the next challenge!");
+                    }
                     if (currentEvent.mode === "arena" ? currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone) {
                         showAlert(`<b>${target}</b>`);
                         showingTargetAlert = true;
