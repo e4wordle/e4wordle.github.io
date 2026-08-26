@@ -804,7 +804,7 @@
         right: 8px;
         bottom: 40px;
         padding: 16px;
-        z-index: 5;
+        z-index: 4;
         width: 288px;
         display: none;
     }
@@ -1718,6 +1718,15 @@
         let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
         let numGames = () => (isDev || totalUsers === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
 
+        /** @type {HTMLElement} */
+        let alertEl = document.querySelector("#alert");
+        let showAlert = (html) => {
+            alertEl.classList.remove("visible");
+            void alertEl.offsetWidth;
+            alertEl.classList.add("visible");
+            alertEl.innerHTML = html;
+        };
+
         let settings;
         let initializeSettings = () => {
             try {
@@ -1813,23 +1822,23 @@
 
             let notificationsEl = document.querySelector("#settings-item-notifications");
             let toggleNotifications =
-                (value, showAlert = true) =>
+                (value, showSample = true) =>
                 () => {
+                    let permission = "Notification" in window ? Notification.permission : "denied";
                     if (value) {
-                        switch (Notification.permission) {
+                        switch (permission) {
                             case "granted": {
                                 break;
                             }
                             case "denied": {
-                                alert("Permission is denied. Please check your browser settings.");
-                                value = false;
-                                break;
+                                showAlert("Your browser denied permission");
+                                return;
                             }
                             case "default": {
                                 (async () => {
                                     let permission = await Notification.requestPermission();
                                     toggleNotifications(permission === "granted")();
-                                    if (showAlert && permission === "granted") {
+                                    if (showSample && permission === "granted") {
                                         showNotification("Notification is on", "You'll be notified for upcoming challenges while the game is in background.");
                                     }
                                 })();
@@ -2419,7 +2428,8 @@
                     }
                 }
             } catch (e) {
-                alert(e.message);
+                showAlert(e.message);
+                console.error(e);
                 return;
             }
             allowedTargets = [...t].sort();
@@ -2781,14 +2791,6 @@
         let setEventToEndIn = (remaining) => {
             currentEventEndTime = Math.min(currentEventEndTime || Infinity, Date.now() + remaining);
             lastProgressBarUpdateTime = Date.now();
-        };
-        /** @type {HTMLElement} */
-        let alertEl = document.querySelector("#alert");
-        let showAlert = (html) => {
-            alertEl.classList.remove("visible");
-            void alertEl.offsetWidth;
-            alertEl.classList.add("visible");
-            alertEl.innerHTML = html;
         };
         // Returns an HTML description for why the guess didn't fit Hard Mode
         let checkHardMode = (nextGuess) => {
@@ -3772,13 +3774,16 @@
         };
         let validateNickname = () => {
             currentPlayer = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
-            if (currentPlayer.toLowerCase() === "rattington") {
-                alert("Please choose another nickname. (You're not a bot!)");
+            if (currentPlayer.toLowerCase().endsWith("rattington")) {
+                showAlert("Please choose another nickname. (You're not a bot!)");
                 nicknameInput.focus();
                 currentPlayer = "";
                 return true;
             }
             if (!currentPlayer) {
+                nicknameInput.classList.remove("shaking");
+                void nicknameInput.offsetWidth;
+                nicknameInput.classList.add("shaking");
                 nicknameInput.focus();
                 return true;
             }
@@ -4066,7 +4071,7 @@
                 console.error("ROOM FULL", roomId, autoEnter);
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
                     if (isInPrivateRoom) {
-                        alert("This private room is full.");
+                        showAlert("This private room is full.");
                     }
                     room.remove("close", room._closeHandler);
                     isInPrivateRoom = false;
@@ -4302,7 +4307,7 @@
                 }
                 if (playerIds.has(player)) {
                     if (uid === currentUid) {
-                        alert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
                         playButton.disabled = false;
                         currentPlayer = undefined;
                         nicknameInput.select();
