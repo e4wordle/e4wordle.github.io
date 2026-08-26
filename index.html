@@ -2337,6 +2337,7 @@
         let currentBoardState = [];
         let currentOpponentBoardState;
         let currentGuess = "";
+        let opponentFinalGuess; // The thing they last typed in when they lost
 
         let allowedTargets = TARGETS;
         let initializeSpecialTargetSet = () => {
@@ -3153,7 +3154,7 @@
                             letterEl.textContent = letter;
                         }
                         letterEl.classList.toggle("nonempty", !!letter);
-                        letterEl.classList.toggle("typed", letter && !color);
+                        letterEl.classList.toggle("typed", !noAnimation && letter && !color);
                         letterEl.classList.toggle("black", color === "B");
                         letterEl.classList.toggle("yellow", color === "Y");
                         letterEl.classList.toggle("green", color === "G");
@@ -4476,6 +4477,7 @@
                         currentPairing = undefined;
                         playersWaitingForPairing = undefined;
                         currentOpponentBoardState = undefined;
+                        opponentFinalGuess = undefined;
                     }
 
                     for (let p of playerIds.keys()) {
@@ -4584,6 +4586,7 @@
                                     }
                                 }, 1000);
                             }
+                            room.send({ type: "final-guess", guess: currentGuess });
                         }
                         addPlayerWaitingForPairing(p, date);
                     };
@@ -4698,7 +4701,23 @@
                     }
                 }
             });
-            room.on("arena-pair", ({ date, eventId, count }) => {
+            room.on("final-guess", ({ uid, guess }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (currentEvent.mode !== "arena" || currentEventEnded || document.querySelector("#between-duels-panel").style.display !== "none") {
+                    return;
+                }
+                let player = playerByUid.get(uid);
+                if (player !== currentPartner) {
+                    return;
+                }
+                opponentFinalGuess = guess;
+            });
+            room.on("arena-pair", ({ uid, date, eventId, count }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
                 if (currentEventEnded || eventId !== currentEvent.id || count < numArenaPairingsDone) {
                     return;
                 }
@@ -4763,6 +4782,7 @@
                 currentGuess = "";
                 currentBoardState = [];
                 currentOpponentBoardState = [];
+                opponentFinalGuess = undefined;
                 loadBoardState(currentBoardState, { noAnimation: true });
                 if (currentEvent.opener) {
                     let v = judge(currentEvent.opener, target);
@@ -5418,8 +5438,16 @@
                 return;
             }
             if (!options.placeAndDeltaOnly) {
-                loadBoardState(currentBoardState || [], { boardEl: betweenDuelsPanelPlayerBoardEl, noAnimation: true });
-                loadBoardState(currentOpponentBoardState || [], { boardEl: betweenDuelsPanelOpponentBoardEl, noAnimation: true });
+                let opponentWon = currentOpponentBoardState.at(-1)?.at(1) === "GGGGG";
+                let playerState = currentBoardState;
+                let opponentState = currentOpponentBoardState;
+                if (opponentWon) {
+                    playerState = playerState.concat([[currentGuess, ""]]);
+                } else if (playerWon && opponentFinalGuess) {
+                    opponentState = opponentState.concat([[opponentFinalGuess, ""]]);
+                }
+                loadBoardState(playerState, { boardEl: betweenDuelsPanelPlayerBoardEl, noAnimation: true });
+                loadBoardState(opponentState, { boardEl: betweenDuelsPanelOpponentBoardEl, noAnimation: true });
                 betweenDuelsPanelPlayerBoardEl.classList.toggle("lost-duel", !playerWon);
                 betweenDuelsPanelOpponentBoardEl.classList.toggle("lost-duel", playerWon || (currentOpponentBoardState.length === gameParams().guessLimit && currentOpponentBoardState.at(-1)[1] !== "GGGGG"));
                 let [playerSide, opponentSide] = document.querySelectorAll(".between-duels-side");
@@ -5430,7 +5458,6 @@
                 playerTopEl.innerHTML = `<b class="no-wrap">${currentPlayer}</b>`;
                 opponentTopEl.innerHTML = `<b class="no-wrap">${currentPartner || BOT_NAME}</b>`;
                 let opponentScore = currentPartner ? playerLeaderboardData.get(currentPartner).score : null;
-                let opponentWon = currentOpponentBoardState.at(-1)?.at(1) === "GGGGG";
                 if (playerWon || opponentWon) {
                     (playerWon ? playerTopEl : opponentTopEl).innerHTML += ` <span class="material-symbols-outlined" style="font-size: 16px">check_circle</span>`;
                 }
