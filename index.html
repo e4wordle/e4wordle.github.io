@@ -1574,7 +1574,7 @@
                 <div id="global-leaderboard-header" class="global-leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -4px"></div>
                 <div class="divider"></div>
                 <div style="height: 183px; display: flex; flex-direction: column; gap: 8px">
-                    <div id="global-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin: -9px 0; padding: 8px 0px; flex: 1; width: 332px"></div>
+                    <div id="global-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -9px; margin-bottom: -8px; padding: 8px 0px; flex: 1; width: 332px"></div>
                     <div class="divider"></div>
                     <div id="global-leaderboard-footer" class="global-leaderboard-item" style="display: flex"></div>
                     <div id="global-leaderboard-score-description" style="font-size: 11px; height: 14px; text-align: center">Your XP for each challenge = Wordles solved + Players outranked</div>
@@ -2167,7 +2167,7 @@
             return {
                 "factory": [0, 0], // [solved, -time]
                 "duo": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
-                "arena": [0, 0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, solved, played, hasStreak, -roundScore, -roundTime, playedOnHardMode]
+                "arena": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTimeInWins, -totalTime, solved, played, hasStreak, -roundScore, -roundTime, playedOnHardMode]
                 "circuit": [0, 0, 0, 0, 0, 0, 0, 1], // [score, -averageTime, -totalTime, played, -roundScore, -roundTime, solved, playedOnHardMode]
                 "sprint": [0, 0, 0, 1], // [solved, played, -time, playedOnHardMode]
                 "golf": [0, 0, 0, 0, 0, 1], // [solved, played, -guesses, -time, currentGameGuesses, playedOnHardMode]
@@ -2247,8 +2247,9 @@
                     };
                 }
                 case "arena": {
-                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    let [eventScore, averageTime, totalTimeInWins, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
                     averageTime *= -1;
+                    totalTimeInWins *= -1;
                     totalTime *= -1;
                     roundScore *= -1;
                     roundTime *= -1;
@@ -2310,8 +2311,9 @@
                     return "in " + formatTime(time, true);
                 }
                 case "arena": {
-                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    let [eventScore, averageTime, totalTimeInWins, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
                     averageTime *= -1;
+                    totalTimeInWins *= -1;
                     totalTime *= -1;
                     roundScore *= -1;
                     roundTime *= -1;
@@ -2359,8 +2361,9 @@
                     return `${solved}/${played}`;
                 }
                 case "arena": {
-                    let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
+                    let [eventScore, averageTime, totalTimeInWins, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = score;
                     averageTime *= -1;
+                    totalTimeInWins *= -1;
                     totalTime *= -1;
                     roundScore *= -1;
                     roundTime *= -1;
@@ -2752,16 +2755,16 @@
                         g = Math.max(g, c);
                     }
                     let d = Math.max(currentBoardState.length - currentOpponentBoardState.length, 0); // Make the bot act quicker when player's going fast
-                    let w = currentScore[3] * 2 - currentScore[4]; // Act according to player's net wins
+                    let w = currentScore[4] * 2 - currentScore[5]; // Act according to player's net wins
                     let wp = Math.max(w, 0);
                     let p;
                     let a;
                     if (currentEvent.opener) {
                         p = (-144 + 72 * d ** 1.5 + 24 * g + 12 * wp) / 1728;
-                        a = (12 + 6 * g + 12 * w) / 1728;
+                        a = (12 + 6 * g + 9 * w) / 1728;
                     } else {
                         p = (-144 + 72 * d ** 2 + 24 * g ** 1.5 + 12 * wp ** 2) / 1728;
-                        a = (12 + 6 * g + 12 * w) / 1728;
+                        a = (12 + 6 * g + 9 * w) / 1728;
                         if (!currentOpponentBoardState.length) {
                             p += (144 + 36 * wp ** 2) / 1728;
                         }
@@ -2849,8 +2852,8 @@
                 }
                 case "arena": {
                     // Wait until Score event to update round or game score, to prevent a race
-                    currentScore[7] = -(Date.now() - currentPlayerStartTime);
-                    currentScore[8] &&= stillHardMode;
+                    currentScore[8] = -(Date.now() - currentPlayerStartTime);
+                    currentScore[9] &&= stillHardMode;
                     break;
                 }
                 case "circuit": {
@@ -3375,7 +3378,7 @@
                       ? "unset" // Override me-only setting
                       : "none";
             guessCountEl.classList.toggle("glow-red", currentEvent.mode === "arena");
-            guessCountEl.style.visibility = currentEvent.mode === "arena" && !score[5] ? "hidden" : "unset";
+            guessCountEl.style.visibility = currentEvent.mode === "arena" && !score[6] ? "hidden" : "unset";
         };
         let addPlayer = (player, notify, score, scoreText, verdict, numGuesses, done) => {
             if (!player) {
@@ -4647,12 +4650,13 @@
                     if (playerLeaderboardData.get(player).done) {
                         return;
                     }
-                    let handleLoss = (p, showPanel) => {
+                    let handleLoss = (p, showPanel, playtime) => {
                         let d = playerLeaderboardData.get(p);
                         leaderboardDataVoided ||= p === player;
-                        ++d.score[4];
-                        d.score[6] = 0;
-                        d.score[5] = false;
+                        d.score[3] -= playtime;
+                        ++d.score[5];
+                        d.score[7] = 0;
+                        d.score[6] = false;
                         d.scoreText = formatScore(currentEvent.mode, d.score);
                         d.done = true;
                         if (p === currentPlayer) {
@@ -4671,13 +4675,14 @@
                     };
                     if (verdict === "GGGGG") {
                         // case "arena":
-                        score[2] += score[7];
-                        ++score[3];
+                        score[2] += score[8];
+                        score[3] += score[8];
                         ++score[4];
-                        score[1] = score[2] / score[3];
-                        score[6] = -(1 + score[5]);
-                        score[0] += -score[6];
-                        score[5] = true;
+                        ++score[5];
+                        score[1] = score[2] / score[4];
+                        score[7] = -(1 + score[6]);
+                        score[0] += -score[7];
+                        score[6] = true;
                         if (uid === currentUid) {
                             currentScore = score;
                         }
@@ -4685,10 +4690,10 @@
                         addPlayerWaitingForPairing(player, date);
                         let partner = currentPairing[currentPairing.indexOf(player) ^ 1];
                         if (partner) {
-                            handleLoss(partner, true);
+                            handleLoss(partner, true, -score[8]);
                         }
                     } else if (done) {
-                        handleLoss(player, !currentPartner); // Panel shows after alert hides; handled by postGameDelayTimeout
+                        handleLoss(player, !currentPartner, -currentScore[8]); // Panel shows after alert hides; handled by postGameDelayTimeout
                     }
                     if (done) {
                         checkForZombies(true);
@@ -4842,8 +4847,8 @@
                     if (!waiting.has(p)) {
                         continue;
                     }
-                    d.score[6] = 0;
                     d.score[7] = 0;
+                    d.score[8] = 0;
                     d.verdict = "";
                     d.numGuesses = 0;
                     d.done = false;
@@ -4958,7 +4963,7 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 0 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 20 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -5387,8 +5392,9 @@
                         break;
                     }
                     case "arena": {
-                        let [eventScore, averageTime, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = o.score;
+                        let [eventScore, averageTime, totalTimeInWins, totalTime, solved, played, hasStreak, roundScore, roundTime, playedOnHardMode] = o.score;
                         averageTime *= -1;
+                        totalTimeInWins *= -1;
                         totalTime *= -1;
                         roundScore *= -1;
                         roundTime *= -1;
@@ -5559,7 +5565,7 @@
                 playerBottomEl.innerHTML = String(currentScore[0]);
                 opponentBottomEl.innerHTML = currentPartner ? String(opponentScore[0]) : "—";
                 if (playerWon || opponentWon) {
-                    let addedScore = playerWon ? -currentScore[6] : -opponentScore?.at(6);
+                    let addedScore = playerWon ? -currentScore[7] : -opponentScore?.at(7);
                     (playerWon ? playerBottomEl : opponentBottomEl).innerHTML += !playerWon && !currentPartner ? "" : ` <div style="font-size: 12px; display: flex">(${addedScore === 2 ? `<span class="material-symbols-outlined glow-red" style="font-size: 14px; margin-inline: -2px -1px">mode_heat</span> ` : ""}+${addedScore})</div>`;
                 }
             }
