@@ -4356,6 +4356,7 @@
                 if (!playerByUid.has(currentUid) && playerByUid.size === 1) {
                     showNotification("Player joined", `${player} is playing. Come join them!`);
                 }
+                checkAutoSelfKickTimeout();
                 if (uid !== currentUid) {
                     return;
                 }
@@ -4510,6 +4511,7 @@
                 currentEventEnded = false;
                 upcomingPairingTime = undefined;
                 showEventInfo();
+                checkAutoSelfKickTimeout();
                 archivedLeaderboardData = undefined;
                 if (playerByUid.has(currentUid)) {
                     currentGuess = "";
@@ -4891,6 +4893,7 @@
                 currentUnownedFactoryGame = undefined;
                 factoryGameToShowAfterAnimation = undefined;
                 updateBanner();
+                checkAutoSelfKickTimeout();
                 upcomingPairingTime = undefined;
                 suggestedArenaPairing = undefined;
                 if (currentEvent.mode === "circuit") {
@@ -5123,6 +5126,7 @@
                 }
             }
             checkEventEndOrAcceleration();
+            checkAutoSelfKickTimeout();
         };
         let kickPlayer = (player) => room.send({ type: "kick", player });
         let checkForZombies = (kick = false) => {
@@ -5198,6 +5202,21 @@
                 }, checkAgainIn);
             }
         };
+        let autoSelfKickTimeout;
+        let checkAutoSelfKickTimeout = () => {
+            if (isDev || !currentEvent || currentEventEnded || currentPlayerDone || document.visibilityState === "visible" || playerByUid.size <= 1 || !playerByUid.has(currentUid)) {
+                clearTimeout(autoSelfKickTimeout);
+                return;
+            }
+            // If an unfinished player leaves the game in background, auto-kick them after a while
+            autoSelfKickTimeout = setTimeout(() => {
+                location.reload();
+            }, 50000);
+        };
+        document.addEventListener("visibilitychange", () => {
+            checkAutoSelfKickTimeout();
+        });
+
         let computePlaceAndDelta = (sortedPlayersWithTeamsCombined, playerJustEntered) => {
             let place = 1 + sortedPlayersWithTeamsCombined.findIndex((x) => x[2].includes(currentPlayer));
             let placeHTML = `You are in <b>${place}<sup>${(Math.floor((place % 100) / 10) !== 1 && ["", "st", "nd", "rd"][place % 10]) || "th"}</sup></b> place`;
