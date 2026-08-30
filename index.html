@@ -2857,7 +2857,7 @@
                     break;
                 }
                 case "circuit": {
-                    let roundScore = verdict === "GGGGG" && 2 * (gameParams().guessLimit + 1 - currentBoardState.length);
+                    let roundScore = verdict === "GGGGG" && 10 + 2 * (gameParams().guessLimit - currentBoardState.length);
                     // Speed component needs to wait until Score event to be added, in case of a race condition (two players solve the word before either player receiving their echoed Score message)
                     currentScore[0] += roundScore;
                     currentScore[4] = -roundScore;
@@ -3610,92 +3610,15 @@
                 case "circuit": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same Wordles, one game at a time. Highest score after 9 games wins!</p>
+                        <p>All players solve the same Wordles. Balance speed and accuracy for bonus points. Highest score after 9 games wins!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
-                        Your score for each Wordle combines accuracy and speed:
+                        Each Wordle scores 10 points + bonuses:
                         <ul class="gapped">
-                            <li>Accuracy: you solved the Wordle in how many guesses
-                                <table style="font-size: 12px">
-                                    <thead>
-                                        <tr>
-                                            <th>Guesses</th>
-                                            <th>Points</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>12</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>10</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>8</td>
-                                        </tr>
-                                        <tr>
-                                            <td>4</td>
-                                            <td>6</td>
-                                        </tr>
-                                        <tr>
-                                            <td>5</td>
-                                            <td>4</td>
-                                        </tr>
-                                        <tr>
-                                            <td>6</td>
-                                            <td>2</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Unsolved</td>
-                                            <td>0</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </li>
-                            <li>Speed: among all players, were you the 1<sup>st</sup>, 2<sup>nd</sup>, etc. to solve the Wordle
-                                <table style="font-size: 12px">
-                                    <thead>
-                                        <tr>
-                                            <th>Solved</th>
-                                            <th>Points</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>1<sup>st</sup></td>
-                                            <td>6</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2<sup>nd</sup></td>
-                                            <td>5</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3<sup>rd</sup></td>
-                                            <td>4</td>
-                                        </tr>
-                                        <tr>
-                                            <td>4<sup>th</sup></td>
-                                            <td>3</td>
-                                        </tr>
-                                        <tr>
-                                            <td>5<sup>th</sup></td>
-                                            <td>2</td>
-                                        </tr>
-                                        <tr>
-                                            <td>6<sup>th</sup></td>
-                                            <td>1</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Later</td>
-                                            <td>0</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </li>
+                            <li>Accuracy: +2 points per unused guess.</li>
+                            <li>Speed: +1 point per player you outpace.</li>
                         </ul>
+                        Example: solving first in a 4-player room in 4 guesses = 10 + 2 × 2 (accuracy) + 3 (speed) = 17 points.
                         <h4>Time Limit</h4>
                         A game ends ${acceleratedTimeLimit() / 1000} seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
                     `;
@@ -4703,11 +4626,10 @@
                     }
                 } else if (currentEvent.mode === "circuit" && verdict === "GGGGG") {
                     // case "circuit":
-                    let playersSolved = 0;
+                    let speed = -1; // Score for self hasn't been updated yet
                     for (let { verdict } of playerLeaderboardData.values()) {
-                        playersSolved += verdict === "GGGGG";
+                        speed += verdict !== "GGGGG";
                     }
-                    let speed = Math.max(6 - playersSolved, 0);
                     score[0] += speed;
                     score[4] -= speed;
                     if (uid === currentUid) {
@@ -4963,7 +4885,7 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 20 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 0 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
