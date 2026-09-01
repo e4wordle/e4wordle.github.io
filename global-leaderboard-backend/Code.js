@@ -15,7 +15,7 @@ let doGet = (e) => {
         console.error(error.stack);
         return jsonResponse({ error: error.toString() });
     } finally {
-        lock.releaseLock();
+        lock?.releaseLock();
     }
 };
 
@@ -35,7 +35,7 @@ let doPost = (e) => {
         console.error(error.stack);
         return jsonResponse({ error: error.toString() });
     } finally {
-        lock.releaseLock();
+        lock?.releaseLock();
     }
 };
 
@@ -51,7 +51,7 @@ let removeOldRows = () => {
         let cutoff = Date.now() - 7 * 86400000;
         let i = 0;
         for (; i < rows.length; ++i) {
-            if (rows[i] > cutoff) {
+            if (rows[i][0] > cutoff) {
                 break;
             }
         }
@@ -61,7 +61,7 @@ let removeOldRows = () => {
     } catch (error) {
         console.error(error.stack);
     } finally {
-        lock.releaseLock();
+        lock?.releaseLock();
     }
 };
 
@@ -175,7 +175,7 @@ let getLeaderboardData = (sheet) => {
     for (let record of soloRecords.values()) {
         if (record.visible) {
             ans.day.players += record.day.overall.score[0] > 0;
-            ans.week.players += record.day.overall.score[0] > 0;
+            ans.week.players += record.week.overall.score[0] > 0;
         }
     }
     modesSeen.set("overall", true);
