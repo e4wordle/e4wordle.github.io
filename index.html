@@ -3808,6 +3808,7 @@
         let lobby;
         let room;
         let currentRoomId;
+        let hasBeenKickedAsRep = false;
         let searchAndJoinRoom = (autoEnter = false) => {
             lobby = createConnection("lobby", "search");
             let createAndJoinRoom = () => {
@@ -3824,12 +3825,23 @@
                     return;
                 }
                 let waitingForSearchResponse = true;
-                lobby.on("search-response", ({ to, roomId }) => {
+                lobby.on("search-response", ({ uid: rep, to, roomId }) => {
                     if (to !== uid) {
                         return;
                     }
                     clearTimeout(responseTimeoutHandle);
                     waitingForSearchResponse = false;
+                    if (roomId === roomIdWithInvalidJoinResponse) {
+                        lobby.on("kick-rep", ({ uid: u }) => {
+                            if (u === uid) {
+                                roomIdWithInvalidJoinResponse = undefined;
+                                closeLobbyConnection();
+                                searchAndJoinRoom(autoEnter);
+                            }
+                        });
+                        lobby.send({ type: "kick-rep", to: rep });
+                        return;
+                    }
                     closeLobbyConnection();
                     joinRoom(roomId);
                 });
@@ -3851,11 +3863,7 @@
         let reps;
         let representRoom = () => {
             // A representative (rep) is the oldest user in a spacious room that may appear in the lobby to greet new users. A lobby can hold up to a certain number of reps. If the lobby is unfilled, more users from a room (ordered by join time) may also become rep to fill the lobby, to improve availability (in case the oldest user becomes a zombie)
-            if (currentRoomId >= 1) {
-                // Treat as private room
-                return;
-            }
-            if (lobby) {
+            if (lobby || isInPrivateRoom || hasBeenKickedAsRep) {
                 return;
             }
             lobby = createConnection("lobby", "rep");
@@ -3956,6 +3964,7 @@
             });
             lobby.on("kick-rep", ({ to }) => {
                 if (to === lobbyUid) {
+                    hasBeenKickedAsRep = true;
                     closeLobbyConnection();
                 }
             });
@@ -3994,6 +4003,7 @@
             progressBar.style.width = "100%";
             updateStartPanel();
         };
+        let roomIdWithInvalidJoinResponse;
         let joinRoom = (roomId, autoEnter = false) => {
             currentRoomId = roomId;
             if (room) {
@@ -4149,6 +4159,7 @@
                 }
                 if (!(ignore && players && entrance && ack && guessed && leaderboard && chat && newUpcomingEvent) || (players.size && !newCurrentEvent)) {
                     // Invalid
+                    roomIdWithInvalidJoinResponse = roomId;
                     handleRoomFull(autoEnter);
                     return;
                 }
