@@ -4951,6 +4951,10 @@
             };
             room.on("close", room._closeHandler);
         };
+        setInterval(() => {
+            lobby?.send({ type: "ping" });
+            room?.send({ type: "ping" });
+        }, 25000);
         let startPanelHeading = document.querySelector("#start-panel-heading");
         startPanelHeading.addEventListener("click", () => {
             if (isInPrivateRoom) {
