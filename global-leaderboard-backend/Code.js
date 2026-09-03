@@ -153,13 +153,10 @@ let getLeaderboardData = (sheet) => {
                 updateSoloRecord(player, visible);
                 players.push(player);
             }
-            let teamKey = players.join("\n");
+            let teamKey = players.sort().join("\n");
             let record = teamRecords.get(teamKey);
             if (!record) {
-                record = {
-                    day: {},
-                    week: {},
-                };
+                record = { day: {}, week: {} };
                 teamRecords.set(teamKey, record);
             }
             if (!failed && compareArrays(score, record.week[mode]?.score || []) >= 0) {
