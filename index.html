@@ -2198,7 +2198,7 @@
         };
         let acceleratedTimeLimit = (mode = undefined) => {
             mode ||= (currentEvent || upcomingEvent).mode;
-            return mode === "circuit" ? 30000 : mode === "arena" ? (isDev ? 0 : 120000) : 180000;
+            return mode === "circuit" ? 30000 : mode === "arena" ? (isDev ? 25000 : 120000) : 120000;
         };
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
@@ -2212,6 +2212,7 @@
         let suggestedToKickTeammate; // For Duo
         let playersWaitingForPairing; // For Arena
         let lastOpponentGuessTime; // For Arena
+        let playerWinningGuessPending; // For Arena
         let upcomingPairingTime;
         let numArenaPairingsDone;
         let suggestedArenaPairing;
@@ -2912,8 +2913,10 @@
             if (currentEvent.mode === "factory") {
                 message.newUnownedGame = verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit ? { ...createUnownedFactoryGame(false), lastGuesser: currentEvent.opener ? undefined : currentPlayer } : { target, board: currentBoardState, lastGuesser: currentPlayer };
             }
-            if (!(verdict === "GGGGG" && currentEvent.mode === "arena")) {
+            if (verdict === "GGGGG" && currentEvent.mode === "arena") {
                 // To avoid a race, in Arena when submitting an all-green guess, wait for the echo Score message to update board state only then
+                playerWinningGuessPending = true;
+            } else {
                 loadBoardState(currentBoardState, {
                     fastAnimation: gameParams().fastAnimation,
                     leaderboardOverride: verdict !== "GGGGG" ? { score: message.score, scoreText: message.scoreText, verdict: message.verdict, numGuesses: message.numGuesses } : undefined,
@@ -3112,7 +3115,7 @@
                                 }
                                 return;
                             }
-                            if (currentEvent.mode === "circuit" || (currentEvent.mode === "factory" ? currentPlayerDone : currentGameIndex === numGames() - 1)) {
+                            if (currentEvent.mode !== "arena" && (currentEvent.mode === "circuit" || (currentEvent.mode === "factory" ? currentPlayerDone : currentGameIndex === numGames() - 1))) {
                                 currentPlayerWaitingForOthers = true;
                                 updateBanner();
                                 return;
@@ -3992,7 +3995,7 @@
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
         const POST_WELCOME_DELAY = 4000;
         const MIN_ARENA_BETWEEN_DUEL_TIME = 4000; // To ensure players always get a break (and time to read the results panel) before their next duel
-        const ARENA_PAIRING_STOP_TIME = 30000;
+        const ARENA_PAIRING_STOP_TIME = isDev ? 12500 : 30000;
 
         let resetToInitialEventStates = () => {
             currentEvent = undefined;
@@ -4550,6 +4553,7 @@
                             loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
                         }
                         lastOpponentGuessTime = Date.now();
+                        playerWinningGuessPending = false;
                     }
                     updateBanner();
                 } else if (uid === currentUid) {
@@ -4623,6 +4627,7 @@
                         score[6] = true;
                         if (uid === currentUid) {
                             currentScore = score;
+                            playerWinningGuessPending = false;
                         }
                         scoreText = formatScore(currentEvent.mode, score);
                         addPlayerWaitingForPairing(player, date);
@@ -4804,6 +4809,7 @@
                 currentBoardState = [];
                 currentOpponentBoardState = [];
                 opponentFinalGuess = undefined;
+                playerWinningGuessPending = false;
                 loadBoardState(currentBoardState, { noAnimation: true });
                 if (currentEvent.opener) {
                     let v = judge(currentEvent.opener, target);
@@ -4846,7 +4852,7 @@
                     } else {
                         showNotification(`${formatEventName(currentEvent)} is over`, "Come get ready for the next challenge!");
                     }
-                    if (currentEvent.mode === "arena" ? currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone) {
+                    if (currentEvent.mode === "arena" ? playerWinningGuessPending || currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone) {
                         showAlert(`<b>${target}</b>`);
                         showingTargetAlert = true;
                         setTimeout(() => {
@@ -4909,6 +4915,7 @@
                 checkAutoSelfKickTimeout();
                 upcomingPairingTime = undefined;
                 suggestedArenaPairing = undefined;
+                playerWinningGuessPending = undefined;
                 if (currentEvent.mode === "circuit") {
                     for (let [p, { done, score }] of playerLeaderboardData) {
                         if (!done) {
@@ -5498,12 +5505,16 @@
             }
             if (!options.placeAndDeltaOnly) {
                 let opponentWon = currentOpponentBoardState.at(-1)?.at(1) === "GGGGG";
-                let playerState = currentBoardState;
-                let opponentState = currentOpponentBoardState;
+                let playerState = structuredClone(currentBoardState);
+                let opponentState = structuredClone(currentOpponentBoardState);
                 if (opponentWon) {
-                    playerState = playerState.concat([[currentGuess, ""]]);
+                    if (playerState.at(-1)?.[1] === "GGGGG") {
+                        playerState.at(-1)[1] = "";
+                    } else {
+                        playerState.push([currentGuess, ""]);
+                    }
                 } else if (playerWon && opponentFinalGuess) {
-                    opponentState = opponentState.concat([[opponentFinalGuess, ""]]);
+                    opponentState.push([opponentFinalGuess, ""]);
                 }
                 loadBoardState(playerState, { boardEl: betweenDuelsPanelPlayerBoardEl, noAnimation: true });
                 loadBoardState(opponentState, { boardEl: betweenDuelsPanelOpponentBoardEl, noAnimation: true });
