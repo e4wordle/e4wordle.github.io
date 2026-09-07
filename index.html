@@ -2636,7 +2636,7 @@
             }
             let postGame = postGameDelayTimeout || currentBoardState.at(-1)?.at(1) === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
             bannerLeftTextEl.innerHTML = mode === "arena" ? (mode === "arena" && currentPartner === undefined ? "" : `<span>Duel vs</span> ${currentPartner || BOT_NAME}`) : mode === "factory" ? `${currentGameIndex} solved` : `Game ${currentGameIndex + 1}`;
-            let leftIcon = mode === "arena" ? (playerLeaderboardData.get(currentPartner)?.score?.at(5) && bannerLeftTextEl.innerHTML ? "mode_heat" : "") : currentPlayerWaitingForOthers ? (mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
+            let leftIcon = mode === "arena" ? (playerLeaderboardData.get(currentPartner)?.score?.at(6) && bannerLeftTextEl.innerHTML ? "mode_heat" : "") : currentPlayerWaitingForOthers ? (mode === "circuit" && currentBoardState.at(-1)?.at(1) !== "GGGGG" ? "cancel" : "check_circle") : "";
             bannerLeftIconEl.textContent = leftIcon;
             bannerLeftIconEl.style.marginLeft = leftIcon === "mode_heat" ? "0" : "";
             bannerLeftIconEl.classList.toggle("glow-red", bannerLeftIconEl.textContent === "mode_heat");
@@ -2714,8 +2714,7 @@
                     if (isCurrentPlayersTurn === false) {
                         let d = Date.now();
                         if (!currentPartner) {
-                            let guessesMade = currentBoardState.length || 5; // Make the first guess also faster
-                            if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 2500) && (playerByUid.size <= 1 || d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 11000) + guessesMade * 500 || Math.random() < 0.083 + guessesMade * 0.021)) {
+                            if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - 3000)) {
                                 isCurrentPlayersTurn = true;
                                 guessAndSend(undefined);
                             }
@@ -2911,7 +2910,14 @@
                 auto: options.markAsAuto,
             };
             if (currentEvent.mode === "factory") {
-                message.newUnownedGame = verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit ? { ...createUnownedFactoryGame(false), lastGuesser: currentEvent.opener ? undefined : currentPlayer } : { target, board: currentBoardState, lastGuesser: currentPlayer };
+                message.newUnownedGame =
+                    verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit
+                        ? currentUnownedFactoryGame
+                        : {
+                              target,
+                              board: currentBoardState,
+                              lastGuesser: currentPlayer,
+                          };
             }
             if (verdict === "GGGGG" && currentEvent.mode === "arena") {
                 // To avoid a race, in Arena when submitting an all-green guess, wait for the echo Score message to update board state only then
@@ -3010,7 +3016,7 @@
             }
             target = factoryGameToShowAfterAnimation.target;
             currentBoardState = factoryGameToShowAfterAnimation.board;
-            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer) {
+            if (factoryGameToShowAfterAnimation.lastGuesser === currentPlayer || (currentBoardState.length === 0 && playerByUid.size === 1 && Math.random() < 0.5)) {
                 // Make a bot guess so the player doesn't get bored from only solving Wordles passed to themselves
                 let g;
                 if (currentBoardState.length < gameParams().guessLimit - 1 && ((g = botPlay({ worse: playerByUid.size > 1 })), g !== target)) {
@@ -3314,7 +3320,6 @@
         let playerIds = new Map();
         let playerLeaderboardData = new Map();
         let shouldShowLeaderboard = true;
-        localStorage.removeItem("showLeaderboard"); // Clean up stale setting. FIXME: Remove this after a while
         let initializeMiniLeaderboard = () => {
             let handleToggle = () => {
                 shouldShowLeaderboard = !shouldShowLeaderboard;
@@ -3570,7 +3575,7 @@
                 case "factory": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>Make a guess, then pass the Wordle to the next player. First to solve 9 Wordles wins!</p>
+                        <p>Make a guess, then pass the Wordle to another player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
                         The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players have solved 9 Wordles.
@@ -3614,7 +3619,7 @@
                 case "circuit": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>All players solve the same Wordles. Balance speed and accuracy for bonus points. Highest score after 9 games wins!</p>
+                        <p>All players solve the same set of 9 Wordles. Balance speed and accuracy for bonus points!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
                         Each Wordle scores 10 points + bonuses:
@@ -4676,7 +4681,7 @@
                         // Load next board only now for up-to-date unowned game
                         if (uid === currentUid) {
                             waitingForScoreAfterGuessInFactory = undefined;
-                            factoryGameToShowAfterAnimation = currentUnownedFactoryGame;
+                            factoryGameToShowAfterAnimation = verdict === "GGGGG" || numGuesses === gameParams().guessLimit ? createUnownedFactoryGame(false) : currentUnownedFactoryGame;
                             if (!isBoardAnimating()) {
                                 loadUnownedFactoryGameState();
                             }
@@ -5182,7 +5187,7 @@
             if (currentEventSuggestedEnded) {
                 return;
             }
-            if (playerByUid.size > 1 && !playersGuessedInCurrentEvent.has(currentPlayer)) {
+            if (currentEvent.mode !== "welcome" && playerByUid.size > 1 && !playersGuessedInCurrentEvent.has(currentPlayer)) {
                 // We don't want somebody who's potentially a zombie, who might get kicked when the event ends, to be in charge of updating the global leaderboard
                 return;
             }
