@@ -32,6 +32,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    .hide-cursor,
+    .hide-cursor * {
+        cursor: none !important;
+    }
     body,
     button,
     input {
@@ -2576,6 +2580,16 @@
                     input(e.key.toUpperCase());
                 }
             });
+            document.addEventListener("mousemove", () => {
+                document.documentElement.classList.remove("hide-cursor");
+            });
+            document.addEventListener(
+                "blur",
+                () => {
+                    document.documentElement.classList.remove("hide-cursor");
+                },
+                { capture: true },
+            );
 
             // spell-checker: ignore gesturestart gesturechange gestureend
             document.addEventListener("gesturestart", (e) => e.preventDefault());
@@ -2943,6 +2957,7 @@
             if (currentEvent.mode === "arena" && currentPlayerDone) {
                 return;
             }
+            document.documentElement.classList.add("hide-cursor");
             if (isNaN(currentPlayerStartTime) && currentEvent.mode === "sprint") {
                 currentPlayerStartTime = Date.now();
             }
