@@ -3743,7 +3743,7 @@
                 currentPlayer = "";
                 return true;
             }
-            if (!currentPlayer) {
+            if (!isInPrivateRoom && !currentPlayer) {
                 nicknameInput.classList.remove("shaking");
                 void nicknameInput.offsetWidth;
                 nicknameInput.classList.add("shaking");
@@ -4279,9 +4279,17 @@
                 if (ignoredUids.has(uid)) {
                     return;
                 }
-                if (playerIds.has(player)) {
+                if (playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
                     if (uid === currentUid) {
-                        showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        handleRoomFull(true);
+                    }
+                    return;
+                }
+                if ((!isInPrivateRoom && !player) || playerIds.has(player)) {
+                    if (uid === currentUid) {
+                        if (player) {
+                            showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        }
                         playButton.disabled = false;
                         currentPlayer = undefined;
                         nicknameInput.select();
@@ -4290,16 +4298,21 @@
                     }
                     return;
                 }
-                if (playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
-                    if (uid === currentUid) {
-                        handleRoomFull(true);
-                    }
-                    return;
-                }
                 if (uid !== currentUid && eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
                     // Outdated event data
                     kickPlayer(player);
                     return;
+                }
+                if (!player) {
+                    // Allow an anonymous player to join private rooms and generate "Player X" as their name
+                    let i = playerByUid.size;
+                    do {
+                        ++i;
+                        player = `Player ${i}`;
+                    } while (playerIds.has(player));
+                    if (uid === currentUid) {
+                        currentPlayer = player;
+                    }
                 }
                 playerByUid.set(uid, player);
                 uidByPlayer.set(player, uid);
