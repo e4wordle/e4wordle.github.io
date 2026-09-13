@@ -2115,7 +2115,7 @@
                     .join("");
                 let footerEl = document.querySelector("#global-leaderboard-footer");
                 // FIXME: Properly implement footer by maintaining self's records in localStorage instead of searching from the leaderboard, in case the player is outside the leaderboard range to be able to still show their record
-                if (playerIndex !== -1) {
+                if (playerIndex !== -1 && playerItem) {
                     let { opener, team, score } = playerItem;
                     footerEl.style.display = "";
                     footerEl.innerHTML = itemEl([`You${team ? ` + ${BOT_NAME}` : ""}`, opener || "–", ...score], playerIndex);
@@ -3166,7 +3166,7 @@
                                 if (currentEvent.opener) {
                                     let v = judge(currentEvent.opener, target);
                                     currentBoardState.push([currentEvent.opener, v]);
-                                    loadBoardState([], { fastAnimation: true, keyboardColorState: fastAnimation ? currentBoardState : undefined, leaderboardOverride: playerLeaderboardData.get(currentPlayer) });
+                                    loadBoardState([], { fastAnimation: true, keyboardColorState: fastAnimation ? currentBoardState : undefined, leaderboardOverride: fastAnimation ? undefined : playerLeaderboardData.get(currentPlayer) });
                                     if (fastAnimation) {
                                         colorKeyboard(1, currentBoardState);
                                     }
@@ -3743,7 +3743,7 @@
                 currentPlayer = "";
                 return true;
             }
-            if (!currentPlayer) {
+            if (!isInPrivateRoom && !currentPlayer) {
                 nicknameInput.classList.remove("shaking");
                 void nicknameInput.offsetWidth;
                 nicknameInput.classList.add("shaking");
@@ -4279,9 +4279,17 @@
                 if (ignoredUids.has(uid)) {
                     return;
                 }
-                if (playerIds.has(player)) {
+                if (playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
                     if (uid === currentUid) {
-                        showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        handleRoomFull(true);
+                    }
+                    return;
+                }
+                if ((!isInPrivateRoom && !player) || playerIds.has(player)) {
+                    if (uid === currentUid) {
+                        if (player) {
+                            showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                        }
                         playButton.disabled = false;
                         currentPlayer = undefined;
                         nicknameInput.select();
@@ -4290,16 +4298,23 @@
                     }
                     return;
                 }
-                if (playerByUid.size >= MAX_PLAYERS_PER_ROOM) {
-                    if (uid === currentUid) {
-                        handleRoomFull(true);
-                    }
-                    return;
-                }
                 if (uid !== currentUid && eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
                     // Outdated event data
                     kickPlayer(player);
                     return;
+                }
+                if (!player) {
+                    // Allow an anonymous player to join private rooms and generate "Player X" as their name
+                    let i = playerByUid.size;
+                    do {
+                        ++i;
+                        player = `Player ${i}`;
+                    } while (playerIds.has(player));
+                    if (uid === currentUid) {
+                        currentPlayer = player;
+                    }
+                } else if (uid === currentUid) {
+                    localStorage.setItem("nickname", currentPlayer);
                 }
                 playerByUid.set(uid, player);
                 uidByPlayer.set(player, uid);
@@ -4396,7 +4411,6 @@
                 if (uid !== currentUid) {
                     return;
                 }
-                localStorage.setItem("nickname", currentPlayer);
                 document.querySelector("#chat-input").placeholder = "Please be nice in the chat!";
                 if (currentEvent.mode === "arena") {
                     target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
@@ -5364,7 +5378,7 @@
                     el.innerHTML = "";
                     continue;
                 }
-                let [p, o] = sortedPlayers[i];
+                let [p, o, team] = sortedPlayers[i];
                 let scoreText;
                 let scoreText2;
                 let hardMode = !currentEvent.opener && !["factory", "duo"].includes(currentEvent.mode);
@@ -5427,6 +5441,9 @@
                 let record = (() => {
                     let leaderboardData = archivedLeaderboardData || globalLeaderboardData;
                     if (i > 0 || isInPrivateRoom || !leaderboardData) {
+                        return undefined;
+                    }
+                    if (team.every((p) => playersWithdrawnFromGlobalLeaderboard.has(p))) {
                         return undefined;
                     }
                     let mode = currentEvent.mode;
