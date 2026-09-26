@@ -1710,9 +1710,22 @@
     import GUESSES from "./guesses.json" with { type: "json" };
     import TARGETS from "./targets.json" with { type: "json" };
 
-    {
+    (async () => {
+        const APP_VERSION = 1;
+
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
+        {
+            let url = new URL(location.href);
+            url.searchParams.set("probe", Math.random());
+            let latestScript = await (await fetch(url)).text();
+            let latestVersion = +latestScript.split("const APP_VERSION = ")[1].split(";")[0];
+            if (APP_VERSION !== latestVersion) {
+                location.reload();
+                return;
+            }
+        }
+
         let log = (...args) => {
             let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
@@ -3816,7 +3829,6 @@
         };
         setInterval(checkUpcomingPairing, 125);
 
-        const APP_VERSION = 1;
         const SOCKET_ID_PREFIX = `e4wordle:${isDev ? "dev-" : ""}${APP_VERSION}-`;
         const MAX_PLAYERS_PER_ROOM = 12;
         const MAX_USERS_PER_ROOM = 36;
@@ -4351,7 +4363,7 @@
                         if (j) {
                             currentPairing.push(player, null);
                         } else {
-                            currentPairing.splice(null, player);
+                            currentPairing.push(null, player);
                         }
                         if (uid === currentUid) {
                             showEventInfo();
@@ -5763,5 +5775,5 @@
             console.assert(false, candidateTargets, candidateGuesses, b);
             return "JAZZY";
         };
-    }
+    })();
 </script>
