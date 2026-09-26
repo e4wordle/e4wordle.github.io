@@ -2657,7 +2657,9 @@
             bannerLeftInnerTextEl.innerHTML = currentPlayerWaitingForOthers && leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentPartner || BOT_NAME}</b>` : "";
             let rightText =
                 mode === "golf"
-                    ? -currentScore[2] + currentScore[4]
+                    ? isBoardAnimating()
+                        ? bannerRightTextEl.innerHTML
+                        : -currentScore[2]
                     : mode === "sprint"
                       ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
                       : mode === "duo"
@@ -2851,7 +2853,7 @@
             switch (currentEvent.mode) {
                 case "factory": {
                     currentScore[0] += verdict === "GGGGG";
-                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                    if (verdict === "GGGGG") {
                         currentScore[1] = -(Date.now() - currentEventStartTime);
                     }
                     break;
@@ -2859,7 +2861,7 @@
                 case "duo": {
                     currentScore[0] += verdict === "GGGGG";
                     currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
-                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                    if (verdict === "GGGGG") {
                         currentScore[2] = -(Date.now() - currentEventStartTime);
                     }
                     currentScore[3] &&= stillHardMode;
@@ -2889,9 +2891,8 @@
                 case "sprint": {
                     currentScore[0] += verdict === "GGGGG";
                     currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
-                    if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
+                    if (verdict === "GGGGG") {
                         currentScore[2] = -(Date.now() - currentPlayerStartTime);
-                        console.assert(!isNaN(currentScore[2]), currentScore, playerLeaderboardData);
                     }
                     currentScore[3] &&= stillHardMode;
                     break;
@@ -2901,15 +2902,16 @@
                     currentScore[1] += verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit;
                     ++currentScore[4];
                     if (verdict === "GGGGG" || currentBoardState.length === gameParams().guessLimit) {
-                        currentScore[3] = -(Date.now() - currentEventStartTime);
-                        currentScore[2] -= currentScore[4];
+                        if (verdict === "GGGGG") {
+                            currentScore[3] = -(Date.now() - currentEventStartTime);
+                            currentScore[2] -= currentScore[4];
+                        }
                         currentScore[4] = 0;
                     }
                     currentScore[5] &&= stillHardMode;
                     break;
                 }
             }
-            updateBanner();
             let message = {
                 type: "score",
                 eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
@@ -3085,6 +3087,7 @@
                         return;
                     }
                     animatingGuessesByBoard.get(boardEl.id).delete(i);
+                    updateBanner();
                     if (currentEvent.mode === "factory" && !isBoardAnimating() && verdict !== "GGGGG" && !waitingForScoreAfterGuessInFactoryTimeoutHandle) {
                         if (!waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
                             loadUnownedFactoryGameState();
@@ -4589,7 +4592,6 @@
                         lastOpponentGuessTime = Date.now();
                         playerWinningGuessPending = false;
                     }
-                    updateBanner();
                 } else if (uid === currentUid) {
                     // Current player is the only user who just pressed play to started the first event
                     room.send({
@@ -4599,6 +4601,7 @@
                         eventId,
                     });
                 }
+                updateBanner();
             });
             room.on("event-start-ack", ({ uid, eventId }) => {
                 if (ignoredUids.has(uid)) {
