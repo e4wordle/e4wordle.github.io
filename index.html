@@ -1713,6 +1713,17 @@
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
+        {
+            let url = new URL(location.href);
+            url.searchParams.set("probe", Math.random());
+            let latestScript = await (await fetch(url)).text();
+            let latestVersion = +latestScript.split("const APP_VERSION = ")[1].split(";")[0];
+            if (APP_VERSION !== latestVersion) {
+                location.reload();
+                return;
+            }
+        }
+
         let log = (...args) => {
             let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
