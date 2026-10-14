@@ -15,6 +15,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 <style id="main-styles">
+    body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 24px hsl(48.8deg, 83.3%, 50%);
+        z-index: 9999;
+        bottom: -24px;
+        left: -24px;
+        right: -24px;
+    }
+    #panel {
+        border-top: 16px ridge hsl(48.8deg, 100%, 58.3%);
+    }
     :root {
         --main-background-color: hsl(0, 0%, 95.8%);
         --main-foreground-color: hsl(0, 0%, 37.5%);
@@ -1392,7 +1406,7 @@
 </div>
 <div id="alert"></div>
 <div id="panel" class="panel">
-    <div id="start-panel" style="width: 252px; margin: 8px -4px 0; display: _none">
+    <div id="start-panel" style="width: 252px; margin: 8px -4px 0; display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 id="start-panel-heading" style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; color: var(--panel-foreground-color)"><i id="start-panel-description">Compete against other avid Wordlers in rotating challenges</i></h2>
@@ -1503,7 +1517,7 @@
     </div>
     <div id="between-games-panel" style="display: none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
-            <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">0</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
+            <h3 style="font-weight: normal">&ensp;Game <span id="between-games-panel-round-id">1</span> <span class="material-symbols-outlined" style="transform: translateY(4px)">sports_score</span> Results</h3>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
                 <div style="display: flex; font-size: 11px; padding-left: 8px; margin-bottom: -4px">
                     <div class="no-wrap" style="width: 124px">Player</div>
@@ -1512,13 +1526,26 @@
                     <div style="width: 56px; text-align: center">Time</div>
                 </div>
                 <div class="divider"></div>
-                <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; max-height: 128px; margin: -8px 0; padding: 8px 0px 8px 8px"></div>
+                <div id="leaderboard" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; max-height: 128px; margin: -8px 0; padding: 8px 0px 8px 8px">
+                    <div style="display: flex">
+                        <div class="no-wrap" style="width: 124px"><b>e4</b></div>
+                        <div style="width: 84px; text-align: center">12 <span style="font-size: 12px">(+12)</span></div>
+                        <div style="width: 56px; text-align: center">3</div>
+                        <div style="width: 56px; text-align: center">0:12</div>
+                    </div>
+                    <div style="display: flex">
+                        <div class="no-wrap" style="width: 124px"><b>Lorem Ipsum</b></div>
+                        <div style="width: 84px; text-align: center">11 <span style="font-size: 12px">(+11)</span></div>
+                        <div style="width: 56px; text-align: center">3</div>
+                        <div style="width: 56px; text-align: center">0:13</div>
+                    </div>
+                </div>
                 <div class="divider"></div>
             </div>
             <div id="leaderboard-your-place" style="font-size: 16px">
                 You are in <b>3<sup>rd</sup></b> place
             </div>
-            <div id="leaderboard-delta"></div>
+            <div id="leaderboard-delta">(2 points behind Lorem Ipsum)</div>
             <p id="next-game-countdown"><span>Next</span> game starts in <b>10</b></p>
         </div>
     </div>
@@ -1545,7 +1572,7 @@
             <p id="next-duel-countdown"></p>
         </div>
     </div>
-    <div id="between-events-panel" style="display: none; margin: 8px -4px">
+    <div id="between-events-panel" style="display: _none; margin: 8px -4px">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: 600; font-size: 16px">So-and-so won!</div>
             <div id="between-events-panel-description" style="opacity: 0.75">"SWIFT" Sprint</div>
@@ -1556,8 +1583,62 @@
             </div>
             <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
             <div class="divider"></div>
-            <div id="final-leaderboard-your-place" style="margin-top: -2px"></div>
-            <div id="final-leaderboard-xp-description" style="font-size: 12px; margin-top: -8px"></div>
+            <div style="margin-block: 0">Standings • Challenge 2 of 6</div>
+            <div id="room-leaderboard-header" class="leaderboard-header leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -8px">
+                <div style="width: 130px">
+                    <b class="no-wrap">Player</b>
+                </div>
+                <div style="width: 64px">Score</div>
+                <div style="width: 56px"></div>
+                <div style="width: 74px">Total time</div>
+            </div>
+            <div class="divider"></div>
+            <div style="height: 68px; display: flex; flex-direction: column; gap: 8px">
+                <div id="room-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -13px; margin-bottom: -12px; padding: 8px 0px; flex: 1; width: 332px">
+                    <div class="leaderboard-item">
+                        <div style="width: 130px">
+                            <b class="no-wrap">e4</b>
+                        </div>
+                        <div style="width: 64px">1 <span style="font-size: 11px">(+1)</span></div>
+                        <div style="width: 56px"></div>
+                        <div style="width: 74px">1:34</div>
+                    </div>
+                    <div class="leaderboard-item">
+                        <div style="width: 130px">
+                            <b class="no-wrap">Lorem</b>
+                        </div>
+                        <div style="width: 64px">0</div>
+                        <div style="width: 56px"></div>
+                        <div style="width: 74px">1:34</div>
+                    </div>
+                    <div class="leaderboard-item">
+                        <div style="width: 130px">
+                            <b class="no-wrap">Lorem</b>
+                        </div>
+                        <div style="width: 64px">0</div>
+                        <div style="width: 56px"></div>
+                        <div style="width: 74px">1:34</div>
+                    </div>
+                    <div class="leaderboard-item">
+                        <div style="width: 130px">
+                            <b class="no-wrap">Lorem</b>
+                        </div>
+                        <div style="width: 64px">0</div>
+                        <div style="width: 56px"></div>
+                        <div style="width: 74px">1:34</div>
+                    </div>
+                    <div class="leaderboard-item">
+                        <div style="width: 130px">
+                            <b class="no-wrap">Lorem</b>
+                        </div>
+                        <div style="width: 64px">0</div>
+                        <div style="width: 56px"></div>
+                        <div style="width: 74px">1:34</div>
+                    </div>
+                </div>
+            </div>
+            <!-- <div id="final-leaderboard-your-place" style="-top: -2px"></div>
+            <div id="final-leaderboard-xp-description" style="font-size: 12px; margin-top: -8px"></div> -->
             <div class="divider"></div>
             <div style="display: flex; flex-direction: column; width: 100%">
                 <div id="next-event-countdown">Next up in <b>20</b></div>
@@ -1709,7 +1790,7 @@
     import TARGETS from "./targets.json" with { type: "json" };
 
     (async () => {
-        const APP_VERSION = 1;
+        const APP_VERSION = 2;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -4027,6 +4108,34 @@
             });
         };
 
+        let { nextTournamentWindowStartTime, createTournament, currentTournament } = (() => {
+            let toWindow = (pstDate) => Date.parse(pstDate + "T18:30-08:00");
+            const T0 = toWindow("2026-02-28");
+            const PERIOD = 7 * 86400000;
+            const NUM_EVENTS = 6;
+            const EVENT_WINDOW = 120000;
+            let nextTournamentWindowStartTime = (now) => T0 + PERIOD * (1 + Math.ceil((now - T0) / PERIOD));
+            let createTournament = (windowStartTime) => {
+                let getOpener = (t) => {
+                    // Maybe list themed openers, then take recent themed opener and generate opener for every x-th week
+                    let d = new Date(t).getUTCDate();
+                    if (d >= 13 && d < 20) {
+                        //
+                    }
+                };
+                let modes = shuffled(EVENT_MODES.map(), new Math.seedrandom(windowStartTime));
+            };
+            let currentTournament = (now) => {
+                let t = T0 + PERIOD * Math.ceil((now - T0) / PERIOD);
+                let e = Math.floor((now - t) / EVENT_WINDOW);
+                if (e >= NUM_EVENTS) {
+                    return undefined;
+                }
+                return { tournament: createTournament(t), currentEventIndex: e };
+            };
+            return { nextTournamentWindowStartTime, currentTournament };
+        })();
+
         let playerByUid = new Map();
         let usersOrderedByJoinTime = [];
         let playersOrderedByEntrance = [];
@@ -4042,7 +4151,7 @@
         let playersGuessedInCurrentEvent = new Set();
         let playersWithdrawnFromGlobalLeaderboard = new Set();
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
-        const POST_WELCOME_DELAY = 4000;
+        const POST_WELCOME_DELAY = 400.0;
         const MIN_ARENA_BETWEEN_DUEL_TIME = 4000; // To ensure players always get a break (and time to read the results panel) before their next duel
         const ARENA_PAIRING_STOP_TIME = isDev ? 12500 : 30000;
 
