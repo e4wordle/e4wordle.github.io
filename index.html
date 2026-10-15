@@ -757,9 +757,7 @@
         height: fit-content;
         max-height: calc(100vh - 88px);
     }
-    #global-leaderboard-header,
-    .global-leaderboard-item,
-    #global-leaderboard-footer {
+    .leaderboard-item {
         display: flex;
         text-align: center;
         > div:nth-child(1) {
@@ -780,7 +778,7 @@
             }
         }
     }
-    #global-leaderboard-header b {
+    .leaderboard-header b {
         font-weight: normal;
     }
     .global-leaderboard-mode-button {
@@ -1576,12 +1574,12 @@
         <h3 style="font-weight: normal; margin-block: 0.5em">Daily Duo Leaderboard</h3>
         <div style="width: 100%; display: _none">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
-                <div id="global-leaderboard-header" class="global-leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -4px"></div>
+                <div id="global-leaderboard-header" class="leaderboard-header leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -4px"></div>
                 <div class="divider"></div>
                 <div style="height: 183px; display: flex; flex-direction: column; gap: 8px">
                     <div id="global-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -9px; margin-bottom: -8px; padding: 8px 0px; flex: 1; width: 332px"></div>
                     <div class="divider"></div>
-                    <div id="global-leaderboard-footer" class="global-leaderboard-item" style="display: flex"></div>
+                    <div id="global-leaderboard-footer" class="leaderboard-item" style="display: flex"></div>
                     <div id="global-leaderboard-score-description" style="font-size: 11px; height: 14px; text-align: center">Your XP for each challenge = Wordles solved + Players outranked</div>
                     <div id="global-leaderboard-hard-mode-description" style="font-size: 11px; height: 14px; display: none; text-align: center"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 11px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
                 </div>
@@ -1634,7 +1632,7 @@
         </div>
         <div></div>
         <div style="display: flex; gap: 6px; width: 100%; justify-content: space-between; align-items: flex-end">
-            <button id="global-leaderboard-ok-button" style="font-weight: normal; font-size: 14px; min-width: 102px; padding-block: 10px">OK</button>
+            <button id="global-leaderboard-ok-button" style="font-weight: normal; font-size: 14px; min-width: 102px; padding-block: 10px">Close</button>
             <div id="global-leaderboard-participation">
                 <div style="font-size: 13px; display: flex; gap: 4px; align-items: center">Participate on leaderboard <button class="key" id="global-leaderboard-participate-button" style="font-weight: normal; font-size: 12px; min-height: unset; height: 33px; width: 33px"></button></div>
             </div>
@@ -1645,7 +1643,7 @@
 <div id="help" class="panel">
     <div id="help-container">
         <div id="help-contents"></div>
-        <button id="help-ok-button">OK</button>
+        <button id="help-ok-button">Close</button>
     </div>
 </div>
 <div id="settings" class="panel">
@@ -1700,7 +1698,7 @@
         <div class="settings-row">
             <a href="https://forms.gle/54ZcAX12BYGhy6Lf6" target="_blank" rel="noopener noreferrer" style="margin: auto; color: var(--panel-foreground-color); font-size: 12px">Provide feedback</a>
         </div>
-        <button id="settings-ok-button">OK</button>
+        <button id="settings-ok-button">Close</button>
     </div>
 </div>
 <script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
@@ -1715,17 +1713,6 @@
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
-        {
-            let url = new URL(location.href);
-            url.searchParams.set("probe", Math.random());
-            let latestScript = await (await fetch(url)).text();
-            let latestVersion = +latestScript.split("const APP_VERSION = ")[1].split(";")[0];
-            if (APP_VERSION !== latestVersion) {
-                location.reload();
-                return;
-            }
-        }
-
         let log = (...args) => {
             let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
@@ -2120,7 +2107,7 @@
                 document.querySelector("#global-leaderboard-table").innerHTML = items
                     .map(
                         ({ player, team, opener, score }, i) => `
-                            <div class="global-leaderboard-item">
+                            <div class="leaderboard-item">
                                 ${itemEl([player ? player : [team[0], team[1] || BOT_NAME].join(" + "), opener || "–", ...score], i)}
                             </div>
                         `,
@@ -2686,6 +2673,9 @@
                               return currentEventEnded || t >= 60000 ? "" : formatTime(t + 999);
                           })()
                         : (() => {
+                              if (currentEventEnded) {
+                                  return bannerRightTextEl.innerHTML;
+                              }
                               let time = currentEventEndTime - Date.now();
                               return time >= (mode === "circuit" ? 30000 : 120000) ? "" : formatTime(time + 999);
                           })();
@@ -3492,6 +3482,18 @@
         initializeChat();
         initializeMiniLeaderboard();
 
+        {
+            // Auto-reload if game is too old (browser loaded it from cache)
+            let url = new URL(location.href);
+            url.searchParams.set("probe", Math.random());
+            let latestScript = await (await fetch(url)).text();
+            let latestVersion = +latestScript.split("const APP_VERSION = ")[1].split(";")[0];
+            if (APP_VERSION !== latestVersion) {
+                location.reload();
+                return;
+            }
+        }
+
         let toggleHelp = () => {
             document.body.classList.toggle("showing-help");
             document.querySelector("#help-contents").scrollTo(0, 0);
@@ -3520,8 +3522,9 @@
             nicknameInput.value = localStorage.getItem("nickname") || "";
         }
         nicknameInput.focus();
+        const EVENT_MODES = ["factory", "duo", "arena", "circuit", "sprint", "golf"];
         let createEvent = () => {
-            let allowedModes = new Set(["factory", "duo", "arena", "circuit", "sprint", "golf"]);
+            let allowedModes = new Set(EVENT_MODES);
             let newMode = urlParams.get("mode");
             if (!allowedModes.has(newMode)) {
                 if (currentEvent?.mode) {
@@ -3586,7 +3589,7 @@
             document.querySelector("#event-description").innerHTML = {
                 "factory": "Guess and pass the Wordle around!",
                 "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
-                "arena": "1v1 speed-Wordle tournament!",
+                "arena": "1v1 speed-Wordle battles!",
                 "circuit": "Balance speed and accuracy!",
                 "sprint": "First to solve nine Wordles wins!",
                 "golf": "Nine Wordles. Fewest guesses wins!",
@@ -3635,7 +3638,7 @@
                     }
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>Compete in this timed tournament of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
+                        <p>Compete in this timed event of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
                         The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
@@ -4955,7 +4958,8 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY : isDev ? 5000 << 0 : (isUpcomingEventNewGameInCircuit ? 10000 : 20000) * (playerByUid.size === 1 ? 2 / 3 : 1));
+                let shortenedDelay = playerByUid.size === 1;
+                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY / (isDev ? 2 : 1) : isDev ? 5000 << 0 : isUpcomingEventNewGameInCircuit ? (shortenedDelay ? 7000 : 10000) : shortenedDelay ? 15000 : 20000);
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -5139,7 +5143,7 @@
                     "duo": "Solve with a partner",
                     "circuit": "Balance speed and accuracy",
                     "random": "All challenges, shuffled",
-                    "arena": "1v1 Wordle tournament",
+                    "arena": "1v1 Wordle battles",
                     "golf": "Fewest guesses wins",
                     "sprint": "Fastest time wins",
                 };
@@ -5674,11 +5678,12 @@
                 board: currentBoardState,
                 hardMode: !!currentEvent?.opener,
                 worse: false,
+                rand: Math.random,
                 ...options,
             };
-            let { board, hardMode, worse } = options;
+            let { board, hardMode, worse, rand } = options;
             let candidateTargets = [];
-            let shuffledTargets = shuffled(TARGETS);
+            let shuffledTargets = shuffled(TARGETS, rand);
             for (let t of shuffledTargets) {
                 let bad = (() => {
                     for (let i = board.length - 1; i >= 0; --i) {
@@ -5766,7 +5771,7 @@
                 b[i][0] = (i === 1 ? 1 : b[i - 1][0]) + Math.pow(board.length ? (worse ? 4 : 36) : 64, b[i][0] - b[0][0]);
             }
             b[0][0] = 1;
-            let r = Math.random() * b.at(-1)[0];
+            let r = rand() * b.at(-1)[0];
             for (let [s, g] of b) {
                 if (s > r) {
                     return g;
