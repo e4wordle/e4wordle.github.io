@@ -1,3 +1,17 @@
+<!-- 
+TODO
+
+[X] Room leaderboard logic
+[ ] Room leaderboard frontend
+[X] Tournament logic
+[X] Tournament start panel
+[ ] Tournament end panel
+[X] Tournament intro in start panel ("Next tournament is in 6 days")
+
+Can wait:
+[ ] Tournament leaderboard backend
+[ ] Tournament leaderboard frontend
+-->
 <meta charset="UTF-8" />
 <title>e4! Wordle – Competitive Multiplayer Wordle Challenges</title>
 <meta name="description" content="Experience Wordle in six unique, fast-paced multiplayer challenges where speed, accuracy, and teamwork all matter." />
@@ -15,19 +29,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 <style id="main-styles">
-    body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        box-shadow: inset 0 0 24px hsl(48.8deg, 83.3%, 50%);
-        z-index: 9999;
-        bottom: -24px;
-        left: -24px;
-        right: -24px;
-    }
-    #panel {
-        border-top: 16px ridge hsl(48.8deg, 100%, 58.3%);
+    body.tournament-themed {
+        &::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 24px hsl(48.8deg, 83.3%, 50%);
+            z-index: 9999;
+            bottom: -24px;
+            left: -24px;
+            right: -24px;
+        }
+        #panel {
+            border-top: 16px ridge hsl(48.8deg, 100%, 58.3%);
+        }
     }
     :root {
         --main-background-color: hsl(0, 0%, 95.8%);
@@ -911,6 +927,26 @@
         margin-top: 4px;
         width: 100%;
     }
+    #between-events-panel {
+        &.showing-tournament-start .non-tournament-start-related {
+            display: none !important;
+        }
+        &:not(.showing-tournament-start) .tournament-start-related {
+            display: none !important;
+        }
+        &.showing-won-title .non-won-title-related {
+            display: none !important;
+        }
+        &:not(.showing-won-title) .won-title-related {
+            display: none !important;
+        }
+        &.showing-room-leaderboard .non-room-leaderboard-related {
+            display: none !important;
+        }
+        &:not(.showing-room-leaderboard) .room-leaderboard-related {
+            display: none !important;
+        }
+    }
     .final-leaderboard-top-item {
         position: relative;
         width: 96px;
@@ -973,8 +1009,10 @@
         border-color: hsl(18.8deg, 50%, 37.5%);
         background: hsl(18.8deg, 50%, 58.3%);
     }
-    #final-leaderboard-record-indicator {
+    .record-indicator {
         color: hsl(48.8deg, 83.3%, 25%);
+    }
+    #final-leaderboard-record-indicator {
         font-size: 11px;
         font-weight: 600;
         margin-top: 4px;
@@ -1269,7 +1307,7 @@
             border-color: hsl(18.8deg, 50%, 50%);
             background: hsl(18.8deg, 50%, 33.3%);
         }
-        #final-leaderboard-record-indicator {
+        .record-indicator {
             color: hsl(48.8deg, 100%, 66.7%);
         }
         .panel button:not(.letter, .key) {
@@ -1316,6 +1354,8 @@
                     <div id="banner-left-inner-text"></div>
                 </div>
                 <div class="banner-section">
+                    <span class="material-symbols-outlined banner-icon" id="banner-inner-right-icon"></span>
+                    <b id="banner-inner-right-text" style="margin-right: 4px"></b>
                     <span class="material-symbols-outlined banner-icon" id="banner-right-icon"></span>
                     <b id="banner-right-text"></b>
                 </div>
@@ -1406,7 +1446,7 @@
 </div>
 <div id="alert"></div>
 <div id="panel" class="panel">
-    <div id="start-panel" style="width: 252px; margin: 8px -4px 0; display: none">
+    <div id="start-panel" style="width: 252px; margin: 8px -4px 0; display: _none">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center">
             <h1 id="start-panel-heading" style="font-size: 20px; font-weight: 600; margin-block: 0"><span class="glow-green">e4! Wordle</span></h1>
             <h2 style="font-size: 14px; font-weight: normal; margin-block: 0; color: var(--panel-foreground-color)"><i id="start-panel-description">Compete against other avid Wordlers in rotating challenges</i></h2>
@@ -1432,9 +1472,17 @@
                     </button>
                 </div>
             </div>
-            <div id="start-panel-bottom-label" style="font-size: 12px; color: var(--panel-foreground-color)">
+            <div id="start-panel-bottom-label" style="display: none; font-size: 12px; color: var(--panel-foreground-color)">
                 <!-- You are in <b>3<sup>rd</sup></b> place on daily leaderboard -->
                 <b>–</b> players competed today
+            </div>
+            <div id="start-panel-next-tournament-section" style="width: 100%; color: var(--panel-foreground-color)">
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                    <div class="divider"></div>
+                    <b id="start-panel-next-tournament-title" style="margin-block: 8px; font-size: 13px"><span>Next</span> Weekly Tournament</b>
+                    <div id="start-panel-next-tournament-date">--</div>
+                    <div id="start-panel-next-tournament-in" style="font-size: 11px">&nbsp;</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1510,7 +1558,7 @@
         </div>
     </div>
     <!-- Welcome panel refers to the one showing "Challenge starts in X" in a private room -->
-    <div id="welcome-panel" style="display: none; max-width: 216px">
+    <div id="welcome-panel" style="display: none; width: 216px">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
             <div id="welcome-panel-text" style="font-size: 16px; text-align: center"></div>
         </div>
@@ -1572,10 +1620,44 @@
             <p id="next-duel-countdown"></p>
         </div>
     </div>
-    <div id="between-events-panel" style="display: _none; margin: 8px -4px">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px">
-            <div class="glow-green" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: 600; font-size: 16px">So-and-so won!</div>
-            <div id="between-events-panel-description" style="opacity: 0.75">"SWIFT" Sprint</div>
+    <div class="" id="between-events-panel" style="display: none; margin: 8px -4px">
+        <div class="tournament-start-related" style="width: 288px; display: flex; flex-direction: column; align-items: center; gap: 12px">
+            <div class="glow-green" id="tournament-start-title" style="color: var(--heading-foreground-color); font-weight: 600; font-size: 16px; margin-bottom: 4px"><span>"SWIFT" </span>Weekly Tournament</div>
+            <div id="tournament-start-date" style="font-size: 12px">Saturday, October 24, 10:30pm</div>
+            <div style="font-size: 11px">6 challenges • Est. 30 minutes</div>
+            <div id="tournament-start-agenda" style="display: flex; flex-direction: column; gap: 8px; margin-block: 4px">
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px">
+                    <span class="material-symbols-outlined">sprint</span>
+                    "SWIFT" Sprint
+                </div>
+            </div>
+            <div style="font-size: 11px">Your score for each challenge = Players outranked</div>
+            <div class="divider"></div>
+        </div>
+        <div class="non-tournament-start-related" style="display: flex; flex-direction: column; align-items: center; gap: 12px">
+            <div class="glow-green won-title-related" id="between-events-panel-title" style="color: var(--heading-foreground-color); font-weight: 600; font-size: 16px">So-and-so won!</div>
+            <div class="won-title-related" id="between-events-panel-description" style="opacity: 0.75">"SWIFT" Sprint</div>
+            <h3 class="non-won-title-related" style="margin-block: 2px; font-weight: normal">"SWIFT" Sprint Results</h3>
             <div style="display: flex; gap: 8px; margin-block: 8px">
                 <div class="final-leaderboard-top-item rank-2" style="margin-top: 24px"></div>
                 <div class="final-leaderboard-top-item rank-1"></div>
@@ -1583,8 +1665,10 @@
             </div>
             <div id="final-leaderboard-hard-mode-description"><span class="material-symbols-outlined" style="transform: translateY(-2px); font-size: 12px">asterisk</span>&nbsp;Played on <em>Hard Mode</em></div>
             <div class="divider"></div>
-            <div style="margin-block: 0">Standings • Challenge 2 of 6</div>
-            <div id="room-leaderboard-header" class="leaderboard-header leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -8px">
+            <div class="non-room-leaderboard-related" id="final-leaderboard-your-place" style="margin-top: -2px"></div>
+            <div class="non-room-leaderboard-related" id="final-leaderboard-xp-description" style="font-size: 12px; margin-top: -8px"></div>
+            <div class="room-leaderboard-related" id="room-leaderboard-title" style="margin-block: 0">&emsp;Standings <span class="material-symbols-outlined" style="font-size: 18px; transform: translateY(3px)">trophy</span> Challenge 2</div>
+            <div id="room-leaderboard-header" class="room-leaderboard-related leaderboard-header leaderboard-item" style="display: flex; font-size: 11px; margin-bottom: -8px">
                 <div style="width: 130px">
                     <b class="no-wrap">Player</b>
                 </div>
@@ -1593,7 +1677,7 @@
                 <div style="width: 74px">Total time</div>
             </div>
             <div class="divider"></div>
-            <div style="height: 68px; display: flex; flex-direction: column; gap: 8px">
+            <div class="room-leaderboard-related" style="height: 68px; display: flex; flex-direction: column; gap: 8px">
                 <div id="room-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -13px; margin-bottom: -12px; padding: 8px 0px; flex: 1; width: 332px">
                     <div class="leaderboard-item">
                         <div style="width: 130px">
@@ -1637,15 +1721,13 @@
                     </div>
                 </div>
             </div>
-            <!-- <div id="final-leaderboard-your-place" style="-top: -2px"></div>
-            <div id="final-leaderboard-xp-description" style="font-size: 12px; margin-top: -8px"></div> -->
-            <div class="divider"></div>
-            <div style="display: flex; flex-direction: column; width: 100%">
-                <div id="next-event-countdown">Next up in <b>20</b></div>
-                <div id="next-event-info" style="display: flex; align-items: center; gap: 6px; align-self: center">
-                    <span class="material-symbols-outlined">sports_golf</span>
-                    <b>"SWIFT" Golf</b>
-                </div>
+            <div class="room-leaderboard-related divider"></div>
+        </div>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; width: 100%">
+            <div id="next-event-countdown"><span>Next up</span> in <b>20</b></div>
+            <div id="next-event-info" style="margin-top: 8px; display: flex; align-items: center; gap: 6px; align-self: center">
+                <span class="material-symbols-outlined">sports_golf</span>
+                <b>"SWIFT" Golf</b>
             </div>
         </div>
     </div>
@@ -1812,7 +1894,7 @@
             console.assert(0, "#=#", time, site, "\n", JSON.stringify(args, replacer));
         };
         const DEFAULT_NUM_GAMES = 9;
-        let numGamesFromURLParam = Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1);
+        let numGamesFromURLParam = Math.min(Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1), 36);
         let numGames = () => (isDev || totalUsers === 1 ? numGamesFromURLParam : DEFAULT_NUM_GAMES);
 
         /** @type {HTMLElement} */
@@ -2270,25 +2352,45 @@
                 "golf": [0, 0, 0, 0, 0, 1], // [solved, played, -guesses, -time, currentGameGuesses, playedOnHardMode]
             };
         };
-        const DUO_GUESS_TIME_LIMIT = 30000;
+        let duoGuessTimeLimit = (isTournament) => (isTournament ? 15000 : 30000);
         const ARENA_POST_PAIRING_TIMEOUT = 3000;
-        let initialEventTimeLimit = (mode = undefined) => {
-            if (numGames() > 18) {
-                return 1 << 30;
+        let initialEventTimeLimit = (event) => {
+            if (numGames() > 18 || event.mode === "welcome") {
+                return 1e18;
             }
-            mode ||= (currentEvent || upcomingEvent).mode;
-            switch (mode) {
-                case "circuit": {
-                    return 120000;
+            if (event.tournament) {
+                if (isDev && numGames() === 1) {
+                    return 15000;
                 }
-                case "sprint": {
-                    return 600000;
+                switch (event.mode) {
+                    case "circuit": {
+                        return 30000 + !!event.opener * 15000;
+                    }
+                    case "sprint":
+                    case "arena": {
+                        return 180000 + !!event.opener * 60000;
+                    }
+                    case "duo": {
+                        return 240000;
+                    }
+                    case "factory": {
+                        return 300000;
+                    }
+                    case "golf": {
+                        return 300000 + !!event.opener * 120000;
+                    }
                 }
-                case "welcome": {
-                    return 1e18;
-                }
-                default: {
-                    return 900000;
+            } else {
+                switch (event.mode) {
+                    case "circuit": {
+                        return 120000;
+                    }
+                    case "sprint": {
+                        return 600000;
+                    }
+                    default: {
+                        return 900000;
+                    }
                 }
             }
         };
@@ -2415,7 +2517,7 @@
                     totalTime *= -1;
                     roundScore *= -1;
                     roundTime *= -1;
-                    return `with ${eventScore} ${score === 1 ? "point" : "points"}`;
+                    return `with ${eventScore} ${eventScore === 1 ? "point" : "points"}`;
                 }
                 case "circuit": {
                     let [eventScore, averageTime, totalTime, played, roundScore, roundTime, solved, playedOnHardMode] = score;
@@ -2423,7 +2525,7 @@
                     totalTime *= -1;
                     roundScore *= -1;
                     roundTime *= -1;
-                    return `with ${eventScore.toString()} points`;
+                    return `with ${eventScore} points`;
                 }
                 case "sprint": {
                     let [solved, played, time, playedOnHardMode] = score;
@@ -2508,6 +2610,17 @@
                 }
             }
             return verdict.join("");
+        };
+        let shuffled = (a, rand = undefined) => {
+            rand ||= Math.random;
+            a = [...a];
+            let i = a.length;
+            while (i) {
+                let j = Math.floor(rand() * i);
+                --i;
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
         };
         let target = "STYLE";
         let allowedGuesses = new Set(GUESSES.concat(TARGETS));
@@ -2730,6 +2843,8 @@
         let bannerLeftTextEl = bannerEl.querySelector("#banner-left-text");
         let bannerLeftIconEl = bannerEl.querySelector("#banner-left-icon");
         let bannerLeftInnerTextEl = bannerEl.querySelector("#banner-left-inner-text");
+        let bannerInnerRightIconEl = bannerEl.querySelector("#banner-inner-right-icon");
+        let bannerInnerRightTextEl = bannerEl.querySelector("#banner-inner-right-text");
         let bannerRightIconEl = bannerEl.querySelector("#banner-right-icon");
         let bannerRightTextEl = bannerEl.querySelector("#banner-right-text");
         let updateBanner = () => {
@@ -2752,31 +2867,46 @@
                     ? isBoardAnimating()
                         ? bannerRightTextEl.innerHTML
                         : -currentScore[2]
-                    : mode === "sprint"
-                      ? formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
-                      : mode === "duo"
-                        ? (() => {
-                              if (postGame) {
-                                  return "";
-                              }
-                              let time = currentEventEndTime - Date.now();
-                              let time2 = currentPlayerDone ? Infinity : playerTurnDueTime - Date.now();
-                              let t = Math.min(time, time2);
-                              return currentEventEnded || t >= 60000 ? "" : formatTime(t + 999);
-                          })()
-                        : (() => {
-                              if (currentEventEnded) {
-                                  return bannerRightTextEl.innerHTML;
-                              }
-                              let time = currentEventEndTime - Date.now();
-                              return time >= (mode === "circuit" ? 30000 : 120000) ? "" : formatTime(time + 999);
-                          })();
+                    : currentEventEnded
+                      ? bannerRightTextEl.innerHTML
+                      : mode === "sprint"
+                        ? currentEvent.tournament
+                            ? formatTime(currentEventEndTime - Date.now() + 999)
+                            : formatTime(currentPlayerDone ? -currentScore[2] : Date.now() - currentPlayerStartTime || 0)
+                        : mode === "duo"
+                          ? (() => {
+                                if (postGame) {
+                                    return "";
+                                }
+                                let time = currentEventEndTime - Date.now();
+                                let time2 = currentPlayerDone ? Infinity : playerTurnDueTime - Date.now();
+                                let t = Math.min(time, time2);
+                                return formatTime(t + 999);
+                            })()
+                          : (() => {
+                                let time = currentEventEndTime - Date.now();
+                                return currentEvent.tournament || time <= (mode === "circuit" ? 30000 : 120000) ? formatTime(time + 999) : "";
+                            })();
             rightText = `${rightText}`;
             bannerRightTextEl.innerHTML = rightText;
             bannerRightIconEl.textContent = rightText ? (mode === "golf" ? "edit_square" : "timer") : "";
+            let innerRightText = (() => {
+                if (mode !== "golf") {
+                    return "";
+                }
+                if (currentEventEnded) {
+                    return bannerInnerRightTextEl.innerHTML;
+                }
+                let time = currentEventEndTime - Date.now();
+                return currentEvent.tournament || time <= 120000 ? formatTime(time + 999) : "";
+            })();
+            bannerInnerRightTextEl.innerHTML = innerRightText;
+            bannerInnerRightIconEl.innerHTML = innerRightText ? "timer" : "";
             let opacity = (currentPlayerWaitingForOthers && leftIcon) || (isCurrentPlayersTurn === false && !postGame) ? 0.5 : "";
             bannerRightTextEl.style.opacity = opacity;
             bannerRightIconEl.style.opacity = opacity;
+            bannerInnerRightTextEl.style.opacity = opacity;
+            bannerInnerRightIconEl.style.opacity = opacity;
         };
         let lastProgressBarWidth = 100;
         let lastProgressBarUpdateTime = Date.now();
@@ -2820,12 +2950,12 @@
                         currentBoardState.push([g, v]);
                         loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                         updateCurrentScore(v, h, { markAsAuto: true });
-                        playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                        playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                     };
                     if (isCurrentPlayersTurn === false) {
                         let d = Date.now();
                         if (!currentPartner) {
-                            if (d >= playerTurnDueTime - (DUO_GUESS_TIME_LIMIT - (currentBoardState.length ? 3000 : 2000))) {
+                            if (d >= playerTurnDueTime - (duoGuessTimeLimit(!!currentEvent.tournament) - (currentBoardState.length ? 3000 : 2000))) {
                                 isCurrentPlayersTurn = true;
                                 guessAndSend(undefined);
                             }
@@ -3075,7 +3205,7 @@
                     return;
                 }
                 if (isCurrentPlayersTurn === true) {
-                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                    playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                     isCurrentPlayersTurn = false;
                 }
                 if (currentEvent.mode === "factory") {
@@ -3274,7 +3404,7 @@
                                     loadBoardState(currentBoardState, { fastAnimation: true });
                                 }
                                 if (currentEvent.mode === "duo") {
-                                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                                    playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                                 }
                                 updateBanner();
                             };
@@ -3614,11 +3744,21 @@
             nicknameInput.value = localStorage.getItem("nickname") || "";
         }
         nicknameInput.focus();
-        const EVENT_MODES = ["factory", "duo", "arena", "circuit", "sprint", "golf"];
-        let createEvent = () => {
-            let allowedModes = new Set(EVENT_MODES);
-            let newMode = urlParams.get("mode");
-            if (!allowedModes.has(newMode)) {
+        const EVENT_MODES = ["factory", "duo", "arena", "circuit", "sprint", "golf"]; //&& ["arena"]; // FIXME
+        let createEvent = (options = {}) => {
+            options = {
+                mode: undefined,
+                opener: undefined,
+                rand: Math.random,
+                ...options,
+            };
+            let { mode, opener, rand } = options;
+            mode ||= (() => {
+                let allowedModes = new Set(EVENT_MODES);
+                let urlMode = urlParams.get("mode");
+                if (allowedModes.has(urlMode)) {
+                    return urlMode;
+                }
                 if (currentEvent?.mode) {
                     allowedModes.delete(currentEvent.mode);
                 }
@@ -3637,60 +3777,78 @@
                     }
                 }
                 allowedModes = [...allowedModes];
-                newMode = allowedModes[Math.floor(Math.random() * allowedModes.length)];
-            }
-            let newOpener = (urlParams.get("opener") || "").toUpperCase();
-            if (newOpener === "NONE") {
-                newOpener = "";
-            } else if (!allowedGuesses.has(newOpener)) {
-                let i = !!currentEvent + !!upcomingEvent;
-                let newUseOpener = newOpener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && Math.random() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
-                newOpener = newUseOpener ? TARGETS[Math.floor(Math.random() * TARGETS.length)] : "";
-            }
-            let newEvent = { id: Math.random(), mode: newMode, opener: newOpener };
-            if (!["factory", "arena"].includes(newMode)) {
-                let i = indexByTarget.get(newOpener);
-                newEvent.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
+                return allowedModes[Math.floor(rand() * allowedModes.length)];
+            })();
+            opener ||= (() => {
+                let opener = (urlParams.get("opener") || "").toUpperCase();
+                if (opener === "NONE") {
+                    opener = "";
+                } else if (!allowedGuesses.has(opener)) {
+                    let i = !!currentEvent + !!upcomingEvent;
+                    let newUseOpener = opener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && rand() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
+                    opener = newUseOpener ? TARGETS[Math.floor(rand() * TARGETS.length)] : "";
+                }
+                return opener;
+            })();
+            let event = { id: rand(), mode, opener };
+            if (!["factory", "arena"].includes(mode)) {
+                let i = indexByTarget.get(opener);
+                event.targets = Array(Math.max(numGames(), DEFAULT_NUM_GAMES))
                     .fill("")
-                    .map(() => generateTarget(newEvent));
+                    .map(() => generateTarget(event, rand));
             }
-            return newEvent;
+            return event;
         };
         let formatEventName = (event) => {
             let eventName = "";
             if (event.opener) {
                 eventName += `"${event.opener}" `;
             }
-            eventName += `${event.mode.charAt(0).toUpperCase()}${event.mode.slice(1)}`;
+            if (event.mode === "welcome" && event.tournament) {
+                let o = (currentTournament || nextTournament).tournamentOpener;
+                eventName += `${o ? `"${o}"` : "Weekly"} Tournament`;
+            } else {
+                eventName += `${event.mode.charAt(0).toUpperCase()}${event.mode.slice(1)}`;
+            }
             return eventName;
         };
-        const MODE_ICONS = {
-            "factory": "conveyor_belt",
-            "duo": "group",
-            "arena": "swords",
-            "circuit": "sports_score",
-            "sprint": "sprint",
-            "golf": "sports_golf",
-            "welcome": "waving_hand",
+        let eventIcon = (e) => {
+            if (e.mode === "welcome" && e.tournament) {
+                return "trophy";
+            }
+            return {
+                "factory": "conveyor_belt",
+                "duo": "group",
+                "arena": "swords",
+                "circuit": "sports_score",
+                "sprint": "sprint",
+                "golf": "sports_golf",
+                "welcome": "waving_hand",
+            }[e.mode];
         };
         const BOT_NAME = "Rattington";
         let showEventInfo = () => {
-            let event = (currentEvent?.mode && currentEvent?.mode !== "welcome" ? currentEvent : upcomingEvent) || { id: -1, mode: "welcome" };
+            let event = (currentEvent?.mode && !(currentEvent?.mode === "welcome" && !currentEvent.tournament) ? currentEvent : upcomingEvent) || { id: -1, mode: "welcome" };
             let eventName = formatEventName(event);
             document.querySelector("#event-name").textContent = eventName;
-            document.querySelector("#event-description").innerHTML = {
-                "factory": "Guess and pass the Wordle around!",
-                "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
-                "arena": "1v1 speed-Wordle battles!",
-                "circuit": "Balance speed and accuracy!",
-                "sprint": "First to solve nine Wordles wins!",
-                "golf": "Nine Wordles. Fewest guesses wins!",
-                "welcome": "",
-            }[event.mode];
-            document.querySelector("#event-info").querySelector("span").textContent = MODE_ICONS[event.mode];
+            document.querySelector("#event-description").innerHTML =
+                {
+                    "factory": "Guess and pass the Wordle around!",
+                    "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
+                    "arena": "1v1 speed-Wordle battles!",
+                    "circuit": "Balance speed and accuracy!",
+                    "sprint": "First to solve nine Wordles wins!",
+                    "golf": "Nine Wordles. Fewest guesses wins!",
+                }[event.mode] || "";
+            document.querySelector("#event-info").querySelector("span").textContent = eventIcon(event);
 
             let helpContentsEl = document.querySelector("#help-contents");
             helpContentsEl.innerHTML = "";
+            let tournamentEventDescription = event.tournament
+                ? `
+                    <p>(Weekly tournament challenge ${event.tournamentEventIndex + 1} of ${EVENT_MODES.length})</p>
+                `
+                : "";
             let hardModeDescription = event.opener
                 ? `
                     <h4>Opener</h4>
@@ -3701,10 +3859,11 @@
                 case "factory": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
+                        ${tournamentEventDescription}
                         <p>Make a guess, then pass the Wordle to another player. First to solve 9 Wordles wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players have solved 9 Wordles.
+                        ${event.tournament ? `The challenge ends when all but one player have solved 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.` : `The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players have solved 9 Wordles.`}
                         <h4>Mechanics</h4>
                         <p>Each player starts with an assigned random Wordle. An extra Wordle is created unassigned. After a player makes a guess, they trade their Wordle with the unassigned Wordle, keeping the factory in motion.</p>
                         ${playerByUid.size + !playerByUid.has(currentUid) <= 1 ? `<p>You are playing with <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot, while waiting for another human player.</p>` : ""}
@@ -3714,11 +3873,12 @@
                 case "duo": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
+                        ${tournamentEventDescription}
                         <p>Solve 9 Wordles with a random partner. First team to do so wins!</p>
                         ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentPartner || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot, while waiting for a human partner<b>`}</b>.</p>` : ""}
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        ${DUO_GUESS_TIME_LIMIT / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles.
+                        ${event.tournament ? `${duoGuessTimeLimit(!!event.tournament) / 1000} seconds per guess. The challenge ends after ${initialEventTimeLimit(event) / 60000} minutes total.` : `${duoGuessTimeLimit(!!event.tournament) / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles.`}
                     `;
                     break;
                 }
@@ -3730,12 +3890,13 @@
                     }
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
-                        <p>Compete in this timed event of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
+                        ${tournamentEventDescription}
+                        <p>Compete in this timed competition of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
                         The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
                         <h4>Time Limit</h4>
-                        The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total. ${!currentEventEnded && playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}
+                        ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit(event) / 60000} minutes total. ${!currentEventEnded && playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}`}
                         <h4>Pairing</h4>
                         <p>Your first duel is randomly matched. Then you'll face opponents with similar rankings. When there's an odd number of players waiting, one player will pair against <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot.</p>
                         <p>Pairing closes around ${ARENA_PAIRING_STOP_TIME / 1000} seconds before the challenge ends.</p>
@@ -3745,6 +3906,7 @@
                 case "circuit": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
+                        ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Showcase both your speed and accuracy for bonus points!</p>
                         ${hardModeDescription}
                         <h4>Scoring</h4>
@@ -3755,27 +3917,29 @@
                         </ul>
                         Example: solving first in a 4-player room in 4 guesses = 10 + 2 × 2 (accuracy) + 3 (speed) = 17 points.
                         <h4>Time Limit</h4>
-                        A game ends ${acceleratedTimeLimit() / 1000} seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
+                        ${event.tournament ? `${initialEventTimeLimit(event) / 1000} seconds per Wordle.` : `A game ends ${acceleratedTimeLimit() / 1000} seconds after half of the players finish the Wordle, or after ${initialEventTimeLimit(event) / 60000} minutes total.`}
                     `;
                     break;
                 }
                 case "sprint": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
+                        ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
+                        ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.`}
                     `;
                     break;
                 }
                 case "golf": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
+                        ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
                         ${hardModeDescription}
                         <h4>Time Limit</h4>
-                        The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event.mode) / 60000} minutes total.
+                        ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.`}
                     `;
                     break;
                 }
@@ -3824,13 +3988,14 @@
             }
         };
         let playButton = document.querySelector("#play-button");
-        let generateTarget = (event = undefined, rand = undefined) => {
+        let generateTarget = (event = undefined, rand = undefined, targets = undefined) => {
             event ||= currentEvent;
             rand ||= Math.random;
+            targets ||= allowedTargets;
             let i = indexByTarget.get(event.opener) || NaN;
-            let j = Math.floor(rand() * (allowedTargets.length - !isNaN(i)));
+            let j = Math.floor(rand() * (targets.length - !isNaN(i)));
             j += j >= i;
-            return allowedTargets[j];
+            return targets[j];
         };
         let createUnownedFactoryGame = (addBotGuess = true, event = undefined) => {
             event ||= currentEvent;
@@ -3848,7 +4013,7 @@
         };
         let validateNickname = () => {
             currentPlayer = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
-            if (currentPlayer.toLowerCase().endsWith("rattington")) {
+            if (currentPlayer.toLowerCase().endsWith(BOT_NAME.toLowerCase())) {
                 showAlert("Please choose another nickname. (You're not a bot!)");
                 nicknameInput.focus();
                 currentPlayer = "";
@@ -3878,7 +4043,21 @@
                 let m = {
                     type: "event-start",
                     eventId: upcomingEvent.id,
-                    newUpcomingEvent: createEvent(),
+                    newUpcomingEvent:
+                        upcomingEvent.tournament && upcomingEvent.tournamentEventIndex !== EVENT_MODES.length - 1
+                            ? (() => {
+                                  let t = upcomingEvent.tournament;
+                                  let i = upcomingEvent.mode === "welcome" ? -1 : upcomingEvent.tournamentEventIndex;
+                                  return {
+                                      ...createEvent({
+                                          ...currentTournament.events[i + 1],
+                                          rand: randForTournamentEvent(t, i + 1),
+                                      }),
+                                      tournament: t,
+                                      tournamentEventIndex: i + 1,
+                                  };
+                              })()
+                            : createEvent(),
                 };
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
@@ -3890,7 +4069,7 @@
         playButton.addEventListener("click", handlePlayButtonClick);
         nicknameInput.addEventListener("keydown", (e) => {
             if (e.code === "Enter") {
-                handlePlayButtonClick();
+                playButton.click();
             }
         });
 
@@ -4031,7 +4210,7 @@
                     }
                     case "search": {
                         usersWaitingForSearchResponse.add(uid);
-                        let eventProgress = !currentEvent ? 1 : currentEventEnded ? 0 : currentEvent.mode === "circuit" ? currentGameIndex / numGames() : 1 - (currentEventEndTime - Date.now()) / initialEventTimeLimit(currentEvent.mode); // The sooner the event is going to end, the later (less likely hopefully) to admit the new user
+                        let eventProgress = !currentEvent ? 1 : currentEventEnded ? 0 : currentEvent.mode === "circuit" ? currentGameIndex / numGames() : 1 - (currentEventEndTime - Date.now()) / initialEventTimeLimit(currentEvent); // The sooner the event is going to end, the later (less likely hopefully) to admit the new user
                         setTimeout(() => {
                             if (!usersWaitingForSearchResponse.has(uid)) {
                                 return;
@@ -4108,33 +4287,89 @@
             });
         };
 
-        let { nextTournamentWindowStartTime, createTournament, currentTournament } = (() => {
-            let toWindow = (pstDate) => Date.parse(pstDate + "T18:30-08:00");
-            const T0 = toWindow("2026-02-28");
-            const PERIOD = 7 * 86400000;
-            const NUM_EVENTS = 6;
-            const EVENT_WINDOW = 120000;
-            let nextTournamentWindowStartTime = (now) => T0 + PERIOD * (1 + Math.ceil((now - T0) / PERIOD));
-            let createTournament = (windowStartTime) => {
-                let getOpener = (t) => {
-                    // Maybe list themed openers, then take recent themed opener and generate opener for every x-th week
-                    let d = new Date(t).getUTCDate();
-                    if (d >= 13 && d < 20) {
-                        //
-                    }
-                };
-                let modes = shuffled(EVENT_MODES.map(), new Math.seedrandom(windowStartTime));
-            };
-            let currentTournament = (now) => {
-                let t = T0 + PERIOD * Math.ceil((now - T0) / PERIOD);
-                let e = Math.floor((now - t) / EVENT_WINDOW);
-                if (e >= NUM_EVENTS) {
-                    return undefined;
+        // A tournament can only be started if the current time is inside a "tournament window", which is a tournament's set start time (what the countdown shows) plus a few minutes in case the first player arrives late. Each event mode also gets its own start-able window, to help prevent a single player's reload of the page always restarting the tournament from the first event over again
+        const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
+        const DEV_MOCK_TOURNAMENT = Date.parse("2026-10-21T20:46:20-07:00"); //Date.now() + 25 * 3600000 + 5000;
+        let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
+            const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
+                Date.parse("2026-10-16T19:00-08:00"), // Friday evening PT
+                Date.parse("2026-10-24T08:30-08:00"), // Saturday morning PT
+            ];
+            // Tournament start times respect whether Los Angeles is in DST
+            let isLosAngelesInDST = (t) => Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).format(t).endsWith("PDT");
+            let nextTournamentWindowStartTime = (t) => {
+                if (isDev) {
+                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 86400000;
                 }
-                return { tournament: createTournament(t), currentEventIndex: e };
+                let period = 7 * 86400000 * INITIAL_WEEKLY_TOURNAMENT_START_TIMES.length;
+                t += isLosAngelesInDST(t) * 3600000;
+                return Math.min(
+                    ...INITIAL_WEEKLY_TOURNAMENT_START_TIMES.map((t0) => {
+                        let ans = (Math.floor((t - t0) / period) + 1) * period + t0;
+                        ans -= isLosAngelesInDST(ans) * 3600000;
+                        return ans;
+                    }),
+                );
             };
-            return { nextTournamentWindowStartTime, currentTournament };
+            let currentTournamentWindowStartTime = (t) => {
+                let next = nextTournamentWindowStartTime(t);
+                let recent = nextTournamentWindowStartTime(t - TOURNAMENT_EVENT_WINDOW * EVENT_MODES.length);
+                return next === recent ? undefined : recent;
+            };
+            let roundedTournamentWeek = (t) => Math.round((t - Date.parse("2026-10-24")) / (7 * 86400000));
+            let generateTournament = (t) => {
+                const THEMED_OPENERS = [
+                    ["1970-01-01", "JAZZY"], // Sentinel
+                    ["2026-10-24", "DEBUT"],
+                    ["2026-11-28", "FEAST"],
+                ];
+                let rand = new Math.seedrandom(t);
+                let tournamentOpener = (() => {
+                    if (isDev) {
+                        return createEvent().opener;
+                    }
+                    let w = roundedTournamentWeek(t);
+                    let i = 1;
+                    while (i < THEMED_OPENERS.length && roundedTournamentWeek(Date.parse(THEMED_OPENERS[i][0])) <= w) {
+                        ++i;
+                    }
+                    if (roundedTournamentWeek(Date.parse(THEMED_OPENERS[i - 1][0])) === w) {
+                        return THEMED_OPENERS[i - 1][1];
+                    }
+                    // // Choose a random tournament-wide opener every few weeks
+                    // if ((w - roundedTournamentWeek(Date.parse(THEMED_OPENERS[i - 1][0]))) % 7 === 0 && (i === THEMED_OPENERS.length || roundedTournamentWeek(Date.parse(THEMED_OPENERS[i][0])) - w >= 4)) {
+                    //     return generateTarget({}, rand, TARGETS);
+                    // }
+                    return "";
+                })();
+                let modes = shuffled(EVENT_MODES, rand);
+                let openers = EVENT_MODES.map((_, i) => tournamentOpener || (i < 2 ? generateTarget({}, rand, TARGETS) : ""));
+                openers = shuffled(openers, rand);
+                return { time: t, tournamentOpener, events: modes.map((mode, i) => ({ mode, opener: openers[i] })) };
+            };
+            return { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament };
         })();
+        let randForTournamentEvent = (tournament, eventIndex) => new Math.seedrandom((tournament << 4) | eventIndex);
+        let formatTournamentTime = (t, endTime = false) => {
+            let ans = new Intl.DateTimeFormat("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+            })
+                .format(t)
+                .replace(" AM", "am")
+                .replace(" PM", "pm");
+            if (endTime) {
+                ans += " – " + formatTournamentTime(t + 30 * 60000).replace(/[ap]m/, "");
+            }
+            return ans;
+        };
+        let formatTournamentDate = (t, longMonth = false) =>
+            new Intl.DateTimeFormat("en-US", {
+                weekday: "long",
+                month: longMonth ? "long" : "short",
+                day: "numeric",
+            }).format(t);
 
         let playerByUid = new Map();
         let usersOrderedByJoinTime = [];
@@ -4146,14 +4381,25 @@
         let responseTimeoutHandle;
         let ignoredUids = new Set();
         let uidByPlayer = new Map();
+        const POST_WELCOME_DELAY = 4000;
+        const MIN_ARENA_BETWEEN_DUEL_TIME = 4000; // To ensure players always get a break (and time to read the results panel) before their next duel
+        const ARENA_PAIRING_STOP_TIME = isDev ? 10000 : 30000;
+
         // Zombie (either dead socket or player leaving tab open but not playing) detection
         let playersAcknowledgedEventStart = new Map();
         let playersGuessedInCurrentEvent = new Set();
         let playersWithdrawnFromGlobalLeaderboard = new Set();
         const MESSAGE_PENDING_TIME_LIMIT = 2000; // If an acknowledgement message isn't received in this time, treat the other side as zombie
-        const POST_WELCOME_DELAY = 400.0;
-        const MIN_ARENA_BETWEEN_DUEL_TIME = 4000; // To ensure players always get a break (and time to read the results panel) before their next duel
-        const ARENA_PAIRING_STOP_TIME = isDev ? 12500 : 30000;
+
+        let roomLeaderboardData = new Map(); // Used for private rooms or tournaments. playerEverCompetedInRoom => [roomScore, -totalTime, completedChallenges, challengeScore]
+        let currentTournament;
+        let nextTournament;
+        let normalTransitionPanelEndTime;
+        let autoReloadForTournamentTimeout; // To prevent a spectator who never starts the game from preventing an upcoming tournament from being detected and started
+        const TOURNAMENT_TRANSITION_PANEL_DURATION = isDev ? 5000 : 15000;
+        const NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION = isDev ? 5000 : 15000; // If the event transition panel is about to switch to showing tournament info (tournament start or tournament results), how long can the normal transition panel (showing the ended event's results) last
+        const MIN_TOURNAMENT_START_PADDING = NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + (isDev ? 5000 : 30000); // A normal event must end at least this long before an upcoming tournament
+        const MAX_TOURNAMENT_START_PADDING = MIN_TOURNAMENT_START_PADDING + (isDev ? 5000 : 60000); // Normal events cannot be spawned within this long before a tournament. (In other words, we don't want any event to have too short of an initial limit, one that's shorter than MAX_PADDING - MIN_PADDING)
 
         let resetToInitialEventStates = () => {
             currentEvent = undefined;
@@ -4200,7 +4446,7 @@
                 }
             };
             // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
-            room.on("join", ({ uid, alias, total: newTotalUids, self, users: onlineUids }) => {
+            room.on("join", ({ date, uid, alias, total: newTotalUids, self, users: onlineUids }) => {
                 totalUsers = newTotalUids - ignoredUids.size;
                 updateStartPanelUserCountLabel();
                 usersOrderedByJoinTime.push(uid);
@@ -4226,9 +4472,41 @@
                         playerLeaderboardData = new Map();
                         document.querySelector("#mini-leaderboard").innerHTML = "";
                         representRoom();
-                        upcomingEvent = createEvent();
                         if (isInPrivateRoom) {
                             upcomingEvent = { id: -1, mode: "welcome" };
+                        } else {
+                            upcomingEvent = (() => {
+                                let t = currentTournamentWindowStartTime(date);
+                                if (t) {
+                                    currentTournament = generateTournament(t);
+                                    let tournamentEventIndex = Math.floor((date - t) / TOURNAMENT_EVENT_WINDOW);
+                                    if (tournamentEventIndex === 0) {
+                                        return { id: -1, mode: "welcome", tournament: t };
+                                    }
+                                    let e = {
+                                        ...createEvent({
+                                            ...currentTournament.events[tournamentEventIndex],
+                                            rand: randForTournamentEvent(t, tournamentEventIndex),
+                                        }),
+                                        tournament: t,
+                                        tournamentEventIndex,
+                                    };
+                                    if (currentTournament.tournamentOpener) {
+                                        e.opener = currentTournament.tournamentOpener;
+                                    }
+                                    return e;
+                                }
+                                t = nextTournamentWindowStartTime(date);
+                                nextTournament = generateTournament(t);
+                                if (t - date <= MAX_TOURNAMENT_START_PADDING) {
+                                    currentTournament = nextTournament;
+                                    nextTournament = undefined;
+                                    return { id: -1, mode: "welcome", tournament: t };
+                                }
+                                checkAutoReloadForTournamentTimeout(date);
+                                return createEvent();
+                            })();
+                            document.body.classList.toggle("tournament-themed", !!upcomingEvent.tournament);
                         }
                         showEventInfo();
                         joinedRoom = true;
@@ -4296,6 +4574,7 @@
                             upcomingEvent,
                             upcomingStart: upcomingEventStartTime - Date.now(),
                             unownedGame: currentUnownedFactoryGame,
+                            roomLeaderboard: [...roomLeaderboardData],
                         });
                     },
                     // Add a short delay, if not the oldest user, to try to avoid spamming the join response
@@ -4305,7 +4584,7 @@
                     closeLobbyConnection();
                 }
             });
-            room.on("join-response", ({ uid, to, full, rep: shouldRep, ignore, players, entrance, users, ack, guessed, withdrawn, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame, waiting: waitingForPairing, upcomingPairing }) => {
+            room.on("join-response", ({ date, uid, to, full, rep: shouldRep, ignore, players, entrance, users, ack, guessed, withdrawn, leaderboard, chat, currentEvent: newCurrentEvent, end, start, game, pairing, ended, upcomingEvent: newUpcomingEvent, upcomingStart, unownedGame, waiting: waitingForPairing, upcomingPairing, roomLeaderboard }) => {
                 if (!uidsWaitingForJoinResponse.has(to)) {
                     return;
                 }
@@ -4342,6 +4621,7 @@
                 upcomingEvent = newUpcomingEvent;
                 upcomingEventStartTime = Date.now() + parseFloat(upcomingStart);
                 currentUnownedFactoryGame = unownedGame;
+                roomLeaderboardData = new Map(roomLeaderboard);
                 playersAcknowledgedEventStart = new Map(ack);
                 playersGuessedInCurrentEvent = new Set(guessed);
                 playersWithdrawnFromGlobalLeaderboard = new Set(withdrawn);
@@ -4361,6 +4641,13 @@
                 for (let c of chat) {
                     addChatMessage(...c);
                 }
+                if (currentEvent?.tournament || upcomingEvent?.tournament) {
+                    currentTournament = generateTournament(currentEvent?.tournament || upcomingEvent?.tournament);
+                    document.body.classList.add("tournament-themed");
+                } else if (!isInPrivateRoom) {
+                    nextTournament = generateTournament(nextTournamentWindowStartTime(date));
+                    checkAutoReloadForTournamentTimeout(date);
+                }
                 joinedRoom = true;
                 totalUsers = users.length;
                 updateStartPanel();
@@ -4374,7 +4661,7 @@
                 }
                 addChatMessage(...data);
             });
-            room.on("leave", ({ uid, total: newTotalUids }) => {
+            room.on("leave", ({ date, uid, total: newTotalUids }) => {
                 if (ignoredUids.has(uid)) {
                     ignoredUids.delete(uid);
                     return;
@@ -4384,7 +4671,7 @@
                 updateStartPanelUserCountLabel();
                 let leavingPlayer = playerByUid.get(uid);
                 if (leavingPlayer) {
-                    removePlayer(leavingPlayer);
+                    removePlayer(leavingPlayer, date);
                 } else if (currentEvent?.mode === "welcome") {
                     checkWelcomeEventEnd();
                 }
@@ -4394,7 +4681,7 @@
                     resetToInitialEventStates();
                 }
             });
-            room.on("kick", ({ uid, player }) => {
+            room.on("kick", ({ date, uid, player }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -4404,7 +4691,7 @@
                 suggestedToKickTeammate = undefined;
                 let playerUid = uidByPlayer.get(player);
                 usersOrderedByJoinTime = usersOrderedByJoinTime.filter((u) => u !== playerUid);
-                removePlayer(player);
+                removePlayer(player, date);
                 ignoredUids.add(uidByPlayer.get(player));
                 --totalUsers;
                 if (player === currentPlayer) {
@@ -4441,6 +4728,7 @@
                     kickPlayer(player);
                     return;
                 }
+                clearTimeout(autoReloadForTournamentTimeout);
                 if (!player) {
                     // Allow an anonymous player to join private rooms and generate "Player X" as their name
                     let i = playerByUid.size;
@@ -4491,7 +4779,7 @@
                         if (uid === currentUid) {
                             showEventInfo();
                             isCurrentPlayersTurn = j;
-                            playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                            playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                         }
                     } else {
                         currentPairing[i] = player;
@@ -4526,7 +4814,7 @@
                                 teamStart: currentPlayerStartTime - Date.now(),
                             });
                             if (!isCurrentPlayersTurn) {
-                                playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                                playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                             }
                         }
                         populateMiniLeaderboardItem(player, document.querySelector("#mini-leaderboard-item-" + playerIds.get(player)));
@@ -4552,10 +4840,10 @@
                 document.querySelector("#chat-input").placeholder = "Please be nice in the chat!";
                 if (currentEvent.mode === "arena") {
                     target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
-                } else if (["factory", "welcome"].includes(currentEvent.mode)) {
-                    target = generateTarget(currentEvent);
-                } else {
+                } else if (["duo", "circuit", "sprint", "golf"].includes(currentEvent.mode)) {
                     target = currentEvent.targets[currentGameIndex];
+                } else {
+                    target = generateTarget(currentEvent);
                 }
                 currentPlayerDone = isWaitingForPairing;
                 currentPlayerWaitingForOthers = false;
@@ -4607,7 +4895,7 @@
                 currentBoardState = board;
                 loadBoardState(currentBoardState, { fastAnimation: true });
                 isCurrentPlayersTurn = isNewPlayersTurn;
-                playerTurnDueTime = Date.now() + (parseFloat(due) || DUO_GUESS_TIME_LIMIT);
+                playerTurnDueTime = Date.now() + (parseFloat(due) || duoGuessTimeLimit(!!currentEvent.tournament));
             });
             room.on("event-start", ({ uid, date, eventId, newUpcomingEvent, unownedGame }) => {
                 if (ignoredUids.has(uid)) {
@@ -4616,6 +4904,7 @@
                 upcomingEventSuggestedStarted = false;
                 upcomingEventStartTime = undefined;
                 currentPlayerStartTime = undefined;
+                normalTransitionPanelEndTime = undefined;
 
                 let startingNewGameInCircuit = eventId >= 1;
                 if (eventId !== (startingNewGameInCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id)) {
@@ -4645,6 +4934,15 @@
                     upcomingEvent = newUpcomingEvent;
                     currentGameIndex = 0;
                     currentScore = initialScore()[currentEvent.mode];
+                    if (!isInPrivateRoom && !currentEvent.tournament) {
+                        roomLeaderboardData = new Map();
+                        currentTournament = undefined;
+                        document.body.classList.remove("tournament-themed");
+                        nextTournament = generateTournament(nextTournamentWindowStartTime(date));
+                        if (!playerByUid.has(currentUid)) {
+                            updateStartPanel();
+                        }
+                    }
 
                     if (["duo", "arena"].includes(currentEvent.mode)) {
                         let rand = new Math.seedrandom(date);
@@ -4682,17 +4980,25 @@
                     currentUnownedFactoryGame = unownedGame;
                 }
                 currentEventEndTime = undefined;
-                setEventToEndIn(initialEventTimeLimit());
+                setEventToEndIn(
+                    Math.min(
+                        initialEventTimeLimit(currentEvent),
+                        isInPrivateRoom || currentEvent.tournament
+                            ? Infinity
+                            : // Cut the event short in respect to an upcoming tournament
+                              nextTournamentWindowStartTime(date) - MIN_TOURNAMENT_START_PADDING - date,
+                    ),
+                );
                 if (currentEvent.mode === "duo") {
-                    playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                    playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                 }
                 currentEventStartTime = Date.now();
                 if (currentEvent.mode === "arena") {
                     target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
-                } else if (["factory", "welcome"].includes(currentEvent.mode)) {
-                    target = generateTarget(currentEvent);
-                } else {
+                } else if (["duo", "circuit", "sprint", "golf"].includes(currentEvent.mode)) {
                     target = currentEvent.targets[currentGameIndex];
+                } else {
+                    target = generateTarget(currentEvent);
                 }
                 currentPlayerDone = false;
                 currentPlayerWaitingForOthers = false;
@@ -4783,7 +5089,7 @@
                                     }
                                 }, 1000);
                             }
-                            room.send({ type: "final-guess", guess: playerWinningGuessPending ? target : currentGuess });
+                            room.send({ type: "arena-final-guess", guess: playerWinningGuessPending ? target : currentGuess });
                         }
                         addPlayerWaitingForPairing(p, date);
                     };
@@ -4833,7 +5139,7 @@
                 if (!leaderboardDataVoided) {
                     playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
                 }
-                if (uid !== currentUid) {
+                if (currentPlayerDone || uid !== currentUid) {
                     // Avoid spoiling the verdict while slow animation for chosen opener is playing
                     if (!(numGuesses === 1 && currentEvent.opener && animatingGuessesByBoard.get("player-board").has(0))) {
                         populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
@@ -4872,7 +5178,7 @@
                         loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
                         updateCurrentScore(v, hard, { shouldPlayAudio: false, markAsAuto: true });
                         isCurrentPlayersTurn = true;
-                        playerTurnDueTime = Date.now() + DUO_GUESS_TIME_LIMIT;
+                        playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                         break;
                     }
                     case "arena": {
@@ -4899,7 +5205,7 @@
                     }
                 }
             });
-            room.on("final-guess", ({ uid, guess }) => {
+            room.on("arena-final-guess", ({ uid, guess }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -5008,7 +5314,7 @@
                     }
                 }
             });
-            room.on("event-end", ({ uid, eventId }) => {
+            room.on("event-end", ({ date, uid, eventId }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -5017,6 +5323,25 @@
                 }
                 let showingTargetAlert = false;
                 let isUpcomingEventNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+                if (!isInPrivateRoom && !currentEvent.tournament) {
+                    let t = nextTournamentWindowStartTime(date);
+                    if (t - (date + NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION) <= MAX_TOURNAMENT_START_PADDING) {
+                        currentTournament = generateTournament(t);
+                        upcomingEvent = {
+                            ...createEvent({
+                                ...currentTournament.events[0],
+                                rand: randForTournamentEvent(t, 0),
+                            }),
+                            tournament: t,
+                            tournamentEventIndex: 0,
+                        };
+                        isUpcomingEventNewGameInCircuit = false;
+                        if (!playerByUid.has(currentUid)) {
+                            document.body.classList.add("tournament-themed");
+                            updateStartPanel();
+                        }
+                    }
+                }
                 if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
                     if (isUpcomingEventNewGameInCircuit) {
@@ -5037,11 +5362,32 @@
                 if (currentEvent.mode !== "welcome" && playerByUid.has(currentUid) && !isUpcomingEventNewGameInCircuit) {
                     checkForZombies(true);
                 }
-                if (!isInPrivateRoom && !isUpcomingEventNewGameInCircuit && currentEvent.mode !== "welcome" && uid === currentUid) {
-                    // This event-end message's sender reports score data to the global leaderboard since they're the most likely to be available, having suggested the event's ending
+                if (currentEvent.mode === "circuit") {
+                    for (let [p, { done, score }] of playerLeaderboardData) {
+                        if (!done) {
+                            score[2] += -(Date.now() - currentEventStartTime);
+                            ++score[3];
+                            score[1] = score[2] / score[3];
+                            if (p === currentPlayer) {
+                                currentScore = score.concat();
+                            }
+                        }
+                    }
+                }
+                if (!isUpcomingEventNewGameInCircuit && currentEvent.mode !== "welcome") {
+                    // Update global and room leaderboards
                     (async () => {
+                        let numNewPlayers = playersOrderedByEntrance.reduce((a, p) => a + !roomLeaderboardData.has(p), 0);
+                        for (let [p, d] of roomLeaderboardData) {
+                            // Retroactively update existing players' scores pretending they beat any new players (players who just completed their first challenge in this room) in all previous events the existing player completed
+                            d[0] += numNewPlayers * d[2];
+                        }
+                        let missingOldPlayers = 0;
+                        for (let p of roomLeaderboardData.keys()) {
+                            missingOldPlayers += !uidByPlayer.has(p);
+                        }
                         let sortedPlayers = getSortedPlayersAndScoresForEventEnd(false, true);
-                        let body = {
+                        let globalLeaderboardUpdateBody = {
                             dev: isDev,
                             mode: currentEvent.mode,
                             opener: currentEvent.opener || "",
@@ -5060,14 +5406,28 @@
                                 item.visible = !playersWithdrawnFromGlobalLeaderboard.has(players[0]);
                             }
                             if (players.some((p) => playersGuessedInCurrentEvent.has(p))) {
-                                body.items.push(item);
+                                globalLeaderboardUpdateBody.items.push(item);
+                            }
+                            for (let p of players) {
+                                if (!roomLeaderboardData.has(p)) {
+                                    roomLeaderboardData.set(p, Array(4).fill(0));
+                                }
+                                let d = roomLeaderboardData.get(p);
+                                d[3] = outranked + missingOldPlayers;
+                                d[0] += d[3];
+                                d[1] -= playtime;
+                                ++d[2];
                             }
                             outranked += players.length;
                         }
+                        if (isInPrivateRoom || uid !== currentUid) {
+                            return;
+                        }
+                        // This event-end message's sender reports score data to the global leaderboard since they're the most likely to be available, having suggested the event's ending
                         let newData = await (
                             await fetch(GLOBAL_LEADERBOARD_BACKEND_URL, {
                                 method: "POST",
-                                body: JSON.stringify(body),
+                                body: JSON.stringify(globalLeaderboardUpdateBody),
                             })
                         ).json();
                         archivedLeaderboardData = globalLeaderboardData;
@@ -5078,8 +5438,28 @@
                 clearTimeout(repeatedZombieCheckTimeoutHandle);
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
-                let shortenedDelay = playerByUid.size === 1;
-                upcomingEventStartTime = Date.now() + (currentEvent.mode === "welcome" ? POST_WELCOME_DELAY / (isDev ? 2 : 1) : isDev ? 5000 << 0 : isUpcomingEventNewGameInCircuit ? (shortenedDelay ? 7000 : 10000) : shortenedDelay ? 15000 : 20000);
+                upcomingEventStartTime =
+                    Date.now() +
+                    (() => {
+                        if (upcomingEvent.tournament) {
+                            return NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + Math.max(upcomingEvent.tournament - date, 0);
+                        }
+                        if (currentEvent.tournament) {
+                            // Tournament end screen
+                            return NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + 30000;
+                        }
+                        if (currentEvent.mode === "welcome") {
+                            return POST_WELCOME_DELAY / (isDev ? 2 : 1);
+                        }
+                        if (isUpcomingEventNewGameInCircuit) {
+                            return isDev ? 5000 : playerByUid.size === 1 ? 7000 : 10000;
+                        }
+                        return isDev ? 5000 : playerByUid.size === 1 ? 15000 : 20000;
+                    })();
+                if (currentEvent.tournament !== upcomingEvent.tournament) {
+                    // Need to show tournament start or end screen as part two of transition panel
+                    normalTransitionPanelEndTime = Date.now() + NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION;
+                }
                 isCurrentPlayersTurn = undefined;
                 playerTurnDueTime = undefined;
                 currentUnownedFactoryGame = undefined;
@@ -5089,18 +5469,6 @@
                 upcomingPairingTime = undefined;
                 suggestedArenaPairing = undefined;
                 playerWinningGuessPending = undefined;
-                if (currentEvent.mode === "circuit") {
-                    for (let [p, { done, score }] of playerLeaderboardData) {
-                        if (!done) {
-                            score[2] += -(Date.now() - currentEventStartTime);
-                            ++score[3];
-                            score[1] = score[2] / score[3];
-                            if (p === currentPlayer) {
-                                currentScore = score.concat();
-                            }
-                        }
-                    }
-                }
                 if (!showingTargetAlert && !isBoardAnimating() && !postGameDelayTimeout) {
                     showEventTransitionPanel();
                 }
@@ -5147,6 +5515,7 @@
             if (isInPrivateRoom) {
                 let u = joinedRoom ? totalUsers || 1 : "–";
                 startPanelBottomLabel.innerHTML = `<b>${u}</b> ${u === 1 ? "player" : "players"} in private room`;
+                startPanelBottomLabel.style.display = "";
             } else {
                 let u = globalLeaderboardData ? globalLeaderboardData?.day?.players || 0 : "–";
                 startPanelBottomLabel.innerHTML = `<b>${u}</b> ${u === 1 ? "player" : "players"} competed today`;
@@ -5160,9 +5529,43 @@
             document.querySelector("#start-panel-extra-options").style.display = !isInPrivateRoom ? "" : "none";
             copyRoomLinkButton.style.display = isInPrivateRoom ? "" : "none";
             updateStartPanelUserCountLabel();
+            updateStartPanelTournamentInfo();
+        };
+        let startPanelNextTournamentSection = document.querySelector("#start-panel-next-tournament-section");
+        let startPanelNextTournamentInLabel = document.querySelector("#start-panel-next-tournament-in");
+        let updateStartPanelTournamentInfo = () => {
+            if (isInPrivateRoom) {
+                startPanelBottomLabel.style.display = "";
+                startPanelNextTournamentSection.style.display = "none";
+                return;
+            }
+            let tournament = currentTournament || nextTournament;
+            if (!tournament) {
+                return;
+            }
+            let ongoing = document.body.classList.contains("tournament-themed");
+            startPanelNextTournamentSection.firstElementChild.classList.toggle("record-indicator", ongoing);
+            startPanelBottomLabel.style.display = "none";
+            startPanelNextTournamentSection.style.display = "";
+            let openerText = tournament.tournamentOpener ? `"${tournament.tournamentOpener}"` : "";
+            startPanelNextTournamentSection.querySelector("#start-panel-next-tournament-title span").textContent = ongoing ? "Ongoing: " + openerText : openerText || "Next";
+            startPanelNextTournamentSection.querySelector("#start-panel-next-tournament-date").textContent = ongoing ? "Join to compete now!" : `${formatTournamentDate(tournament.time)} at ${formatTournamentTime(tournament.time, true)}`;
+            startPanelNextTournamentInLabel.style.display = ongoing ? "none" : "";
+            updateCountdownInPanel();
+        };
+        let checkAutoReloadForTournamentTimeout = (now) => {
+            if (playerByUid.size) {
+                return;
+            }
+            autoReloadForTournamentTimeout = setTimeout(
+                () => {
+                    location.reload();
+                },
+                Math.min(Math.max(nextTournament.time - MAX_TOURNAMENT_START_PADDING - now, 0), 1 << 30),
+            );
         };
         let checkWelcomeEventEnd = () => {
-            if (playerByUid.size === Math.min(totalUsers, MAX_PLAYERS_PER_ROOM)) {
+            if (currentEvent.tournament || playerByUid.size === Math.min(totalUsers, MAX_PLAYERS_PER_ROOM)) {
                 suggestToEndEvent();
             }
         };
@@ -5247,6 +5650,7 @@
                 resetToInitialEventStates();
                 updateStartPanel();
                 showOrHidePanel("start-panel");
+                document.body.classList.remove("tournament-themed");
             });
             return () => {
                 for (let mode of CUSTOMIZATION_MODES) {
@@ -5276,7 +5680,7 @@
             location.reload();
         });
 
-        let removePlayer = (player) => {
+        let removePlayer = (player, serverNow) => {
             addChatMessage(player, "", "player-leave");
             document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`).remove();
             playerIds.delete(player);
@@ -5324,6 +5728,7 @@
             }
             checkEventEndOrAcceleration();
             checkAutoSelfKickTimeout();
+            checkAutoReloadForTournamentTimeout(serverNow);
         };
         let kickPlayer = (player) => room.send({ type: "kick", player });
         let checkForZombies = (kick = false) => {
@@ -5355,7 +5760,7 @@
             if (currentEventSuggestedEnded) {
                 return;
             }
-            if (currentEvent.mode !== "welcome" && playerByUid.size > 1 && !playersGuessedInCurrentEvent.has(currentPlayer)) {
+            if (currentEvent.mode !== "welcome" && playersGuessedInCurrentEvent.size && !playersGuessedInCurrentEvent.has(currentPlayer)) {
                 // We don't want somebody who's potentially a zombie, who might get kicked when the event ends, to be in charge of updating the global leaderboard
                 return;
             }
@@ -5385,7 +5790,7 @@
             let activePlayers = playerByUid.size - zombies;
             if (currentEvent.mode !== "arena" && playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
                 suggestToEndEvent();
-            } else if (currentEvent.mode === "arena" ? totalPlayerScore() >= (numGames() / 3) * playerByUid.size : playersDone >= activePlayers / 2) {
+            } else if (!currentEvent.tournament && (currentEvent.mode === "arena" ? totalPlayerScore() >= (numGames() / 3) * playerByUid.size : playersDone >= activePlayers / 2)) {
                 setEventToEndIn(acceleratedTimeLimit());
             }
             if (Number.isFinite(checkAgainIn)) {
@@ -5430,11 +5835,12 @@
             }
             let deltaHTML = !playerJustEntered && sortedPlayersWithTeamsCombined.length > 1 ? `(${delta ? `${Math.abs(delta)} ${Math.abs(delta) === 1 ? "point" : "points"} ${delta > 0 ? "behind" : "ahead of"}` : "Currently tied with"} <b>${otherPlayer}</b>)` : "";
             let solved = +!playerJustEntered && getShortScoreForGlobalLeaderboard(currentEvent.mode, sortedPlayersWithTeamsCombined[place - 1][1].score).solved;
-            let xp = solved;
+            let outranked = 0;
             for (let i = place; i < sortedPlayersWithTeamsCombined.length; ++i) {
-                xp += sortedPlayersWithTeamsCombined[i][2].length;
+                outranked += sortedPlayersWithTeamsCombined[i][2].length;
             }
-            return { place, placeHTML, delta, deltaHTML, xp, solved };
+            let xp = solved + outranked;
+            return { place, placeHTML, delta, deltaHTML, outranked, xp, solved };
         };
         let getSortedPlayersAndScoresForEventEnd = (playerJustEntered = false, sortOnly = false) => {
             let sortedPlayers = structuredClone(sortMiniLeaderboard(undefined, sortOnly)).map((x) => [...x, [x[0]]]);
@@ -5463,17 +5869,43 @@
             return sortedPlayers;
         };
         let showEventTransitionPanel = (playerJustEntered = false) => {
-            if (currentEvent.mode === "welcome") {
-                showOrHidePanel("welcome-panel");
-                return;
-            }
             showOrHideOpponentBoard(false);
-            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && currentEvent.tournament === upcomingEvent.tournament;
             let sortedPlayers = getSortedPlayersAndScoresForEventEnd(playerJustEntered);
-            if (!startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
+            if (currentEvent.mode !== "welcome" && !startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
                 addChatMessage(sortedPlayers[0][0], `won ${formatEventName(currentEvent)} ${formatShortScoreDescription(currentEvent.mode, sortedPlayers[0][1].score)}`, "player-won");
             }
             if (!playerByUid.has(currentUid)) {
+                return;
+            }
+            if ((currentEvent.mode === "welcome" && currentEvent.tournament) || (!currentEvent.tournament && upcomingEvent.tournament && !(Date.now() < normalTransitionPanelEndTime))) {
+                normalTransitionPanelEndTime = undefined;
+                let panel = document.querySelector("#between-events-panel");
+                panel.classList.add("showing-tournament-start");
+                panel.querySelector("#tournament-start-title span").textContent = currentTournament.tournamentOpener ? `"${currentTournament.tournamentOpener}" ` : "";
+                panel.querySelector("#tournament-start-date").textContent = `${formatTournamentDate(currentTournament.time, true)} at ${formatTournamentTime(currentTournament.time)}`;
+                panel.querySelector("#tournament-start-agenda").innerHTML = currentTournament.events
+                    .map(
+                        (e) => `
+                        <div style="display: flex; align-items: center; gap: 6px">
+                            <span class="material-symbols-outlined">${eventIcon(e)}</span>
+                            ${formatEventName(e)}
+                        </div>
+                    `,
+                    )
+                    .join("");
+                panel.querySelector("#next-event-countdown span").textContent = "First challenge";
+                let nextEventInfoEl = panel.querySelector("#next-event-info");
+                nextEventInfoEl.querySelector("span").textContent = eventIcon(upcomingEvent);
+                nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
+                showOrHidePanel("between-events-panel");
+                updateCountdownInPanel();
+                document.body.classList.add("tournament-themed");
+                return;
+            }
+            if (currentEvent.mode === "welcome") {
+                showOrHidePanel("welcome-panel");
+                updateCountdownInPanel();
                 return;
             }
             if (startingNewGameInCircuit) {
@@ -5507,6 +5939,9 @@
                 return;
             }
             let panel = document.querySelector("#between-events-panel");
+            panel.classList.remove("showing-tournament-start");
+            panel.classList.toggle("showing-won-title", !isInPrivateRoom && !currentEvent.tournament);
+            panel.classList.toggle("showing-room-leaderboard", isInPrivateRoom || (!!currentEvent.tournament && currentEvent.tournamentEventIndex !== EVENT_MODES.length - 1));
             panel.querySelector("#between-events-panel-title").textContent = sortedPlayers[0][0] + " won!";
             panel.querySelector("#between-events-panel-description").textContent = formatEventName(currentEvent);
             let anyHardMode = false;
@@ -5607,13 +6042,16 @@
                     <div>
                         ${scoreText}
                         ${scoreText2 ? `<div style="font-size: 11px">${scoreText2}</div>` : ""}
-                        ${record ? `<div id="final-leaderboard-record-indicator">${record} Record</div>` : ""}
+                        ${record ? `<div class="record-indicator" id="final-leaderboard-record-indicator">${record} Record</div>` : ""}
                     </div>
                     ${hardMode ? '<span class="material-symbols-outlined">asterisk</span>' : ""}
                 `;
             }
             panel.querySelector("#final-leaderboard-hard-mode-description").style.display = anyHardMode ? "" : "none";
             let { placeHTML, xp, solved } = computePlaceAndDelta(sortedPlayers, playerJustEntered);
+            if (isInPrivateRoom || currentEvent.tournament) {
+                // FIXME Room leaderboard
+            }
             let placeEl = panel.querySelector("#final-leaderboard-your-place");
             if (currentEvent.mode === "duo") {
                 placeEl.innerHTML = placeHTML.replace(/You are/, "Your team finished");
@@ -5621,12 +6059,15 @@
                 placeEl.innerHTML = placeHTML.replace(/are/, "finished");
             }
             let xpEl = panel.querySelector("#final-leaderboard-xp-description");
-            xpEl.textContent = `(+${xp} XP)`;
-            placeEl.style.display = placeEl.previousElementSibling.style.display = playerJustEntered ? "none" : "";
-            xpEl.style.display = playerJustEntered || isInPrivateRoom ? "none" : "";
+            let isLastTournamentEvent = currentEvent.tournamentEventIndex === EVENT_MODES.length - 1;
+            let roomScore = roomLeaderboardData.get(currentPlayer)?.[3];
+            xpEl.textContent = isLastTournamentEvent ? `(+${roomScore} tournament ${roomScore === 1 ? "point" : "points"})` : `(+${xp} XP)`;
+            placeEl.style.display = placeEl.previousElementSibling.style.display = playerJustEntered || (isLastTournamentEvent && sortedPlayers.length === 1) ? "none" : "";
+            xpEl.style.display = playerJustEntered || isInPrivateRoom || (isLastTournamentEvent && sortedPlayers.length === 1) ? "none" : "";
+            panel.querySelector("#next-event-countdown span").textContent = upcomingEvent.tournamentEventIndex === EVENT_MODES.length - 1 ? "Final challenge" : "Next up";
             let nextEventInfoEl = panel.querySelector("#next-event-info");
-            nextEventInfoEl.querySelector("span").textContent = MODE_ICONS[upcomingEvent.mode];
-            nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
+            nextEventInfoEl.querySelector("span").textContent = !currentEvent.tournament && upcomingEvent.tournament ? "trophy" : eventIcon(upcomingEvent);
+            nextEventInfoEl.querySelector("b").textContent = formatEventName(!currentEvent.tournament && upcomingEvent.tournament ? { ...upcomingEvent, mode: "welcome", opener: "" } : upcomingEvent);
             showOrHidePanel("between-events-panel");
             updateCountdownInPanel();
             let playConfetti = (() => {
@@ -5724,10 +6165,31 @@
         let nextEventCountdownValueEl = panel.querySelector("#next-event-countdown").querySelector("b");
         let nextDuelCountdownEl = panel.querySelector("#next-duel-countdown");
         let updateCountdownInPanel = () => {
+            if (document.querySelector("#start-panel").style.display !== "none" && !isInPrivateRoom && !document.body.classList.contains("tournament-themed") && nextTournament) {
+                let t = Math.max(nextTournament.time - Date.now() + 999, 0);
+                let d = Math.floor(t / 86400000);
+                let h = t >= 25 * 3600000 ? Math.floor((t % 86400000) / 3600000) : Math.floor(t / 3600000);
+                let m = Math.floor((t % 3600000) / 60000);
+                let s = Math.floor((t % 60000) / 1000);
+                startPanelNextTournamentInLabel.textContent = `(in ${t >= 25 * 3600000 ? `${d} ${d === 1 ? "day" : "days"}, ${h} ${h === 1 ? "hour" : "hours"}` : `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`})`;
+                return;
+            }
             if (!playerByUid.has(currentUid)) {
                 return;
             }
-            let formatUpcomingStartTime = () => Math.max(Math.ceil((currentEvent.mode === "welcome" && !upcomingEventStartTime ? POST_WELCOME_DELAY : upcomingEventStartTime - Date.now()) / 1000), 0);
+            let formatUpcomingStartTime = () => {
+                if (Date.now() >= normalTransitionPanelEndTime) {
+                    setTimeout(() => {
+                        normalTransitionPanelEndTime = undefined;
+                        showEventTransitionPanel();
+                    }, 0);
+                }
+                let s = Math.max(Math.ceil((normalTransitionPanelEndTime ? normalTransitionPanelEndTime - Date.now() : (currentEvent.mode === "welcome" || upcomingEvent.tournament) && !upcomingEventStartTime ? (upcomingEvent.tournament ? NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + Math.max(currentEvent.tournament - Date.now(), 0) : POST_WELCOME_DELAY) : upcomingEventStartTime - Date.now()) / 1000), 0);
+                if (s >= 60) {
+                    return `${Math.floor(s / 60)}:${`${s % 60}`.padStart(2, "0")}`;
+                }
+                return `${s}`;
+            };
             if (currentEvent.mode !== "welcome" && !currentEventEnded && !(currentEvent.mode === "arena" && currentPlayerDone)) {
                 return;
             }
@@ -5760,18 +6222,33 @@
                 nextEventCountdownValueEl.textContent = formatUpcomingStartTime();
             }
 
-            if (currentEvent.mode === "welcome") {
+            if (isInPrivateRoom && currentEvent.mode === "welcome") {
                 let p = totalUsers - playerByUid.size;
                 document.querySelector("#welcome-panel-text").innerHTML = currentEventEnded || !p ? `Challenge starts in <b>${formatUpcomingStartTime()}</b>` : `Waiting for the other ${p} ${p === 1 ? "player" : "players"} to join...`;
             }
 
             if (Date.now() >= upcomingEventStartTime && !upcomingEventSuggestedStarted) {
                 upcomingEventSuggestedStarted = true;
-                let isUpcomingStillCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1;
+                let isUpcomingStillCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && currentEvent.tournament === upcomingEvent.tournament;
                 let m = {
                     type: "event-start",
                     eventId: isUpcomingStillCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
-                    newUpcomingEvent: isUpcomingStillCircuit ? undefined : createEvent(),
+                    newUpcomingEvent: isUpcomingStillCircuit
+                        ? undefined
+                        : upcomingEvent.tournament && upcomingEvent.tournamentEventIndex !== EVENT_MODES.length - 1
+                          ? (() => {
+                                let t = upcomingEvent.tournament;
+                                let i = upcomingEvent.mode === "welcome" ? -1 : upcomingEvent.tournamentEventIndex;
+                                return {
+                                    ...createEvent({
+                                        ...currentTournament.events[i + 1],
+                                        rand: randForTournamentEvent(t, i + 1),
+                                    }),
+                                    tournament: t,
+                                    tournamentEventIndex: i + 1,
+                                };
+                            })()
+                          : createEvent(),
                 };
                 if (upcomingEvent.mode === "factory") {
                     m.unownedGame = createUnownedFactoryGame(true, upcomingEvent);
@@ -5781,17 +6258,6 @@
         };
         setInterval(updateCountdownInPanel, 125);
 
-        let shuffled = (a, rand = undefined) => {
-            rand ||= Math.random;
-            a = [...a];
-            let i = a.length;
-            while (i) {
-                let j = Math.floor(rand() * i);
-                --i;
-                [a[i], a[j]] = [a[j], a[i]];
-            }
-            return a;
-        };
         const BOT_AVOIDED_OPENERS = ["CHUMP", "CRASS", "DEATH", "DOPEY", "DUMMY", "DUNCE", "GOOFY", "NINNY", "SILLY", "TRASH"];
         let botPlay = (options = {}) => {
             options = {
