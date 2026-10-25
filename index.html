@@ -932,6 +932,9 @@
         &:not(.showing-room-leaderboard) .room-leaderboard-related {
             display: none !important;
         }
+        &.hide-room-leaderboard-score-column .room-leaderboard-score-column {
+            visibility: hidden;
+        }
     }
     .final-leaderboard-top-item {
         position: relative;
@@ -1658,54 +1661,13 @@
                 <div style="width: 136px">
                     <b class="no-wrap">Player</b>
                 </div>
-                <div style="width: 64px">Score</div>
+                <div class="room-leaderboard-score-column" style="width: 64px">Score</div>
                 <div style="width: 50px"></div>
                 <div style="width: 74px">Total time</div>
             </div>
             <div class="divider"></div>
             <div class="room-leaderboard-related" style="max-height: 68px; display: flex; flex-direction: column; gap: 8px">
-                <div id="room-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -13px; margin-bottom: -12px; padding: 8px 0px; flex: 1; width: 332px">
-                    <div class="leaderboard-item">
-                        <div style="width: 130px">
-                            <b class="no-wrap">e4</b>
-                        </div>
-                        <div style="width: 64px">1 <span style="font-size: 11px">(+1)</span></div>
-                        <div style="width: 56px"></div>
-                        <div style="width: 74px">1:34</div>
-                    </div>
-                    <div class="leaderboard-item">
-                        <div style="width: 130px">
-                            <b class="no-wrap">Lorem</b>
-                        </div>
-                        <div style="width: 64px">0</div>
-                        <div style="width: 56px"></div>
-                        <div style="width: 74px">1:34</div>
-                    </div>
-                    <div class="leaderboard-item">
-                        <div style="width: 130px">
-                            <b class="no-wrap">Lorem</b>
-                        </div>
-                        <div style="width: 64px">0</div>
-                        <div style="width: 56px"></div>
-                        <div style="width: 74px">1:34</div>
-                    </div>
-                    <div class="leaderboard-item">
-                        <div style="width: 130px">
-                            <b class="no-wrap">Lorem</b>
-                        </div>
-                        <div style="width: 64px">0</div>
-                        <div style="width: 56px"></div>
-                        <div style="width: 74px">1:34</div>
-                    </div>
-                    <div class="leaderboard-item">
-                        <div style="width: 130px">
-                            <b class="no-wrap">Lorem</b>
-                        </div>
-                        <div style="width: 64px">0</div>
-                        <div style="width: 56px"></div>
-                        <div style="width: 74px">1:34</div>
-                    </div>
-                </div>
+                <div id="room-leaderboard-table" style="display: flex; flex-direction: column; align-items: center; gap: 8px; overflow: scroll; margin-top: -13px; margin-bottom: -12px; padding: 8px 0px; flex: 1; width: 332px"></div>
             </div>
             <div class="room-leaderboard-related divider"></div>
         </div>
@@ -2075,8 +2037,11 @@
             );
         };
         let archivedLeaderboardData; // To help display record indicators in case new leaderboard is processed and fetched before transition panel shows when event ends
-        const GLOBAL_LEADERBOARD_BACKEND_URL = urlParams.has("no-leaderboard") ? "" : "https://script.google.com/macros/s/AKfycbwGaMe_oCsIycXZJ64S-y7PsoMzsq4JtdU4YT7O5C5oFnYwyAuO5VcnQXfHMLdr8BEtcg/exec";
+        const GLOBAL_LEADERBOARD_BACKEND_URL = urlParams.has("no-leaderboard") ? undefined : "https://script.google.com/macros/s/AKfycbwGaMe_oCsIycXZJ64S-y7PsoMzsq4JtdU4YT7O5C5oFnYwyAuO5VcnQXfHMLdr8BEtcg/exec";
         let fetchGlobalLeaderboardData = async () => {
+            if (!GLOBAL_LEADERBOARD_BACKEND_URL) {
+                return;
+            }
             let url = new URL(GLOBAL_LEADERBOARD_BACKEND_URL);
             if (isDev) {
                 url.searchParams.set("dev", 1);
@@ -2258,11 +2223,11 @@
                     playerIndex = Infinity;
                 }
                 const HEADERS = {
-                    "overall": ["Player", "(Opener)", "Total XP", "Challenges", globalLeaderboardPanelSelectedPeriod === "day" ? "Last played" : "Playtime"],
-                    "factory": ["Player", "Opener", "Time", "Achieved"],
-                    "duo": ["Team", "(Opener)", "Time", "Achieved"],
-                    "golf": ["Player", "Opener", "Guesses", "", "Achieved"],
-                    "sprint": ["Player", "Opener", "Time", "", "Achieved"],
+                    overall: ["Player", "(Opener)", "Total XP", "Challenges", globalLeaderboardPanelSelectedPeriod === "day" ? "Last played" : "Playtime"],
+                    factory: ["Player", "Opener", "Time", "Achieved"],
+                    duo: ["Team", "(Opener)", "Time", "Achieved"],
+                    golf: ["Player", "Opener", "Guesses", "", "Achieved"],
+                    sprint: ["Player", "Opener", "Time", "", "Achieved"],
                 };
                 document.querySelector("#global-leaderboard-header").innerHTML = itemEl(HEADERS[globalLeaderboardPanelSelectedMode], undefined);
                 document.querySelector("#global-leaderboard-table").innerHTML = items
@@ -3808,13 +3773,13 @@
                 return "trophy";
             }
             return {
-                "factory": "conveyor_belt",
-                "duo": "group",
-                "arena": "swords",
-                "circuit": "sports_score",
-                "sprint": "sprint",
-                "golf": "sports_golf",
-                "welcome": "waving_hand",
+                factory: "conveyor_belt",
+                duo: "group",
+                arena: "swords",
+                circuit: "sports_score",
+                sprint: "sprint",
+                golf: "sports_golf",
+                welcome: "waving_hand",
             }[e.mode];
         };
         const BOT_NAME = "Rattington";
@@ -3824,12 +3789,12 @@
             document.querySelector("#event-name").textContent = eventName;
             document.querySelector("#event-description").innerHTML =
                 {
-                    "factory": "Guess and pass the Wordle around!",
-                    "duo": playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
-                    "arena": "1v1 speed-Wordle battles!",
-                    "circuit": "Balance speed and accuracy!",
-                    "sprint": "First to solve nine Wordles wins!",
-                    "golf": "Nine Wordles. Fewest guesses wins!",
+                    factory: "Guess and pass the Wordle around!",
+                    duo: playerByUid.has(currentUid) ? `Paired with <b>${currentPartner || BOT_NAME}</b>` : "First team to solve nine Wordles wins!",
+                    arena: "1v1 speed-Wordle battles!",
+                    circuit: "Balance speed and accuracy!",
+                    sprint: "First to solve nine Wordles wins!",
+                    golf: "Nine Wordles. Fewest guesses wins!",
                 }[event.mode] || "";
             document.querySelector("#event-info").querySelector("span").textContent = eventIcon(event);
 
@@ -4282,7 +4247,7 @@
         const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19, 34, 50).getTime();
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 10, 41, 0).getTime();
             // return Date.now(); //+ 25 * 3600000 + 5000;
         })();
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
@@ -4294,7 +4259,7 @@
             let isLosAngelesInDST = (t) => Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).format(t).endsWith("PDT");
             let nextTournamentWindowStartTime = (t) => {
                 if (isDev) {
-                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 180000;
+                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 90000;
                 }
                 let period = 7 * 86400000 * INITIAL_WEEKLY_TOURNAMENT_START_TIMES.length;
                 t += isLosAngelesInDST(t) * 3600000;
@@ -5446,6 +5411,9 @@
                         if (isInPrivateRoom || uid !== currentUid) {
                             return;
                         }
+                        if (!GLOBAL_LEADERBOARD_BACKEND_URL) {
+                            return;
+                        }
                         // This event-end message's sender reports score data to the global leaderboard since they're the most likely to be available, having suggested the event's ending
                         let newData = await (
                             await fetch(GLOBAL_LEADERBOARD_BACKEND_URL, {
@@ -5691,13 +5659,13 @@
                 customizationPanelOpenerInput.classList.remove("shaking");
                 let descriptionEl = document.querySelector("#customization-panel-description");
                 const DESCRIPTION_BY_MODE = {
-                    "factory": "Guess and pass the Wordle around",
-                    "duo": "Solve with a partner",
-                    "circuit": "Balance speed and accuracy",
-                    "random": "All challenges, shuffled",
-                    "arena": "1v1 Wordle battles",
-                    "golf": "Fewest guesses wins",
-                    "sprint": "Fastest time wins",
+                    factory: "Guess and pass the Wordle around",
+                    duo: "Solve with a partner",
+                    circuit: "Balance speed and accuracy",
+                    random: "All challenges, shuffled",
+                    arena: "1v1 Wordle battles",
+                    golf: "Fewest guesses wins",
+                    sprint: "Fastest time wins",
                 };
                 descriptionEl.innerHTML = `<i>${DESCRIPTION_BY_MODE[customizationPanelSelectedMode]}</i>`;
                 descriptionEl.style.visibility = customizationPanelSelectedMode === "random" ? "hidden" : "";
@@ -6135,13 +6103,14 @@
                                     ${showingTournamentEndScreen && i >= 0 && i < 3 ? `<div class="final-leaderboard-top-item rank-${i + 1}"></div>` : ""}
                                     <b class="no-wrap">${p}</b>
                                 </div>
-                                <div style="width: 64px">${s[0]}${!showingTournamentEndScreen && s[3] ? ` <span style="font-size: 11px">(+${s[3]})</span>` : ""}</div>
+                                <div class="room-leaderboard-score-column" style="width: 64px">${s[0]}${!showingTournamentEndScreen && s[3] ? ` <span style="font-size: 11px">(+${s[3]})</span>` : ""}</div>
                                 <div style="width: 50px"></div>
                                 <div style="width: 74px">${formatTime(-s[1] * 1000, true)}</div>
                             </div>
                         `,
                     )
                     .join("");
+                panel.classList.toggle("hide-room-leaderboard-score-column", playerByUid.size - playerJustEntered <= 1);
                 requestAnimationFrame(() => {
                     document.querySelector("room-leaderboard-item-" + playerIds.get(currentPlayer))?.scrollIntoView({ block: "center" });
                 });
