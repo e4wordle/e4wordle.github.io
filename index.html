@@ -4248,8 +4248,8 @@
         const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
+            return Date.now() - 31000; //+ 25 * 3600000 + 5000;
             return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 11, 57, 0).getTime();
-            // return Date.now(); //+ 25 * 3600000 + 5000;
         })();
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
             const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
@@ -4827,7 +4827,7 @@
                 currentScore = score;
                 updateBanner();
                 if (currentEventEnded || currentEvent.mode === "welcome") {
-                    showEventTransitionPanel(true);
+                    showEventTransitionPanel({ playerJustEntered: true });
                     return;
                 }
                 if (isWaitingForPairing) {
@@ -5871,11 +5871,22 @@
             }
             return sortedPlayers;
         };
-        let showEventTransitionPanel = (playerJustEntered = false) => {
+        let showEventTransitionPanel = (options = {}) => {
+            options = {
+                playerJustEntered: false,
+                forTournamentEndScreen: false,
+                ...options,
+            };
+            let { playerJustEntered, forTournamentEndScreen } = options;
             showOrHideOpponentBoard(false);
             let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && currentEvent.tournament === upcomingEvent.tournament;
             let sortedPlayers = getSortedPlayersAndScoresForEventEnd(playerJustEntered);
-            if (currentEvent.mode !== "welcome" && !startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
+            let sortedRoomLeaderboard = [...roomLeaderboardDataByPlayer].sort((a, b) => compareArrays(b[1], a[1]));
+            if (forTournamentEndScreen) {
+                let o = currentTournament.tournamentOpener;
+                let p = sortedRoomLeaderboard[0][1][ROOM_SCORE_KEY.points];
+                addChatMessage(sortedRoomLeaderboard[0][0], `won ${o ? `"${o}" ` : ""}Weekly Tournament${p ? ` with ${p} ${p === 1 ? "point" : "points"}` : ""}`, "player-won");
+            } else if (currentEvent.mode !== "welcome" && !startingNewGameInCircuit && !playerJustEntered && document.querySelector("#between-events-panel").style.display === "none") {
                 addChatMessage(sortedPlayers[0][0], `won ${formatEventName(currentEvent)} ${formatShortScoreDescription(currentEvent.mode, sortedPlayers[0][1].score)}`, "player-won");
             }
             if (!playerByUid.has(currentUid)) {
@@ -5940,19 +5951,18 @@
                 updateCountdownInPanel();
                 return;
             }
-            let showingTournamentEndScreen = !!currentEvent.tournament && !upcomingEvent.tournament && !normalTransitionPanelEndTime;
-            let sortedRoomLeaderboard = [...roomLeaderboardDataByPlayer].sort((a, b) => compareArrays(b[1], a[1]));
+            forTournamentEndScreen ||= !!currentEvent.tournament && !upcomingEvent.tournament && !normalTransitionPanelEndTime;
             let panel = document.querySelector("#between-events-panel");
             panel.classList.remove("showing-tournament-start");
-            panel.classList.toggle("showing-won-title", !isInPrivateRoom && (!currentEvent.tournament || showingTournamentEndScreen));
-            panel.classList.toggle("showing-room-leaderboard", isInPrivateRoom || (!!currentEvent.tournament && currentEvent.tournamentEventIndex !== EVENT_MODES.length - 1) || showingTournamentEndScreen);
-            panel.querySelector("#between-events-panel-title").textContent = (showingTournamentEndScreen ? sortedRoomLeaderboard[0][0] : sortedPlayers[0][0]) + " won!";
-            panel.querySelector("#between-events-panel-description").textContent = showingTournamentEndScreen ? formatEventName({ ...currentEvent, mode: "welcome", opener: "" }) : formatEventName(currentEvent);
+            panel.classList.toggle("showing-won-title", !isInPrivateRoom && (!currentEvent.tournament || forTournamentEndScreen));
+            panel.classList.toggle("showing-room-leaderboard", isInPrivateRoom || (!!currentEvent.tournament && currentEvent.tournamentEventIndex !== EVENT_MODES.length - 1) || forTournamentEndScreen);
+            panel.querySelector("#between-events-panel-title").textContent = (forTournamentEndScreen ? sortedRoomLeaderboard[0][0] : sortedPlayers[0][0]) + " won!";
+            panel.querySelector("#between-events-panel-description").textContent = forTournamentEndScreen ? formatEventName({ ...currentEvent, mode: "welcome", opener: "" }) : formatEventName(currentEvent);
             panel.querySelector("#between-events-panel-non-won-title").textContent = formatEventName(currentEvent) + " Results";
             let anyHardMode = false;
             for (let i = 0; i < 3; ++i) {
                 let { empty, smallerText, displayName, scoreText, scoreText2, record, hardMode } = (() => {
-                    if (showingTournamentEndScreen) {
+                    if (forTournamentEndScreen) {
                         if (roomLeaderboardDataByPlayer.size <= i) {
                             return { empty: true };
                         }
@@ -6010,7 +6020,7 @@
                             break;
                         }
                         case "golf": {
-                            let s = decomposeScore("golf", score);
+                            let s = decomposeScore("golf", o.score);
                             scoreText = `${s.guesses} guesses`;
                             scoreText2 = `${s.solved}/${s.played} solved`;
                             let tied = (j) => {
@@ -6082,7 +6092,7 @@
             panel.querySelector("#final-leaderboard-hard-mode-description").style.display = anyHardMode ? "" : "none";
             let { placeHTML, xp, solved } = computePlaceAndDelta(sortedPlayers, playerJustEntered);
             if (isInPrivateRoom || currentEvent.tournament) {
-                document.querySelector("#room-leaderboard-title").innerHTML = showingTournamentEndScreen
+                document.querySelector("#room-leaderboard-title").innerHTML = forTournamentEndScreen
                     ? `
                         Tournament <span class="material-symbols-outlined" style="font-size: 18px; transform: translateY(3px)">trophy</span> Standings
                     `
@@ -6094,10 +6104,10 @@
                         ([p, s], i) => `
                             <div class="leaderboard-item" id="room-leaderboard-item-${playerIds.get(p)}">
                                 <div style="width: 136px" title="${p}">
-                                    ${showingTournamentEndScreen && i >= 0 && i < 3 ? `<div class="final-leaderboard-top-item rank-${i + 1}"></div>` : ""}
+                                    ${forTournamentEndScreen && i >= 0 && i < 3 ? `<div class="final-leaderboard-top-item rank-${i + 1}"></div>` : ""}
                                     <b class="no-wrap">${p}</b>
                                 </div>
-                                <div class="room-leaderboard-score-column" style="width: 64px">${s[ROOM_SCORE_KEY.points]}${!showingTournamentEndScreen && s[ROOM_SCORE_KEY.challengePoints] ? ` <span style="font-size: 11px">(+${s[ROOM_SCORE_KEY.challengePoints]})</span>` : ""}</div>
+                                <div class="room-leaderboard-score-column" style="width: 64px">${s[ROOM_SCORE_KEY.points]}${!forTournamentEndScreen && s[ROOM_SCORE_KEY.challengePoints] ? ` <span style="font-size: 11px">(+${s[ROOM_SCORE_KEY.challengePoints]})</span>` : ""}</div>
                                 <div style="width: 50px"></div>
                                 <div style="width: 74px">${formatTime(-s[ROOM_SCORE_KEY.negTotalTime] * 1000, true)}</div>
                             </div>
@@ -6124,12 +6134,12 @@
             xpEl.style.display = playerJustEntered || isInPrivateRoom || (isLastTournamentEvent && sortedPlayers.length === 1) ? "none" : "";
             panel.querySelector("#next-event-countdown span").textContent = upcomingEvent.tournamentEventIndex === EVENT_MODES.length - 1 ? "Final challenge" : "Next up";
             let nextEventInfoEl = panel.querySelector("#next-event-info");
-            nextEventInfoEl.querySelector("span").textContent = (currentEvent.tournament && !upcomingEvent.tournament && !showingTournamentEndScreen) || (!currentEvent.tournament && upcomingEvent.tournament) ? "trophy" : eventIcon(upcomingEvent);
-            nextEventInfoEl.querySelector("b").textContent = currentEvent.tournament && !upcomingEvent.tournament && !showingTournamentEndScreen ? "Tournament Results" : formatEventName(!currentEvent.tournament && upcomingEvent.tournament ? { ...upcomingEvent, mode: "welcome", opener: "" } : upcomingEvent);
+            nextEventInfoEl.querySelector("span").textContent = (currentEvent.tournament && !upcomingEvent.tournament && !forTournamentEndScreen) || (!currentEvent.tournament && upcomingEvent.tournament) ? "trophy" : eventIcon(upcomingEvent);
+            nextEventInfoEl.querySelector("b").textContent = currentEvent.tournament && !upcomingEvent.tournament && !forTournamentEndScreen ? "Tournament Results" : formatEventName(!currentEvent.tournament && upcomingEvent.tournament ? { ...upcomingEvent, mode: "welcome", opener: "" } : upcomingEvent);
             showOrHidePanel("between-events-panel");
             updateCountdownInPanel();
             let playConfetti = (() => {
-                if (showingTournamentEndScreen) {
+                if (forTournamentEndScreen) {
                     let i = sortedRoomLeaderboard.findIndex(([p]) => p === currentPlayer);
                     return i === 0 || (i > 0 && i < Math.min(3, sortedRoomLeaderboard.length - 1));
                 }
@@ -6227,6 +6237,14 @@
         let nextEventCountdownValueEl = panel.querySelector("#next-event-countdown").querySelector("b");
         let nextDuelCountdownEl = panel.querySelector("#next-duel-countdown");
         let updateCountdownInPanel = () => {
+            if (Date.now() >= normalTransitionPanelEndTime) {
+                setTimeout(() => {
+                    if (Date.now() >= normalTransitionPanelEndTime) {
+                        normalTransitionPanelEndTime = undefined;
+                        showEventTransitionPanel({ forTournamentEndScreen: !upcomingEvent.tournament });
+                    }
+                }, 0);
+            }
             if (document.querySelector("#start-panel").style.display !== "none" && !isInPrivateRoom && !document.body.classList.contains("tournament-themed") && nextTournament) {
                 let t = Math.max(nextTournament.time - Date.now() + 999, 0);
                 let d = Math.floor(t / 86400000);
@@ -6240,12 +6258,6 @@
                 return;
             }
             let formatUpcomingStartTime = () => {
-                if (Date.now() >= normalTransitionPanelEndTime) {
-                    setTimeout(() => {
-                        normalTransitionPanelEndTime = undefined;
-                        showEventTransitionPanel();
-                    }, 0);
-                }
                 let s = Math.max(Math.ceil((normalTransitionPanelEndTime ? normalTransitionPanelEndTime - Date.now() : (currentEvent.mode === "welcome" || upcomingEvent.tournament) && !upcomingEventStartTime ? (upcomingEvent.tournament ? NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + Math.max(currentEvent.tournament - Date.now(), 0) : POST_WELCOME_DELAY) : upcomingEventStartTime - Date.now()) / 1000), 0);
                 if (s >= 60) {
                     return `${Math.floor(s / 60)}:${`${s % 60}`.padStart(2, "0")}`;
