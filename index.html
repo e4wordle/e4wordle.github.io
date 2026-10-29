@@ -2808,7 +2808,12 @@
         let bannerInnerRightTextEl = bannerEl.querySelector("#banner-inner-right-text");
         let bannerRightIconEl = bannerEl.querySelector("#banner-right-icon");
         let bannerRightTextEl = bannerEl.querySelector("#banner-right-text");
-        let updateBanner = () => {
+        let updateBanner = (options = {}) => {
+            options = {
+                forEventStart: false,
+                ...options,
+            };
+            let { forEventStart } = options;
             if (!playerByUid.has(currentUid)) {
                 return;
             }
@@ -2825,7 +2830,7 @@
             bannerLeftInnerTextEl.innerHTML = currentPlayerWaitingForOthers && leftIcon ? "Wait for other players" : isCurrentPlayersTurn === false && !postGame ? `•&ensp;Wait for&nbsp;<b>${currentPartner || BOT_NAME}</b>` : "";
             let rightText =
                 mode === "golf"
-                    ? isBoardAnimating()
+                    ? !forEventStart && isBoardAnimating()
                         ? bannerRightTextEl.innerHTML
                         : -currentScore[SCORE_KEY.golf.negGuesses]
                     : currentEventEnded
@@ -4248,7 +4253,7 @@
         const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            return Date.now() - 31000; //+ 25 * 3600000 + 5000;
+            return Date.now() - 38000; //+ 25 * 3600000 + 5000;
             return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 11, 57, 0).getTime();
         })();
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
@@ -5037,7 +5042,7 @@
                         eventId,
                     });
                 }
-                updateBanner();
+                updateBanner({ forEventStart: true });
             });
             room.on("event-start-ack", ({ uid, eventId }) => {
                 if (ignoredUids.has(uid)) {
