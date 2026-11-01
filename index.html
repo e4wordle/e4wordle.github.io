@@ -1821,26 +1821,16 @@
     import TARGETS from "./targets.json" with { type: "json" };
 
     (async () => {
-        const APP_VERSION = 4;
+        const APP_VERSION = 6;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
-        {
-            let url = new URL(location.href);
-            url.searchParams.set("probe", Math.random());
-            let latestScript = await (await fetch(url)).text();
-            let latestVersion = +latestScript.split("const APP_VERSION = ")[1].split(";")[0];
-            if (APP_VERSION !== latestVersion) {
-                location.reload();
-                return;
-            }
-        }
 
         let log = (...args) => {
             let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
             let replacer = (k, v) => (v instanceof Set || v instanceof Map ? [...v] : v);
-            console.assert(0, "#=#", time, site, "\n", JSON.stringify(args, replacer));
+            console.assert(0, time, site, "\n", JSON.stringify(args, replacer));
         };
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.min(Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1), 36);
@@ -2380,10 +2370,10 @@
             if (numGames() > 18 || event.mode === "welcome") {
                 return 1e18;
             }
+            if (isDev && numGames() === 1) {
+                return 15000;
+            }
             if (event.tournament) {
-                if (isDev && numGames() === 1) {
-                    return 15000;
-                }
                 switch (event.mode) {
                     case "circuit": {
                         return 30000 + !!event.opener * 15000;
@@ -2424,13 +2414,7 @@
         };
         let currentPlayerDone = false;
         let currentPlayerWaitingForOthers = false;
-        let _currentEventSuggestedEnded = false;
-        Object.defineProperty(window, "currentEventSuggestedEnded", {
-            get: () => _currentEventSuggestedEnded,
-            set: (x) => {
-                _currentEventSuggestedEnded = x;
-            },
-        });
+        let currentEventSuggestedEnded = false;
         let currentEventEnded = false;
         let upcomingEventSuggestedStarted = false;
         let currentPartner; // For Duo or Arena
@@ -2452,55 +2436,59 @@
         let gameParams = () => ({
             guessLimit: 6,
             fastAnimation: FAST_ANIMATION_MODES.includes(currentEvent?.mode),
-            hardMode: !!currentEvent?.opener,
         });
+        let isEventOnHardMode = (event) => !!event.opener && ["arena", "sprint"].includes(event.mode);
         let getShortScoreForGlobalLeaderboard = (mode, score) => {
             let s = decomposeScore(mode, score);
-            switch (mode) {
-                case "factory":
-                case "duo": {
-                    return {
-                        score: [-Math.floor(s.time / 1000)],
-                        solved: s.solved,
-                        failed: s.solved < numGames(),
-                        playtime: Math.round(s.time / 1000),
-                    };
+            let ans = (() => {
+                switch (mode) {
+                    case "factory":
+                    case "duo": {
+                        return {
+                            score: [-Math.floor(s.time / 1000)],
+                            solved: s.solved,
+                            failed: s.solved < numGames(),
+                            playtime: Math.floor(s.time / 1000),
+                        };
+                    }
+                    case "arena": {
+                        return {
+                            score: [s.points, s.playedOnHardMode],
+                            solved: s.solved,
+                            failed: false,
+                            playtime: Math.floor(s.totalTime / 1000),
+                        };
+                    }
+                    case "circuit": {
+                        return {
+                            score: [s.points, s.playedOnHardMode],
+                            solved: s.solved,
+                            failed: s.solved < numGames(),
+                            playtime: Math.floor(s.totalTime / 1000),
+                        };
+                    }
+                    case "sprint": {
+                        return {
+                            score: [-Math.floor(s.time / 1000), s.playedOnHardMode],
+                            solved: s.solved,
+                            failed: s.solved < numGames(),
+                            playtime: Math.floor(s.time / 1000),
+                        };
+                    }
+                    case "golf": {
+                        return {
+                            score: [-s.guesses, s.playedOnHardMode],
+                            solved: s.solved,
+                            failed: s.solved < numGames(),
+                            playtime: Math.floor(s.time / 1000),
+                        };
+                    }
                 }
-                case "arena": {
-                    return {
-                        score: [s.points, s.playedOnHardMode],
-                        solved: s.solved,
-                        failed: false,
-                        playtime: Math.round(s.totalTime / 1000),
-                    };
-                }
-                case "circuit": {
-                    return {
-                        score: [s.points, s.playedOnHardMode],
-                        solved: s.solved,
-                        failed: s.solved < numGames(),
-                        playtime: Math.round(s.totalTime / 1000),
-                    };
-                }
-                case "sprint": {
-                    return {
-                        score: [-Math.floor(s.time / 1000), s.playedOnHardMode],
-                        solved: s.solved,
-                        failed: s.solved < numGames(),
-                        playtime: Math.round(s.time / 1000),
-                    };
-                }
-                case "golf": {
-                    return {
-                        score: [-s.guesses, s.playedOnHardMode],
-                        solved: s.solved,
-                        failed: s.solved < numGames(),
-                        playtime: Math.round(s.time / 1000),
-                    };
-                }
-            }
-            console.assert(false, mode, score, s);
-            return score;
+                console.assert(false, mode, score, s);
+                return score;
+            })();
+            ans.playtime = Math.min(ans.playtime, 900); // In case the player disconnected and reconnected
+            return ans;
         };
         let formatShortScoreDescription = (mode, score) => {
             switch (mode) {
@@ -2887,7 +2875,8 @@
                 if (currentEventSuggestedEnded) {
                     return;
                 }
-                suggestToEndEvent();
+                let immediatelyStartUpcomingEvent = Date.now() >= currentEventEndTime + 25000; // This can happen due to the single player reconnecting, and starting immediately prevents them from having to stare at the end screen
+                suggestToEndEvent(immediatelyStartUpcomingEvent);
                 progressBar.style.width = "0";
                 updateBanner();
                 return;
@@ -3106,7 +3095,7 @@
             let message = {
                 type: "score",
                 eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
-                score: structuredClone(currentScore),
+                score: structuredClone(currentScore), //#=#
                 scoreText: formatScore(currentEvent.mode, currentScore),
                 verdict,
                 numGuesses: currentBoardState.length,
@@ -3155,11 +3144,16 @@
                 currentPlayerStartTime = Date.now();
             }
             if (key === ENTER_KEY) {
+                if (waitingForRoomReconnection) {
+                    // room._closeHandler turns out to be not so reliable: connection may be lost before that's called and this flag is set, and a guess might still go through (and worse, might solve the Wordle). I guess that's just an edge case we have to live with for now
+                    showAlert("Reconnecting...");
+                    return;
+                }
                 if (currentBoardState.length === gameParams().guessLimit || (currentBoardState.length && currentBoardState.at(-1)[1] === "GGGGG")) {
                     return;
                 }
                 let hardModeErrorHTML;
-                if (currentGuess.length !== 5 || !allowedGuesses.has(currentGuess) || ((hardModeErrorHTML = checkHardMode(currentGuess)) && (settings.alwaysHardMode || gameParams().hardMode))) {
+                if (currentGuess.length !== 5 || !allowedGuesses.has(currentGuess) || ((hardModeErrorHTML = checkHardMode(currentGuess)) && (settings.alwaysHardMode || isEventOnHardMode(currentEvent)))) {
                     let guessEl = document.querySelector(`#guess-${currentBoardState.length}`);
                     guessEl.classList.remove("shaking");
                     void guessEl.offsetWidth;
@@ -3519,7 +3513,7 @@
             if (chatMessages.length >= 24) {
                 chatMessages.shift();
             }
-            document.querySelector("#chat-message-container").innerHTML += specialEvent ? `<div class="chat-message ${specialEvent}${specialEvent ? "-message" : ""}"><span class="material-symbols-outlined" style="font-size: 14px; transform: translateY(2px)">${{ "player-join": "arrow_forward", "player-leave": "arrow_back", "player-won": "star_shine" }[specialEvent]}</span> <b>${player}</b> ${{ "player-join": "joined", "player-leave": "left", "player-won": "" }[specialEvent]}${text}</div>` : `<div class="chat-message"><b>${player}</b>&nbsp;&nbsp;${text}</div>`;
+            document.querySelector("#chat-message-container").innerHTML += specialEvent ? `<div class="chat-message ${specialEvent}${specialEvent ? "-message" : ""}"><span class="material-symbols-outlined" style="font-size: 14px; transform: translateY(2px)">${{ "player-join": "arrow_forward", "player-leave": "arrow_back", "player-won": "star_shine" }[specialEvent]}</span> <b>${player}</b> ${text ? text : { "player-join": "joined", "player-leave": "left", "player-won": "" }[specialEvent]}</div>` : `<div class="chat-message"><b>${player}</b>&nbsp;&nbsp;${text}</div>`;
             requestAnimationFrame(() => {
                 let section = document.querySelector("#chat-section");
                 section.scrollTo(0, section.scrollHeight);
@@ -3609,7 +3603,7 @@
             playerIds.set(player, playerId);
             playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
             if (notify) {
-                addChatMessage(player, "", "player-join");
+                addChatMessage(player, notify ? notify : "", "player-join");
             }
             let miniLeaderboard = document.querySelector("#mini-leaderboard");
             let leaderBoardItem = miniLeaderboard.appendChild(document.createElement("div"));
@@ -3690,6 +3684,12 @@
         });
         document.querySelector("#help-ok-button").addEventListener("click", toggleHelp);
         document.querySelector("#full-screen-button").addEventListener("click", () => {
+            if (isDev) {
+                // As a way to test reconnection. FIXME: Remove this
+                lobby?.close();
+                room?.close();
+                return;
+            }
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
             } else {
@@ -3746,8 +3746,9 @@
                 if (opener === "NONE") {
                     opener = "";
                 } else if (!allowedGuesses.has(opener)) {
+                    const MORE_OPENERS = true;
                     let i = !!currentEvent + !!upcomingEvent;
-                    let newUseOpener = opener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && rand() < (i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
+                    let newUseOpener = opener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && rand() < (MORE_OPENERS ? 1 / 2 : i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
                     opener = newUseOpener ? TARGETS[Math.floor(rand() * TARGETS.length)] : "";
                 }
                 return opener;
@@ -3774,6 +3775,13 @@
             }
             return eventName;
         };
+        let formatEventNameWithHardModeHTML = (event) => {
+            let ans = formatEventName(event);
+            if (isEventOnHardMode(event)) {
+                ans += '<span class="material-symbols-outlined" style="font-size: 0.75em; transform: translate(0.0625em, -0.333em); margin-inline-end: 2px">asterisk</span>';
+            }
+            return ans;
+        };
         let eventIcon = (e) => {
             if (e.mode === "welcome" && e.tournament) {
                 return "trophy";
@@ -3791,8 +3799,7 @@
         const BOT_NAME = "Rattington";
         let showEventInfo = () => {
             let event = (currentEvent?.mode && !(currentEvent?.mode === "welcome" && !currentEvent.tournament) ? currentEvent : upcomingEvent) || { id: -1, mode: "welcome" };
-            let eventName = formatEventName(event);
-            document.querySelector("#event-name").textContent = eventName;
+            document.querySelector("#event-name").innerHTML = formatEventNameWithHardModeHTML(event);
             document.querySelector("#event-description").innerHTML =
                 {
                     factory: "Guess and pass the Wordle around!",
@@ -3804,6 +3811,7 @@
                 }[event.mode] || "";
             document.querySelector("#event-info").querySelector("span").textContent = eventIcon(event);
 
+            let eventName = formatEventName(event);
             let helpContentsEl = document.querySelector("#help-contents");
             helpContentsEl.innerHTML = "";
             let tournamentEventDescription = event.tournament
@@ -3811,19 +3819,26 @@
                     <p>(Weekly tournament challenge ${event.tournamentEventIndex + 1} of ${EVENT_MODES.length})</p>
                 `
                 : "";
-            let hardModeDescription = event.opener
-                ? `
+            let openerAndHandModeDescription = "";
+            if (event.opener) {
+                openerAndHandModeDescription += `
                     <h4>Opener</h4>
-                    <p>"${event.opener}" is the chosen first guess for every Wordle. Players must play on <em>Hard Mode</em>: ${settings.accessibleColors ? "blue and red" : "yellow and green"} letters must be reused in subsequent guesses, where ${settings.accessibleColors ? "red" : "green"} letters must remain in their revealed positions.</p>
-                `
-                : "";
+                    <p>"${event.opener}" is the chosen first guess for every Wordle.</p>
+                `;
+            }
+            if (isEventOnHardMode(event)) {
+                openerAndHandModeDescription += `
+                    <h4><em>Hard Mode</em> (<span class="material-symbols-outlined" style="font-size: 12px">asterisk</span>)</h4>
+                    <p>All ${settings.accessibleColors ? "blue and red" : "yellow and green"} letters must be reused in subsequent guesses. ${settings.accessibleColors ? "Red" : "Green"} letters must also remain in their revealed positions.</p>
+                `;
+            }
             switch (event.mode) {
                 case "factory": {
                     helpContentsEl.innerHTML = `
                         <h2>${eventName} Challenge</h2>
                         ${tournamentEventDescription}
                         <p>Make a guess, then pass the Wordle to another player. First to solve 9 Wordles wins!</p>
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Time Limit</h4>
                         ${event.tournament ? `The challenge ends when all but one player have solved 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.` : `The challenge ends when all but one player have solved 9 Wordles, or ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players have solved 9 Wordles.`}
                         <h4>Mechanics</h4>
@@ -3838,7 +3853,7 @@
                         ${tournamentEventDescription}
                         <p>Solve 9 Wordles with a random partner. First team to do so wins!</p>
                         ${playerByUid.has(currentUid) ? `<p>You are paired with <b>${currentPartner || `<em>${BOT_NAME}</em></b>, an adventurous Wordle bot${event.tournament ? "" : ", while waiting for a human partner"}<b>`}</b>.</p>` : ""}
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Time Limit</h4>
                         ${event.tournament ? `${duoGuessTimeLimit(!!event.tournament) / 1000} seconds per guess. The challenge ends after ${initialEventTimeLimit(event) / 60000} minutes total.` : `${duoGuessTimeLimit(!!event.tournament) / 1000} seconds per guess. The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles.`}
                     `;
@@ -3854,7 +3869,7 @@
                         <h2>${eventName} Challenge</h2>
                         ${tournamentEventDescription}
                         <p>Compete in this timed competition of Wordle duels. Build win streaks for bonus points. Solve quickly to play more duels and have more opportunities to score points!</p>
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Scoring</h4>
                         The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
                         <h4>Time Limit</h4>
@@ -3870,7 +3885,7 @@
                         <h2>${eventName} Challenge</h2>
                         ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Showcase both your speed and accuracy for bonus points!</p>
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Scoring</h4>
                         Each Wordle scores 10 points + bonuses:
                         <ul class="gapped">
@@ -3888,7 +3903,7 @@
                         <h2>${eventName} Challenge</h2>
                         ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Fastest time wins!</p>
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Time Limit</h4>
                         ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.`}
                     `;
@@ -3899,7 +3914,7 @@
                         <h2>${eventName} Challenge</h2>
                         ${tournamentEventDescription}
                         <p>All players solve the same set of 9 Wordles. Fewest guesses wins!</p>
-                        ${hardModeDescription}
+                        ${openerAndHandModeDescription}
                         <h4>Time Limit</h4>
                         ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${acceleratedTimeLimit(event.mode) / 60000} minutes after half of the players finish the 9 Wordles, or after ${initialEventTimeLimit(event) / 60000} minutes total.`}
                     `;
@@ -3954,7 +3969,7 @@
             event ||= currentEvent;
             rand ||= Math.random;
             targets ||= allowedTargets;
-            let i = indexByTarget.get(event.opener) || NaN;
+            let i = indexByTarget.get(event?.opener) || NaN;
             let j = Math.floor(rand() * (targets.length - !isNaN(i)));
             j += j >= i;
             return targets[j];
@@ -3990,16 +4005,26 @@
             }
             return false;
         };
-        let handlePlayButtonClick = () => {
+        let playGame = (wasForAutoEnter = false) => {
             if (validateNickname()) {
                 return;
             }
-            if (playerByUid.size) {
+            if (playerByUid.size || wasForAutoEnter) {
                 room.send({
                     type: "enter",
                     player: currentPlayer,
                     withdraw: settings.withdrawFromGlobalLeaderboard,
                     eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
+                    leaderboard: playerLeaderboardData.has(currentPlayer)
+                        ? {
+                              // For a reconnect
+                              score: structuredClone(currentScore),
+                              scoreText: formatScore(currentEvent.mode, currentScore),
+                              verdict: currentBoardState.at(-1)?.at(1) || "",
+                              numGuesses: currentBoardState.length,
+                              done: currentPlayerDone,
+                          }
+                        : undefined,
                 });
             } else {
                 let m = {
@@ -4028,7 +4053,9 @@
             }
             playButton.disabled = true;
         };
-        playButton.addEventListener("click", handlePlayButtonClick);
+        playButton.addEventListener("click", () => {
+            playGame();
+        });
         nicknameInput.addEventListener("keydown", (e) => {
             if (e.code === "Enter") {
                 playButton.click();
@@ -4131,9 +4158,19 @@
                     createAndJoinRoom();
                 }, MESSAGE_PENDING_TIME_LIMIT);
             });
+            lobby._closeHandler = () => {
+                lobby = undefined;
+                requestAnimationFrame(() => {
+                    searchAndJoinRoom(autoEnter);
+                });
+            };
+            lobby.on("close", lobby._closeHandler);
         };
         let closeLobbyConnection = () => {
-            lobby?.close();
+            if (lobby) {
+                lobby.remove("close", lobby._closeHandler);
+                lobby.close();
+            }
             lobby = undefined;
         };
         let reps;
@@ -4247,13 +4284,17 @@
             lobby.on("leave", ({ uid }) => {
                 reps = reps.filter((r) => r !== uid);
             });
+            lobby.on("close", () => {
+                lobby = undefined;
+                // If a representing lobby connection closes unexpectedly, let the room connection's close handler and the room-reconnection logic handle whether to re-establish the rep lobby connection
+            });
         };
 
         // A tournament can only be started if the current time is inside a "tournament window", which is a tournament's set start time (what the countdown shows) plus a few minutes in case the first player arrives late. Each event mode also gets its own start-able window, to help prevent a single player's reload of the page always restarting the tournament from the first event over again
         const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            return Date.now() - 38000; //+ 25 * 3600000 + 5000;
+            // return Date.now() - 0; //+ 25 * 3600000 + 5000;
             return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 11, 57, 0).getTime();
         })();
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
@@ -4265,7 +4306,7 @@
             let isLosAngelesInDST = (t) => Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).format(t).endsWith("PDT");
             let nextTournamentWindowStartTime = (t) => {
                 if (isDev) {
-                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 90000;
+                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 86400000;
                 }
                 let period = 7 * 86400000 * INITIAL_WEEKLY_TOURNAMENT_START_TIMES.length;
                 t += isLosAngelesInDST(t) * 3600000;
@@ -4309,7 +4350,8 @@
                     return "";
                 })();
                 let modes = shuffled(EVENT_MODES, rand);
-                let openers = EVENT_MODES.map((_, i) => tournamentOpener || (i < 2 ? generateTarget({}, rand, TARGETS) : ""));
+                const NUM_TOURNAMENT_EVENTS_WITH_OPENERS = 3;
+                let openers = EVENT_MODES.map((_, i) => tournamentOpener || (i < NUM_TOURNAMENT_EVENTS_WITH_OPENERS ? generateTarget({}, rand, TARGETS) : ""));
                 openers = shuffled(openers, rand);
                 if (isDev) {
                     let urlMode = urlParams.get("mode");
@@ -4394,6 +4436,7 @@
             updateStartPanel();
         };
         let roomIdWithInvalidJoinResponse;
+        let waitingForRoomReconnection = false;
         let joinRoom = (roomId, autoEnter = false) => {
             currentRoomId = roomId;
             if (room) {
@@ -4403,10 +4446,14 @@
             }
             room = createConnection(roomId);
             room.on("error", (data) => {
-                console.error("CONN ERROR (ROOM)", data);
+                console.error("ROOM CONNECTION ERROR", data);
             });
             let handleRoomFull = (autoEnter) => {
                 console.error("ROOM FULL", roomId, autoEnter);
+                if (waitingForRoomReconnection) {
+                    location.reload();
+                    return;
+                }
                 if (preferredRoomIdFromURLParam && roomId === preferredRoomIdFromURLParam) {
                     if (isInPrivateRoom) {
                         showAlert("This private room is full.");
@@ -4426,103 +4473,115 @@
                     representRoom();
                 }
             };
+            let initializeRoom = (serverNow) => {
+                usersOrderedByJoinTime = [currentUid];
+                joinedRoom = true;
+                if (autoEnter) {
+                    requestAnimationFrame(() => {
+                        playGame(true);
+                    });
+                }
+                currentEventSuggestedEnded = false;
+                upcomingEventSuggestedStarted = false;
+                suggestedToKickTeammate = false;
+                suggestedArenaPairing = false;
+                playerIds = new Map();
+                playerByUid = new Map();
+                representRoom();
+                if (waitingForRoomReconnection) {
+                    waitingForRoomReconnection = false;
+                    if (currentPlayer) {
+                        addChatMessage(currentPlayer, "", "player-leave");
+                    }
+                    document.querySelector("#mini-leaderboard").innerHTML = "";
+                    return;
+                }
+                playersOrderedByEntrance = [];
+                waitingForJoinResponse = false;
+                waitingForEnterResponse = false;
+                ignoredUids = new Set();
+                uidByPlayer = new Map();
+                playersAcknowledgedEventStart = new Map();
+                playersGuessedInCurrentEvent = new Set();
+                playersWithdrawnFromGlobalLeaderboard = new Set();
+                chatMessages = [];
+                playerLeaderboardData = new Map();
+                if (isInPrivateRoom) {
+                    upcomingEvent = { id: -1, mode: "welcome" };
+                } else {
+                    upcomingEvent = (() => {
+                        let t = currentTournamentWindowStartTime(serverNow);
+                        if (t) {
+                            currentTournament = generateTournament(t);
+                            let tournamentEventIndex = Math.floor((serverNow - t) / TOURNAMENT_EVENT_WINDOW);
+                            if (tournamentEventIndex === 0) {
+                                return { id: -1, mode: "welcome", tournament: t };
+                            }
+                            let e = {
+                                ...createEvent({
+                                    ...currentTournament.events[tournamentEventIndex],
+                                    rand: randForTournamentEvent(t, tournamentEventIndex),
+                                }),
+                                tournament: t,
+                                tournamentEventIndex,
+                            };
+                            if (currentTournament.tournamentOpener) {
+                                e.opener = currentTournament.tournamentOpener;
+                            }
+                            return e;
+                        }
+                        t = nextTournamentWindowStartTime(serverNow);
+                        nextTournament = generateTournament(t);
+                        if (t - serverNow <= MAX_TOURNAMENT_START_PADDING) {
+                            currentTournament = nextTournament;
+                            nextTournament = undefined;
+                            return { id: -1, mode: "welcome", tournament: t };
+                        }
+                        checkAutoReloadForTournamentTimeout(serverNow);
+                        return createEvent();
+                    })();
+                    document.body.classList.toggle("tournament-themed", !!upcomingEvent.tournament);
+                }
+                showEventInfo();
+                updateStartPanel();
+            };
             // "Join" here means becoming online, where the "user" and their client appear in the itty-sockets channel. When a user clicks the play button, they "enter" and becomes a "player".
             room.on("join", ({ date, uid, alias, total: newTotalUids, self, users: onlineUids }) => {
                 totalUsers = newTotalUids - ignoredUids.size;
                 updateStartPanelUserCountLabel();
-                usersOrderedByJoinTime.push(uid);
                 currentRoomId = roomId;
                 if (self) {
                     currentUid = uid;
-                    if (isDev) {
-                        nicknameInput.value = "Player " + uid;
+                    if (isDev && !nicknameInput.value) {
+                        nicknameInput.value = "Player " + generateTarget(undefined, undefined, TARGETS);
                     }
                     if (totalUsers === 1) {
-                        playerByUid = new Map();
-                        playersOrderedByEntrance = [];
-                        waitingForJoinResponse = false;
-                        waitingForEnterResponse = false;
-                        ignoredUids = new Set();
-                        uidByPlayer = new Map();
-                        playersAcknowledgedEventStart = new Map();
-                        playersGuessedInCurrentEvent = new Set();
-                        playersWithdrawnFromGlobalLeaderboard = new Set();
-                        document.querySelector("#chat-message-container").innerHTML = "";
-                        chatMessages = [];
-                        playerIds = new Map();
-                        playerLeaderboardData = new Map();
-                        document.querySelector("#mini-leaderboard").innerHTML = "";
-                        representRoom();
-                        if (isInPrivateRoom) {
-                            upcomingEvent = { id: -1, mode: "welcome" };
-                        } else {
-                            upcomingEvent = (() => {
-                                let t = currentTournamentWindowStartTime(date);
-                                if (t) {
-                                    currentTournament = generateTournament(t);
-                                    let tournamentEventIndex = Math.floor((date - t) / TOURNAMENT_EVENT_WINDOW);
-                                    if (tournamentEventIndex === 0) {
-                                        return { id: -1, mode: "welcome", tournament: t };
-                                    }
-                                    let e = {
-                                        ...createEvent({
-                                            ...currentTournament.events[tournamentEventIndex],
-                                            rand: randForTournamentEvent(t, tournamentEventIndex),
-                                        }),
-                                        tournament: t,
-                                        tournamentEventIndex,
-                                    };
-                                    if (currentTournament.tournamentOpener) {
-                                        e.opener = currentTournament.tournamentOpener;
-                                    }
-                                    return e;
-                                }
-                                t = nextTournamentWindowStartTime(date);
-                                nextTournament = generateTournament(t);
-                                if (t - date <= MAX_TOURNAMENT_START_PADDING) {
-                                    currentTournament = nextTournament;
-                                    nextTournament = undefined;
-                                    return { id: -1, mode: "welcome", tournament: t };
-                                }
-                                checkAutoReloadForTournamentTimeout(date);
-                                return createEvent();
-                            })();
-                            document.body.classList.toggle("tournament-themed", !!upcomingEvent.tournament);
-                        }
-                        showEventInfo();
-                        joinedRoom = true;
-                        updateStartPanel();
-                        if (autoEnter) {
-                            handlePlayButtonClick();
-                        }
-                    } else {
-                        waitingForJoinResponse = true;
-                        uidsWaitingForJoinResponse.add(uid);
-                        responseTimeoutHandle = setTimeout(() => {
-                            responseTimeoutHandle = undefined;
-                            if (!waitingForJoinResponse) {
-                                return;
-                            }
-                            waitingForJoinResponse = false;
-                            if (isInPrivateRoom) {
-                                // Treat existing users as zombies and take over the room
-                                for (let { uid: u } of onlineUids) {
-                                    if (u !== currentUid) {
-                                        ignoredUids.add(u);
-                                    }
-                                }
-                                totalUsers = newTotalUids - ignoredUids.size;
-                                upcomingEvent = { id: -1, mode: "welcome" };
-                                showEventInfo();
-                                joinedRoom = true;
-                                updateStartPanel();
-                            } else {
-                                handleRoomFull(autoEnter);
-                            }
-                        }, MESSAGE_PENDING_TIME_LIMIT);
+                        initializeRoom(date);
+                        return;
                     }
+                    waitingForJoinResponse = true;
+                    uidsWaitingForJoinResponse.add(uid);
+                    responseTimeoutHandle = setTimeout(() => {
+                        responseTimeoutHandle = undefined;
+                        if (!waitingForJoinResponse) {
+                            return;
+                        }
+                        waitingForJoinResponse = false;
+                        if (isInPrivateRoom || waitingForRoomReconnection) {
+                            // Treat existing non-responding users as zombies and take over the room
+                            for (let { uid: u } of onlineUids) {
+                                if (u !== currentUid) {
+                                    ignoredUids.add(u);
+                                }
+                            }
+                            initializeRoom(date + MESSAGE_PENDING_TIME_LIMIT);
+                        } else {
+                            handleRoomFull(autoEnter);
+                        }
+                    }, MESSAGE_PENDING_TIME_LIMIT);
                     return;
                 }
+                usersOrderedByJoinTime.push(uid);
                 uidsWaitingForJoinResponse.add(uid);
                 setTimeout(
                     () => {
@@ -4591,6 +4650,15 @@
                     representRoom();
                 }
                 ignoredUids = new Set(ignore);
+                let oldLeaderboardData = undefined;
+                if (waitingForRoomReconnection) {
+                    // A different game has started while disconnected
+                    if (!(newCurrentEvent.id === currentEvent?.id && game === currentGameIndex)) {
+                        location.reload();
+                        return;
+                    }
+                    oldLeaderboardData = [[currentPlayer, playerLeaderboardData.get(currentPlayer)]];
+                }
                 currentEvent = newCurrentEvent;
                 currentEventEndTime = Date.now() + parseFloat(end);
                 currentEventStartTime = Date.now() + parseFloat(start);
@@ -4612,13 +4680,19 @@
                     lastProgressBarUpdateTime = Date.now();
                 }
                 playerByUid = new Map(players);
+                uidByPlayer = new Map();
                 for (let [x, y] of playerByUid) {
                     uidByPlayer.set(y, x);
                 }
                 playersOrderedByEntrance = entrance;
+                playerIds = new Map();
+                document.querySelector("#mini-leaderboard").innerHTML = "";
+                playerLeaderboardData = new Map(oldLeaderboardData);
                 for (let [player, { score, scoreText, verdict, numGuesses, done }] of leaderboard) {
-                    addPlayer(player, false, score, scoreText, verdict, numGuesses);
+                    addPlayer(player, undefined, score, scoreText, verdict, numGuesses);
                 }
+                document.querySelector("#chat-message-container").innerHTML = "";
+                chatMessages = [];
                 for (let c of chat) {
                     addChatMessage(...c);
                 }
@@ -4633,8 +4707,9 @@
                 totalUsers = users.length;
                 updateStartPanel();
                 if (autoEnter) {
-                    handlePlayButtonClick();
+                    playGame();
                 }
+                waitingForRoomReconnection = false;
             });
             room.on("chat", ({ uid, data }) => {
                 if (ignoredUids.has(uid)) {
@@ -4681,7 +4756,7 @@
                 }
                 representIfOldest();
             });
-            room.on("enter", ({ uid, date, player, withdraw, eventId }) => {
+            room.on("enter", ({ uid, date, player, withdraw, eventId, leaderboard }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -4694,6 +4769,11 @@
                 if ((!isInPrivateRoom && !player) || playerIds.has(player)) {
                     if (uid === currentUid) {
                         if (player) {
+                            if (document.querySelector("#start-panel").style.display === "none") {
+                                // Reconnecting but another same-name player joined during that
+                                location.reload();
+                                return;
+                            }
                             showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
                         }
                         playButton.disabled = false;
@@ -4730,9 +4810,17 @@
                 if (withdraw) {
                     playersWithdrawnFromGlobalLeaderboard.add(player);
                 }
-                let score = initialScore(currentEvent.mode);
                 let isWaitingForPairing = currentEvent.mode === "arena";
-                addPlayer(player, true, score, formatScore(currentEvent.mode, score), "", 0, isWaitingForPairing);
+                let score;
+                if (leaderboard) {
+                    let { scoreText, verdict, numGuesses, done } = leaderboard;
+                    score = leaderboard.score;
+                    done ||= isWaitingForPairing;
+                    addPlayer(player, "reconnected", score, scoreText, verdict, numGuesses, done);
+                } else {
+                    score = initialScore(currentEvent.mode);
+                    addPlayer(player, "joined", score, formatScore(currentEvent.mode, score), "", 0, isWaitingForPairing);
+                }
                 if (["factory", "arena"].includes(currentEvent.mode)) {
                     // Potentially show/hide description for the bot (Factory), or current total score (Arena)
                     showEventInfo();
@@ -4820,16 +4908,19 @@
                     return;
                 }
                 document.querySelector("#chat-input").placeholder = "Please be nice in the chat!";
-                if (currentEvent.mode === "arena") {
-                    target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
-                } else if (["duo", "circuit", "sprint", "golf"].includes(currentEvent.mode)) {
-                    target = currentEvent.targets[currentGameIndex];
-                } else {
-                    target = generateTarget(currentEvent);
+                let reconnected = !!leaderboard;
+                if (!reconnected) {
+                    if (currentEvent.mode === "arena") {
+                        target = generateTarget(currentEvent, new Math.seedrandom(currentEvent.id));
+                    } else if (["duo", "circuit", "sprint", "golf"].includes(currentEvent.mode)) {
+                        target = currentEvent.targets[currentGameIndex];
+                    } else {
+                        target = generateTarget(currentEvent);
+                    }
+                    currentPlayerDone = isWaitingForPairing;
+                    currentPlayerWaitingForOthers = false;
+                    currentScore = score;
                 }
-                currentPlayerDone = isWaitingForPairing;
-                currentPlayerWaitingForOthers = false;
-                currentScore = score;
                 updateBanner();
                 if (currentEventEnded || currentEvent.mode === "welcome") {
                     showEventTransitionPanel({ playerJustEntered: true });
@@ -4841,22 +4932,27 @@
                     }
                     return;
                 }
-                playAudio("event-start");
                 showOrHidePanel(undefined);
-                currentBoardState = [];
-                loadBoardState(currentBoardState, { fastAnimation: true });
-                if (currentEvent.opener) {
-                    let v = judge(currentEvent.opener, target);
-                    currentBoardState = [[currentEvent.opener, v]];
-                    loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                    updateCurrentScore(v, true);
-                    requestAnimationFrame(() => {
-                        if (currentEvent.mode === "sprint") {
-                            currentPlayerStartTime = Date.now();
-                        }
-                    });
+                if (reconnected) {
+                    // The reconnected player might be done
+                    checkEventEndOrAcceleration();
+                } else {
+                    playAudio("event-start");
+                    currentBoardState = [];
+                    loadBoardState(currentBoardState, { fastAnimation: true });
+                    if (currentEvent.opener) {
+                        let v = judge(currentEvent.opener, target);
+                        currentBoardState = [[currentEvent.opener, v]];
+                        loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
+                        updateCurrentScore(v, true);
+                        requestAnimationFrame(() => {
+                            if (currentEvent.mode === "sprint") {
+                                currentPlayerStartTime = Date.now();
+                            }
+                        });
+                    }
+                    updateBanner();
                 }
-                updateBanner();
             });
             room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, due, teamStart }) => {
                 if (ignoredUids.has(uid)) {
@@ -5310,7 +5406,7 @@
                     }
                 }
             });
-            room.on("event-end", ({ date, uid, eventId }) => {
+            room.on("event-end", ({ date, uid, eventId, startUpcoming }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -5441,6 +5537,9 @@
                 currentEventEnded = true;
                 currentEventSuggestedEnded = false;
                 let upcomingDelay = (() => {
+                    if (startUpcoming) {
+                        return 0;
+                    }
                     if (upcomingEvent.tournament) {
                         if (currentEvent.tournament && currentEvent.mode !== "welcome") {
                             if (isUpcomingEventNewGameInCircuit) {
@@ -5500,8 +5599,17 @@
                 }
             });
             room._closeHandler = () => {
+                let shouldAutoEnter = playerByUid.has(currentUid);
+                console.error("ROOM DISCONNECTED", roomId, shouldAutoEnter);
+                waitingForRoomReconnection = true;
+                closeLobbyConnection();
+                let closeTime = Date.now();
                 requestAnimationFrame(() => {
-                    location.reload();
+                    if (Date.now() - closeTime >= 150000) {
+                        location.reload();
+                        return;
+                    }
+                    joinRoom(currentRoomId, shouldAutoEnter);
                 });
             };
             room.on("close", room._closeHandler);
@@ -5566,6 +5674,7 @@
             }
             autoReloadForTournamentTimeout = setTimeout(
                 () => {
+                    // FIXME: This should probably be a room message (announce the upcoming event now being a tournament) rather than everyone reloading at the same time
                     location.reload();
                 },
                 Math.min(Math.max(nextTournament.time - MAX_TOURNAMENT_START_PADDING - now, 0), 1 << 30),
@@ -5763,7 +5872,7 @@
             return [zombies, checkAgainIn];
         };
         let repeatedZombieCheckTimeoutHandle;
-        let suggestToEndEvent = () => {
+        let suggestToEndEvent = (immediatelyStartUpcomingEvent) => {
             if (currentEventSuggestedEnded || currentEventEnded) {
                 return;
             }
@@ -5771,7 +5880,11 @@
                 // We don't want somebody who's potentially a zombie, who might get kicked when the event ends, to be in charge of updating the global leaderboard
                 return;
             }
-            room.send({ type: "event-end", eventId: currentEvent.id });
+            room.send({
+                type: "event-end",
+                eventId: currentEvent.id,
+                startUpcoming: immediatelyStartUpcomingEvent,
+            });
             currentEventSuggestedEnded = true;
         };
         let checkEventEndOrAcceleration = () => {
@@ -5908,7 +6021,7 @@
                         (e) => `
                         <div style="display: flex; align-items: center; gap: 6px">
                             <span class="material-symbols-outlined">${eventIcon(e)}</span>
-                            ${formatEventName(e)}
+                            <div>${formatEventNameWithHardModeHTML(e)}</div>
                         </div>
                     `,
                     )
@@ -5916,7 +6029,7 @@
                 panel.querySelector("#next-event-countdown span").textContent = "First challenge";
                 let nextEventInfoEl = panel.querySelector("#next-event-info");
                 nextEventInfoEl.querySelector("span").textContent = eventIcon(upcomingEvent);
-                nextEventInfoEl.querySelector("b").textContent = formatEventName(upcomingEvent);
+                nextEventInfoEl.querySelector("b").innerHTML = formatEventNameWithHardModeHTML(upcomingEvent);
                 showOrHidePanel("between-events-panel");
                 updateCountdownInPanel();
                 document.body.classList.add("tournament-themed");
@@ -5947,7 +6060,7 @@
                     .join("\n");
                 let { place, placeHTML, delta, deltaHTML } = computePlaceAndDelta(sortedPlayers, playerJustEntered);
                 requestAnimationFrame(() => {
-                    leaderboardEl.children[place - 1].scrollIntoView({ block: "center" });
+                    leaderboardEl.children[place - 1]?.scrollIntoView({ block: "center" });
                 });
                 panel.querySelector("#leaderboard-your-place").innerHTML = !playerJustEntered && playerByUid.size > 1 ? placeHTML : "";
                 panel.querySelector("#leaderboard-delta").innerHTML = deltaHTML;
@@ -5962,8 +6075,8 @@
             panel.classList.toggle("showing-won-title", !isInPrivateRoom && (!currentEvent.tournament || forTournamentEndScreen));
             panel.classList.toggle("showing-room-leaderboard", isInPrivateRoom || (!!currentEvent.tournament && currentEvent.tournamentEventIndex !== EVENT_MODES.length - 1) || forTournamentEndScreen);
             panel.querySelector("#between-events-panel-title").textContent = (forTournamentEndScreen ? sortedRoomLeaderboard[0][0] : sortedPlayers[0][0]) + " won!";
-            panel.querySelector("#between-events-panel-description").textContent = forTournamentEndScreen ? formatEventName({ ...currentEvent, mode: "welcome", opener: "" }) : formatEventName(currentEvent);
-            panel.querySelector("#between-events-panel-non-won-title").textContent = formatEventName(currentEvent) + " Results";
+            panel.querySelector("#between-events-panel-description").innerHTML = forTournamentEndScreen ? formatEventName({ ...currentEvent, mode: "welcome", opener: "" }) : formatEventNameWithHardModeHTML(currentEvent);
+            panel.querySelector("#between-events-panel-non-won-title").innerHTML = formatEventNameWithHardModeHTML(currentEvent) + " Results";
             let anyHardMode = false;
             for (let i = 0; i < 3; ++i) {
                 let { empty, smallerText, displayName, scoreText, scoreText2, record, hardMode } = (() => {
@@ -5988,7 +6101,7 @@
                     let [p, o, team] = sortedPlayers[i];
                     let scoreText;
                     let scoreText2;
-                    let hardMode = !currentEvent.opener && !["factory", "duo"].includes(currentEvent.mode);
+                    let hardMode = !["factory", "duo"].includes(currentEvent.mode);
                     switch (currentEvent.mode) {
                         case "factory": {
                             scoreText = formatTime(-o.score[SCORE_KEY.factory.negTime], true);
@@ -6140,7 +6253,7 @@
             panel.querySelector("#next-event-countdown span").textContent = upcomingEvent.tournamentEventIndex === EVENT_MODES.length - 1 ? "Final challenge" : "Next up";
             let nextEventInfoEl = panel.querySelector("#next-event-info");
             nextEventInfoEl.querySelector("span").textContent = (currentEvent.tournament && !upcomingEvent.tournament && !forTournamentEndScreen) || (!currentEvent.tournament && upcomingEvent.tournament) ? "trophy" : eventIcon(upcomingEvent);
-            nextEventInfoEl.querySelector("b").textContent = currentEvent.tournament && !upcomingEvent.tournament && !forTournamentEndScreen ? "Tournament Results" : formatEventName(!currentEvent.tournament && upcomingEvent.tournament ? { ...upcomingEvent, mode: "welcome", opener: "" } : upcomingEvent);
+            nextEventInfoEl.querySelector("b").innerHTML = currentEvent.tournament && !upcomingEvent.tournament && !forTournamentEndScreen ? "Tournament Results" : !currentEvent.tournament && upcomingEvent.tournament ? formatEventName({ ...upcomingEvent, mode: "welcome", opener: "" }) : formatEventNameWithHardModeHTML(upcomingEvent);
             showOrHidePanel("between-events-panel");
             updateCountdownInPanel();
             let playConfetti = (() => {
