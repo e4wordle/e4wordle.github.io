@@ -979,11 +979,9 @@
         opacity: 0.5;
     }
     .final-leaderboard-top-item.smaller-text {
-        * {
-            font-size: 11px;
-        }
-        > :nth-child(1) {
-            max-height: 68px;
+        > :nth-child(1),
+        > :nth-child(2) {
+            font-size: 13px;
         }
     }
     .final-leaderboard-top-item.rank-1 {
@@ -2110,7 +2108,7 @@
                 }
                 let itemEl = (a, i) => {
                     let medalHTML = i >= 0 && i < 3 ? `<div class="final-leaderboard-top-item rank-${i + 1}"></div>` : "";
-                    let asterisk = !isNaN(i) && a[3] ? `<span class="material-symbols-outlined">asterisk</span>` : "";
+                    let asterisk = !isNaN(i) && a[3] === true ? `<span class="material-symbols-outlined">asterisk</span>` : "";
                     let _formatNumber = (x, s = 1) => (typeof x === "string" ? x : (x * s).toLocaleString("en-US"));
                     let _formatTime = (t, s = 1) => (typeof t === "string" ? t : formatTime(t * s * 1000, true));
                     let _formatTimeAgo = (t, s = 1) => {
@@ -2170,9 +2168,13 @@
                                     ${medalHTML}
                                     <b class="no-wrap">${a[0]}</b>
                                 </div>
-                                <div style="width: 64px">${_formatTime(a[2], -1)}</div>
-                                <div style="width: 74px">${_formatTimeAgo(a[3], -1)}</div>
+                                <div style="width: 64px">
+                                    ${_formatTime(a[2], -1)}
+                                    ${asterisk}
+                                </div>
+                                <div style="width: 74px">${_formatTimeAgo(a[["number", "string"].includes(typeof a[3]) ? 3 : 4], -1)}</div>
                             `;
+                            // FIXME: Remove the backward-compatibility logic for not respecting hard mode
                         }
                         case "golf": {
                             return `
@@ -2239,7 +2241,7 @@
                     footerEl.style.display = "none";
                 }
                 document.querySelector("#global-leaderboard-score-description").style.display = globalLeaderboardPanelSelectedMode === "overall" ? "" : "none";
-                document.querySelector("#global-leaderboard-hard-mode-description").style.display = ["golf", "sprint"].includes(globalLeaderboardPanelSelectedMode) ? "" : "none";
+                document.querySelector("#global-leaderboard-hard-mode-description").style.display = ["golf", "sprint", "duo"].includes(globalLeaderboardPanelSelectedMode) ? "" : "none";
                 document.querySelector("#global-leaderboard-participation").style.display = isInPrivateRoom ? "none" : "";
                 document.querySelector("#global-leaderboard-no-participation-description").style.display = isInPrivateRoom ? "" : "none";
             };
@@ -2442,10 +2444,17 @@
             let s = decomposeScore(mode, score);
             let ans = (() => {
                 switch (mode) {
-                    case "factory":
-                    case "duo": {
+                    case "factory": {
                         return {
                             score: [-Math.floor(s.time / 1000)],
+                            solved: s.solved,
+                            failed: s.solved < numGames(),
+                            playtime: Math.floor(s.time / 1000),
+                        };
+                    }
+                    case "duo": {
+                        return {
+                            score: [-Math.floor(s.time / 1000), s.playedOnHardMode],
                             solved: s.solved,
                             failed: s.solved < numGames(),
                             playtime: Math.floor(s.time / 1000),
@@ -2904,7 +2913,7 @@
                         let h = checkHardMode(g);
                         currentBoardState.push([g, v]);
                         loadBoardState(currentBoardState, { fastAnimation: gameParams().fastAnimation });
-                        updateCurrentScore(v, h, { markAsAuto: true });
+                        updateCurrentScore(v, !h, { markAsAuto: true });
                         playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                     };
                     if (isCurrentPlayersTurn === false) {
@@ -5434,6 +5443,9 @@
                         }
                     }
                 }
+                if (startUpcoming) {
+                    showOrHideOpponentBoard(false);
+                }
                 if (playerByUid.has(currentUid) && currentEvent.mode !== "welcome") {
                     playAudio("event-end");
                     if (isUpcomingEventNewGameInCircuit) {
@@ -5441,7 +5453,7 @@
                     } else {
                         showNotification(`${formatEventName(currentEvent)} is over`, "Come get ready for the next challenge!");
                     }
-                    if (currentEvent.mode === "arena" ? playerWinningGuessPending || currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone) {
+                    if (!startUpcoming && (currentEvent.mode === "arena" ? playerWinningGuessPending || currentBoardState.at(-1)?.at(1) !== "GGGGG" : !currentPlayerDone)) {
                         showAlert(`<b>${target}</b>`);
                         showingTargetAlert = true;
                         setTimeout(() => {
@@ -6101,7 +6113,7 @@
                     let [p, o, team] = sortedPlayers[i];
                     let scoreText;
                     let scoreText2;
-                    let hardMode = !["factory", "duo"].includes(currentEvent.mode);
+                    let hardMode = currentEvent.mode !== "factory";
                     switch (currentEvent.mode) {
                         case "factory": {
                             scoreText = formatTime(-o.score[SCORE_KEY.factory.negTime], true);
