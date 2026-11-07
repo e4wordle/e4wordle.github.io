@@ -1819,7 +1819,7 @@
     import TARGETS from "./targets.json" with { type: "json" };
 
     (async () => {
-        const APP_VERSION = 6;
+        const APP_VERSION = 7;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -3750,18 +3750,28 @@
                 allowedModes = [...allowedModes];
                 return allowedModes[Math.floor(rand() * allowedModes.length)];
             })();
-            opener ||= (() => {
-                let opener = (urlParams.get("opener") || "").toUpperCase();
+            if (opener === undefined) {
+                opener = (urlParams.get("opener") || "").toUpperCase();
                 if (opener === "NONE") {
                     opener = "";
                 } else if (!allowedGuesses.has(opener)) {
-                    const MORE_OPENERS = true;
-                    let i = !!currentEvent + !!upcomingEvent;
-                    let newUseOpener = opener === "RANDOM" || (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) || (!(currentEvent?.opener && upcomingEvent?.opener) && rand() < (MORE_OPENERS ? 1 / 2 : i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8));
+                    let newUseOpener = (() => {
+                        if (opener === "RANDOM") {
+                            return true;
+                        }
+                        if (currentEvent && upcomingEvent && !currentEvent.opener && !upcomingEvent.opener) {
+                            return true;
+                        }
+                        if (currentEvent?.opener && upcomingEvent?.opener) {
+                            return false;
+                        }
+                        let i = !!currentEvent + !!upcomingEvent;
+                        const MORE_OPENERS = true;
+                        return rand() < (MORE_OPENERS ? 1 / 2 : i === 0 ? 3 / 8 : i === 1 && !(currentEvent || upcomingEvent).opener ? 1 / 2 : 1 / 8);
+                    })();
                     opener = newUseOpener ? TARGETS[Math.floor(rand() * TARGETS.length)] : "";
                 }
-                return opener;
-            })();
+            }
             let event = { id: rand(), mode, opener };
             if (!["factory", "arena"].includes(mode)) {
                 let i = indexByTarget.get(opener);
@@ -4303,8 +4313,9 @@
         const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
+            // return 1794069000000;
             // return Date.now() - 0; //+ 25 * 3600000 + 5000;
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 11, 57, 0).getTime();
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 8, 56, 0).getTime();
         })();
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
             const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
@@ -4341,8 +4352,8 @@
                 ];
                 let rand = new Math.seedrandom(t);
                 let tournamentOpener = (() => {
-                    if (isDev) {
-                        return createEvent({ rand: new Math.seedrandom(DEV_MOCK_TOURNAMENT) }).opener;
+                    if (isDev && urlParams.has("opener")) {
+                        return createEvent({ rand: new Math.seedrandom(t) }).opener;
                     }
                     let w = roundedTournamentWeek(t);
                     let i = 1;
@@ -4374,6 +4385,7 @@
             };
             return { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament };
         })();
+        window.generateTournament = generateTournament;
         let randForTournamentEvent = (tournament, eventIndex) => new Math.seedrandom((tournament << 4) | eventIndex);
         let formatTournamentTime = (t, endTime = false) => {
             let ans = new Intl.DateTimeFormat("en-US", {
@@ -5243,7 +5255,7 @@
                 if (!leaderboardDataVoided) {
                     playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
                 }
-                if (uid !== currentUid || !animatingGuessesByBoard.get("player-board").size) {
+                if (uid === currentUid ? !animatingGuessesByBoard.get("player-board").size : !(numGuesses === 1 && currentEvent.opener)) {
                     populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
                 }
                 checkEventEndOrAcceleration();
