@@ -5106,6 +5106,7 @@
                               nextTournamentWindowStartTime(date) - MIN_TOURNAMENT_START_PADDING - date,
                     ),
                 );
+                updateProgressBar();
                 if (currentEvent.mode === "duo") {
                     playerTurnDueTime = Date.now() + duoGuessTimeLimit(!!currentEvent.tournament);
                 }
@@ -5787,6 +5788,9 @@
                 joinedRoom = false;
                 joinRoom(roomId, false);
                 isInPrivateRoom = true;
+                chatMessages = [];
+                document.querySelector("#chat-message-container").innerHTML = "";
+                document.querySelector("#mini-leaderboard").innerHTML = "";
                 resetToInitialEventStates();
                 updateStartPanel();
                 showOrHidePanel("start-panel");
