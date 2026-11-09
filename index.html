@@ -1825,7 +1825,7 @@
     });
 
     (async () => {
-        const APP_VERSION = 7;
+        const APP_VERSION = 8;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -3490,7 +3490,7 @@
             hideChatButton.addEventListener("click", handleShowOrHideFunction(false));
             let lastSendTime = Date.now() - 1000;
             let handleChatSend = () => {
-                if (!currentPlayer) {
+                if (!playerByUid.has(currentUid)) {
                     return;
                 }
                 if (Date.now() - lastSendTime < 1000) {
@@ -4520,10 +4520,12 @@
                 representRoom();
                 if (waitingForRoomReconnection) {
                     waitingForRoomReconnection = false;
-                    if (currentPlayer) {
-                        addChatMessage(currentPlayer, "", "player-leave");
-                    }
                     document.querySelector("#mini-leaderboard").innerHTML = "";
+                    if (playerByUid.has(currentUid)) {
+                        addChatMessage(currentPlayer, "", "player-leave");
+                    } else {
+                        updateStartPanel();
+                    }
                     return;
                 }
                 playersOrderedByEntrance = [];
