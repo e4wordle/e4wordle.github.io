@@ -1818,6 +1818,12 @@
     import GUESSES from "./guesses.json" with { type: "json" };
     import TARGETS from "./targets.json" with { type: "json" };
 
+    import { RegExpMatcher, TextCensor, englishDataset, englishRecommendedTransformers } from "https://cdn.jsdelivr.net/npm/obscenity@0.4.6/+esm";
+    let obscenityMatcher = new RegExpMatcher({
+        ...englishDataset.build(),
+        ...englishRecommendedTransformers,
+    });
+
     (async () => {
         const APP_VERSION = 7;
 
@@ -4008,20 +4014,23 @@
             return { target, board };
         };
         let validateNickname = () => {
-            currentPlayer = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
-            if (currentPlayer.toLowerCase().endsWith(BOT_NAME.toLowerCase())) {
-                showAlert("Please choose another nickname. (You're not a bot!)");
-                nicknameInput.focus();
-                currentPlayer = "";
-                return true;
-            }
-            if (!isInPrivateRoom && !currentPlayer) {
+            let p = nicknameInput.value.slice(0, nicknameInput.maxLength).trim();
+            let shakeNameInput = () => {
                 nicknameInput.classList.remove("shaking");
                 void nicknameInput.offsetWidth;
                 nicknameInput.classList.add("shaking");
                 nicknameInput.focus();
+            };
+            if (p.toLowerCase().endsWith(BOT_NAME.toLowerCase())) {
+                showAlert("Please choose another nickname. (You're not a bot!)");
+                shakeNameInput();
                 return true;
             }
+            if ((!p && !isInPrivateRoom) || obscenityMatcher.hasMatch(p)) {
+                shakeNameInput();
+                return true;
+            }
+            currentPlayer = p;
             return false;
         };
         let playGame = (wasForAutoEnter = false) => {
