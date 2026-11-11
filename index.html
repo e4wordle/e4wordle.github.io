@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet" />
 <style id="main-styles">
     body.tournament-themed {
         &::after {
@@ -4522,6 +4522,7 @@
                     waitingForRoomReconnection = false;
                     document.querySelector("#mini-leaderboard").innerHTML = "";
                     if (playerByUid.has(currentUid)) {
+                        // FIXME: This can never run because we just reset playerByUid
                         addChatMessage(currentPlayer, "", "player-leave");
                     } else {
                         updateStartPanel();
