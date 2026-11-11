@@ -1830,11 +1830,11 @@
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
 
-        let log = (...args) => {
-            let time = new Date(Date.now()).toISOString().split("T")[1].replace("Z", "");
+        let trace = (...args) => {
+            let time = new Date().toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
             let replacer = (k, v) => (v instanceof Set || v instanceof Map ? [...v] : v);
-            console.assert(0, time, site, "\n", JSON.stringify(args, replacer));
+            console.log(time, site, "\n", JSON.stringify(args, replacer));
         };
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.min(Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1), 36);
@@ -2890,8 +2890,7 @@
                 if (currentEventSuggestedEnded) {
                     return;
                 }
-                let immediatelyStartUpcomingEvent = Date.now() >= currentEventEndTime + 25000; // This can happen due to the single player reconnecting, and starting immediately prevents them from having to stare at the end screen
-                suggestToEndEvent(immediatelyStartUpcomingEvent);
+                suggestToEndEvent();
                 progressBar.style.width = "0";
                 updateBanner();
                 return;
@@ -3110,7 +3109,7 @@
             let message = {
                 type: "score",
                 eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
-                score: structuredClone(currentScore), //#=#
+                score: structuredClone(currentScore),
                 scoreText: formatScore(currentEvent.mode, currentScore),
                 verdict,
                 numGuesses: currentBoardState.length,
@@ -4037,7 +4036,7 @@
             if (validateNickname()) {
                 return;
             }
-            if (playerByUid.size || wasForAutoEnter) {
+            if (currentEvent) {
                 room.send({
                     type: "enter",
                     player: currentPlayer,
@@ -4079,6 +4078,7 @@
                 }
                 room.send(m);
             }
+            waitingToEnter = true;
             playButton.disabled = true;
         };
         playButton.addEventListener("click", () => {
@@ -4423,6 +4423,7 @@
         let currentUid;
         let totalUsers;
         let waitingForJoinResponse = false;
+        let waitingToEnter = false;
         let waitingForEnterResponse = false;
         let responseTimeoutHandle;
         let ignoredUids = new Set();
@@ -4521,11 +4522,8 @@
                 if (waitingForRoomReconnection) {
                     waitingForRoomReconnection = false;
                     document.querySelector("#mini-leaderboard").innerHTML = "";
-                    if (playerByUid.has(currentUid)) {
-                        // FIXME: This can never run because we just reset playerByUid
+                    if (currentPlayer) {
                         addChatMessage(currentPlayer, "", "player-leave");
-                    } else {
-                        updateStartPanel();
                     }
                     return;
                 }
@@ -4690,7 +4688,9 @@
                         location.reload();
                         return;
                     }
-                    oldLeaderboardData = [[currentPlayer, playerLeaderboardData.get(currentPlayer)]];
+                    if (playerLeaderboardData.has(currentPlayer)) {
+                        oldLeaderboardData = [[currentPlayer, playerLeaderboardData.get(currentPlayer)]];
+                    }
                 }
                 currentEvent = newCurrentEvent;
                 currentEventEndTime = Date.now() + parseFloat(end);
@@ -4940,6 +4940,7 @@
                 if (uid !== currentUid) {
                     return;
                 }
+                waitingToEnter = false;
                 document.querySelector("#chat-input").placeholder = "Please be nice in the chat!";
                 let reconnected = !!leaderboard;
                 if (!reconnected) {
@@ -5636,13 +5637,12 @@
                 }
             });
             room._closeHandler = () => {
-                let shouldAutoEnter = playerByUid.has(currentUid);
+                let shouldAutoEnter = waitingToEnter || playerByUid.has(currentUid);
                 console.error("ROOM DISCONNECTED", roomId, shouldAutoEnter);
                 waitingForRoomReconnection = true;
                 closeLobbyConnection();
-                let closeTime = Date.now();
                 requestAnimationFrame(() => {
-                    if (Date.now() - closeTime >= 150000) {
+                    if (Date.now() >= currentEventEndTime) {
                         location.reload();
                         return;
                     }
