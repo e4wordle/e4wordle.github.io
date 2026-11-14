@@ -4327,11 +4327,11 @@
         // A tournament can only be started if the current time is inside a "tournament window", which is a tournament's set start time (what the countdown shows) plus a few minutes in case the first player arrives late. Each event mode also gets its own start-able window, to help prevent a single player's reload of the page always restarting the tournament from the first event over again
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            // return new Date(2026, 10, 13, 19).getTime();
+            return new Date(2026, 10, 13, 19).getTime();
             // return Date.now() + 17000; //+ 25 * 3600000 + 5000;
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 20, 9, 40).getTime();
+            // return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 20, 9, 40).getTime();
         })();
-        const TOURNAMENT_EVENT_WINDOW = isDev ? (1 ? 6000 : (Date.now() - DEV_MOCK_TOURNAMENT) / 5) : 120000;
+        const TOURNAMENT_EVENT_WINDOW = isDev ? (0 ? 6000 : (Date.now() - DEV_MOCK_TOURNAMENT) / 5) : 120000;
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
             const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
                 Date.parse("2026-10-16T19:00-08:00"), // Friday evening PT
@@ -4538,6 +4538,7 @@
                 suggestedArenaPairing = false;
                 playerIds = new Map();
                 playerByUid = new Map();
+                playersOrderedByEntrance = [];
                 representRoom();
                 if (waitingForRoomReconnection) {
                     waitingForRoomReconnection = false;
@@ -4547,7 +4548,6 @@
                     }
                     return;
                 }
-                playersOrderedByEntrance = [];
                 waitingForJoinResponse = false;
                 waitingForEnterResponse = false;
                 ignoredUids = new Set();
@@ -6424,8 +6424,11 @@
                 setTimeout(() => {
                     if (Date.now() >= normalTransitionPanelEndTime) {
                         normalTransitionPanelEndTime = undefined;
-                        showEventTransitionPanel({ forTournamentEndScreen: !upcomingEvent.tournament });
-                        showCurrentEventAsTournament();
+                        let forTournamentEndScreen = !upcomingEvent.tournament;
+                        showEventTransitionPanel({ forTournamentEndScreen });
+                        if (!forTournamentEndScreen) {
+                            showCurrentEventAsTournament();
+                        }
                     }
                 }, 0);
             }
