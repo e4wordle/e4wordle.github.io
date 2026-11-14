@@ -1825,7 +1825,7 @@
     });
 
     (async () => {
-        const APP_VERSION = 8;
+        const APP_VERSION = 9;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -3586,6 +3586,7 @@
             })();
             playerNameEl.title = playerNameEl.textContent;
             scoreEl.textContent = scoreText;
+            scoreEl.style.display = currentEvent.mode === "welcome" ? "none" : "";
             let guessCountHTML = currentEvent.mode === "circuit" ? (numGuesses === gameParams().guessLimit && verdict !== "GGGGG" ? X_SYMBOL : `${numGuesses}`) : currentEvent.mode === "arena" ? X_SYMBOL.replace("close", "mode_heat") : "";
             for (let i = 0; i < 5; ++i) {
                 let letterEl = guessEl.children[i];
@@ -3605,6 +3606,11 @@
                       : "none";
             guessCountEl.classList.toggle("glow-red", currentEvent.mode === "arena");
             guessCountEl.style.visibility = currentEvent.mode === "arena" && !score[SCORE_KEY.arena.hasStreak] ? "hidden" : "unset";
+        };
+        let updateAllMiniLeaderboardItems = () => {
+            for (let [p, i] of playerIds) {
+                populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
+            }
         };
         let addPlayer = (player, notify, score, scoreText, verdict, numGuesses, done) => {
             if (!player) {
@@ -4319,13 +4325,13 @@
         };
 
         // A tournament can only be started if the current time is inside a "tournament window", which is a tournament's set start time (what the countdown shows) plus a few minutes in case the first player arrives late. Each event mode also gets its own start-able window, to help prevent a single player's reload of the page always restarting the tournament from the first event over again
-        const TOURNAMENT_EVENT_WINDOW = isDev ? 6000 : 120000;
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            // return 1794069000000;
-            // return Date.now() - 0; //+ 25 * 3600000 + 5000;
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 8, 56, 0).getTime();
+            // return new Date(2026, 10, 13, 19).getTime();
+            // return Date.now() + 17000; //+ 25 * 3600000 + 5000;
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 20, 9, 40).getTime();
         })();
+        const TOURNAMENT_EVENT_WINDOW = isDev ? (1 ? 6000 : (Date.now() - DEV_MOCK_TOURNAMENT) / 5) : 120000;
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
             const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
                 Date.parse("2026-10-16T19:00-08:00"), // Friday evening PT
@@ -4416,6 +4422,20 @@
                 month: longMonth ? "long" : "short",
                 day: "numeric",
             }).format(t);
+        let showCurrentEventAsTournament = () => {
+            let t = currentTournament.time;
+            currentEvent = { id: -1, mode: "welcome", tournament: t };
+            upcomingEvent = {
+                ...createEvent({
+                    ...currentTournament.events[0],
+                    rand: randForTournamentEvent(t, 0),
+                }),
+                tournament: t,
+                tournamentEventIndex: 0,
+            };
+            showEventInfo();
+            updateAllMiniLeaderboardItems();
+        };
 
         let playerByUid = new Map();
         let usersOrderedByJoinTime = [];
@@ -5038,9 +5058,7 @@
                         d.numGuesses = 0;
                         d.done = false;
                     }
-                    for (let [p, i] of playerIds) {
-                        populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
-                    }
+                    updateAllMiniLeaderboardItems();
                 } else {
                     if (!isInPrivateRoom && !currentEvent?.tournament && upcomingEvent?.tournament) {
                         roomLeaderboardDataByPlayer = new Map();
@@ -5104,9 +5122,7 @@
                     for (let p of playerIds.keys()) {
                         playerLeaderboardData.set(p, { score: initialScore(currentEvent.mode), scoreText: formatScore(currentEvent.mode, currentScore), verdict: "", numGuesses: 0 });
                     }
-                    for (let [p, i] of playerIds) {
-                        populateMiniLeaderboardItem(p, document.querySelector("#mini-leaderboard-item-" + i));
-                    }
+                    updateAllMiniLeaderboardItems();
                     currentUnownedFactoryGame = unownedGame;
                 }
                 currentEventEndTime = undefined;
@@ -5578,11 +5594,11 @@
                     if (startUpcoming) {
                         return 0;
                     }
+                    if (isUpcomingEventNewGameInCircuit) {
+                        return isDev ? 5000 : playerByUid.size === 1 || currentEvent.tournament ? 7000 : 10000;
+                    }
                     if (upcomingEvent.tournament) {
                         if (currentEvent.tournament && currentEvent.mode !== "welcome") {
-                            if (isUpcomingEventNewGameInCircuit) {
-                                return isDev ? 5000 : 7000;
-                            }
                             return isDev ? 5000 : 15000;
                         }
                         return NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION + Math.max(upcomingEvent.tournament - date, 0);
@@ -5594,13 +5610,10 @@
                     if (currentEvent.mode === "welcome") {
                         return POST_WELCOME_DELAY / (isDev ? 2 : 1);
                     }
-                    if (isUpcomingEventNewGameInCircuit) {
-                        return isDev ? 5000 : playerByUid.size === 1 ? 7000 : 10000;
-                    }
                     return isDev ? 5000 : playerByUid.size === 1 ? 15000 : 20000;
                 })();
                 upcomingEventStartTime = Date.now() + upcomingDelay;
-                if (currentEvent.tournament !== upcomingEvent.tournament) {
+                if (!isUpcomingEventNewGameInCircuit && currentEvent.tournament !== upcomingEvent.tournament) {
                     // Need to show tournament start or end screen as part two of transition panel
                     normalTransitionPanelEndTime = Date.now() + NORMAL_TRANSITION_PANEL_PRE_TOURNAMENT_DURATION;
                 }
@@ -5635,6 +5648,19 @@
                 if (playerByUid.size < MAX_PLAYERS_PER_ROOM && usersOrderedByJoinTime.indexOf(currentUid) <= count) {
                     representRoom();
                 }
+            });
+            room.on("prep-tournament", ({ uid, tournament }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (currentEvent || currentTournament || tournament !== nextTournament.time) {
+                    return;
+                }
+                currentTournament = nextTournament;
+                nextTournament = undefined;
+                document.body.classList.add("tournament-themed");
+                showCurrentEventAsTournament();
+                updateStartPanel();
             });
             room._closeHandler = () => {
                 let shouldAutoEnter = waitingToEnter || playerByUid.has(currentUid);
@@ -5711,8 +5737,7 @@
             }
             autoReloadForTournamentTimeout = setTimeout(
                 () => {
-                    // FIXME: This should probably be a room message (announce the upcoming event now being a tournament) rather than everyone reloading at the same time
-                    location.reload();
+                    room.send({ type: "prep-tournament", tournament: nextTournament.time });
                 },
                 Math.min(Math.max(nextTournament.time - MAX_TOURNAMENT_START_PADDING - now, 0), 1 << 30),
             );
@@ -6037,7 +6062,7 @@
             };
             let { playerJustEntered, forTournamentEndScreen } = options;
             showOrHideOpponentBoard(false);
-            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && currentEvent.tournament === upcomingEvent.tournament;
+            let startingNewGameInCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && (!!currentEvent.tournament || !upcomingEvent.tournament);
             let sortedPlayers = getSortedPlayersAndScoresForEventEnd(playerJustEntered);
             let sortedRoomLeaderboard = [...roomLeaderboardDataByPlayer].sort((a, b) => compareArrays(b[1], a[1]));
             if (forTournamentEndScreen) {
@@ -6400,6 +6425,7 @@
                     if (Date.now() >= normalTransitionPanelEndTime) {
                         normalTransitionPanelEndTime = undefined;
                         showEventTransitionPanel({ forTournamentEndScreen: !upcomingEvent.tournament });
+                        showCurrentEventAsTournament();
                     }
                 }, 0);
             }
@@ -6461,7 +6487,7 @@
 
             if (Date.now() >= upcomingEventStartTime && !upcomingEventSuggestedStarted) {
                 upcomingEventSuggestedStarted = true;
-                let isUpcomingStillCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && currentEvent.tournament === upcomingEvent.tournament;
+                let isUpcomingStillCircuit = currentEvent.mode === "circuit" && currentGameIndex < numGames() - 1 && (!!currentEvent.tournament || !upcomingEvent.tournament);
                 let m = {
                     type: "event-start",
                     eventId: isUpcomingStillCircuit ? currentEvent.id + (currentGameIndex + 1) : upcomingEvent.id,
