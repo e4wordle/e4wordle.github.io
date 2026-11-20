@@ -4329,23 +4329,22 @@
         // A tournament can only be started if the current time is inside a "tournament window", which is a tournament's set start time (what the countdown shows) plus a few minutes in case the first player arrives late. Each event mode also gets its own start-able window, to help prevent a single player's reload of the page always restarting the tournament from the first event over again
         const DEV_MOCK_TOURNAMENT = (() => {
             let d = new Date();
-            return new Date(2027, 10, 13, 19).getTime();
+            return new Date(2026, 10, 13, 19).getTime();
             // return Date.now() + 17000; //+ 25 * 3600000 + 5000;
             // return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 20, 9, 40).getTime();
         })();
         const TOURNAMENT_EVENT_WINDOW = isDev ? (1 ? 6000 : (Date.now() - DEV_MOCK_TOURNAMENT) / 5) : 120000;
         let { nextTournamentWindowStartTime, currentTournamentWindowStartTime, generateTournament } = (() => {
-            const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = [
-                Date.parse("2026-10-16T19:00-08:00"), // Friday evening PT
-                Date.parse("2026-10-24T08:30-08:00"), // Saturday morning PT
-            ];
+            const INITIAL_WEEKLY_TOURNAMENT_START_TIMES = isDev
+                ? [DEV_MOCK_TOURNAMENT]
+                : [
+                      Date.parse("2026-10-16T19:00-08:00"), // Friday evening PT
+                      Date.parse("2026-10-24T08:30-08:00"), // Saturday morning PT
+                  ];
             // Tournament start times respect whether Los Angeles is in DST
             let isLosAngelesInDST = (t) => Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).format(t).endsWith("PDT");
             let nextTournamentWindowStartTime = (t) => {
-                if (isDev) {
-                    return t < DEV_MOCK_TOURNAMENT ? DEV_MOCK_TOURNAMENT : DEV_MOCK_TOURNAMENT + 86400000;
-                }
-                let period = 7 * 86400000 * INITIAL_WEEKLY_TOURNAMENT_START_TIMES.length;
+                let period = isDev ? 86400000 : 7 * 86400000 * INITIAL_WEEKLY_TOURNAMENT_START_TIMES.length;
                 t += isLosAngelesInDST(t) * 3600000;
                 return Math.min(
                     ...INITIAL_WEEKLY_TOURNAMENT_START_TIMES.map((t0) => {
@@ -4501,6 +4500,10 @@
             room.on("error", (data) => {
                 console.error("ROOM CONNECTION ERROR", data);
             });
+            let lastMessageTime = 0;
+            room.on("*", () => {
+                lastMessageTime = Date.now();
+            });
             let handleRoomFull = (autoEnter) => {
                 console.error("ROOM FULL", roomId, autoEnter);
                 if (waitingForRoomReconnection) {
@@ -4545,7 +4548,7 @@
                 if (waitingForRoomReconnection) {
                     waitingForRoomReconnection = false;
                     document.querySelector("#mini-leaderboard").innerHTML = "";
-                    if (currentPlayer) {
+                    if (currentPlayer && currentScore) {
                         addChatMessage(currentPlayer, "", "player-leave");
                     }
                     return;
@@ -5288,7 +5291,7 @@
                 if (!leaderboardDataVoided) {
                     playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
                 }
-                if (uid === currentUid ? !animatingGuessesByBoard.get("player-board").size : !(numGuesses === 1 && currentEvent.opener)) {
+                if (!playerByUid.has(currentUid) || (uid === currentUid ? !animatingGuessesByBoard.get("player-board").size : !(numGuesses === 1 && currentEvent.opener))) {
                     populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
                 }
                 checkEventEndOrAcceleration();
@@ -5671,7 +5674,8 @@
                 waitingForRoomReconnection = true;
                 closeLobbyConnection();
                 requestAnimationFrame(() => {
-                    if (Date.now() >= currentEventEndTime) {
+                    // Only try to reconnect if we've been disconnected "not for too long" (according to the following heuristics). Not really meaningful to reconnect to a game the user has left for a while, and we don't want to miss out on a potential new global room created with other players
+                    if (Date.now() >= Math.min(currentEventEndTime || Infinity, lastMessageTime + 180000)) {
                         location.reload();
                         return;
                     }
