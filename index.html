@@ -4049,16 +4049,17 @@
                     player: currentPlayer,
                     withdraw: settings.withdrawFromGlobalLeaderboard,
                     eventId: currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex),
-                    leaderboard: playerLeaderboardData.has(currentPlayer)
-                        ? {
-                              // For a reconnect
-                              score: structuredClone(currentScore),
-                              scoreText: formatScore(currentEvent.mode, currentScore),
-                              verdict: currentBoardState.at(-1)?.at(1) || "",
-                              numGuesses: currentBoardState.length,
-                              done: currentPlayerDone,
-                          }
-                        : undefined,
+                    leaderboard:
+                        currentScore && playerLeaderboardData.has(currentPlayer)
+                            ? {
+                                  // For a reconnect
+                                  score: structuredClone(currentScore),
+                                  scoreText: formatScore(currentEvent.mode, currentScore),
+                                  verdict: currentBoardState.at(-1)?.at(1) || "",
+                                  numGuesses: currentBoardState.length,
+                                  done: currentPlayerDone,
+                              }
+                            : undefined,
                 });
             } else {
                 let m = {
