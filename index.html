@@ -1825,7 +1825,7 @@
     });
 
     (async () => {
-        const APP_VERSION = 9;
+        const APP_VERSION = 10;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -4446,6 +4446,7 @@
         let waitingForJoinResponse = false;
         let waitingToEnter = false;
         let waitingForEnterResponse = false;
+        let waitingForEnterCollisionResponse = false;
         let responseTimeoutHandle;
         let ignoredUids = new Set();
         let uidByPlayer = new Map();
@@ -4646,6 +4647,12 @@
                             return;
                         }
                         uidsWaitingForJoinResponse.delete(uid);
+                        if (playerLeaderboardData.size !== playerByUid.size) {
+                            // FIXME: Find out why this can even happen
+                            console.assert(false, playerLeaderboardData, playerByUid);
+                            location.reload();
+                            return;
+                        }
                         room.send({
                             type: "join-response",
                             to: uid,
@@ -4710,7 +4717,7 @@
                 let oldLeaderboardData = undefined;
                 if (waitingForRoomReconnection) {
                     // A different game has started while disconnected
-                    if (!(newCurrentEvent.id === currentEvent?.id && game === currentGameIndex)) {
+                    if (!(newCurrentEvent?.id === currentEvent?.id && game === currentGameIndex)) {
                         location.reload();
                         return;
                     }
@@ -4815,7 +4822,8 @@
                 }
                 representIfOldest();
             });
-            room.on("enter", ({ uid, date, player, withdraw, eventId, leaderboard }) => {
+            room.on("enter", (data) => {
+                let { uid, date, player, withdraw, eventId, leaderboard } = data;
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -4827,19 +4835,14 @@
                 }
                 if ((!isInPrivateRoom && !player) || playerIds.has(player)) {
                     if (uid === currentUid) {
-                        if (player) {
-                            if (document.querySelector("#start-panel").style.display === "none") {
-                                // Reconnecting but another same-name player joined during that
-                                location.reload();
-                                return;
-                            }
-                            showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
-                        }
-                        playButton.disabled = false;
-                        currentPlayer = undefined;
-                        nicknameInput.select();
-                        nicknameInput.focus();
-                        return;
+                        waitingForEnterCollisionResponse = true;
+                        responseTimeoutHandle = setTimeout(() => {
+                            waitingForEnterCollisionResponse = false;
+                            kickPlayer(player);
+                            joinRoom(roomId, true);
+                        }, MESSAGE_PENDING_TIME_LIMIT);
+                    } else if (player === currentPlayer) {
+                        room.send({ type: "enter-collision", to: uid });
                     }
                     return;
                 }
@@ -5013,6 +5016,28 @@
                     }
                     updateBanner();
                 }
+            });
+            room.on("enter-collision", ({ uid, to }) => {
+                if (ignoredUids.has(uid)) {
+                    return;
+                }
+                if (to !== currentUid) {
+                    return;
+                }
+                waitingForEnterCollisionResponse = false;
+                clearTimeout(responseTimeoutHandle);
+                if (currentPlayer) {
+                    if (document.querySelector("#start-panel").style.display === "none") {
+                        // Reconnecting but another same-name player had entered during that
+                        location.reload();
+                        return;
+                    }
+                    showAlert(`Please choose another nickname. Another player is already named "${currentPlayer}".`);
+                }
+                playButton.disabled = false;
+                currentPlayer = undefined;
+                nicknameInput.select();
+                nicknameInput.focus();
             });
             room.on("enter-response", ({ uid, to, eventId, score, game, board, isNewPlayersTurn, due, teamStart }) => {
                 if (ignoredUids.has(uid)) {
