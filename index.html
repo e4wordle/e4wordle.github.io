@@ -1825,7 +1825,7 @@
     });
 
     (async () => {
-        const APP_VERSION = 10;
+        const APP_VERSION = 11;
 
         let urlParams = new URLSearchParams(location.search);
         let isDev = urlParams.get("dev")?.length ? +urlParams.get("dev") !== 0 : location.href.includes("localhost") || location.href.includes("192.168");
@@ -2375,6 +2375,7 @@
         };
         let duoGuessTimeLimit = (isTournament) => (isTournament ? 15000 : 30000);
         const ARENA_POST_PAIRING_TIMEOUT = 3000;
+        const arenaPointsThreshold = () => Math.floor(numGames() / 3) + 1;
         let initialEventTimeLimit = (event) => {
             if (numGames() > 18 || event.mode === "welcome") {
                 return 1e18;
@@ -3904,7 +3905,7 @@
                         <h4>Scoring</h4>
                         The first player to solve the Wordle wins the duel. The winner earns 1 point, or 2 points if it's their second consecutive win or beyond.
                         <h4>Time Limit</h4>
-                        ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches triple the number of players, or after ${initialEventTimeLimit(event) / 60000} minutes total. ${!currentEventEnded && playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${3 * playerByUid.size})` : ""}`}
+                        ${event.tournament ? `${initialEventTimeLimit(event) / 60000} minutes.` : `The challenge ends ${a} ${a === 1 ? "minute" : "minutes"} after all players' combined score reaches ${arenaPointsThreshold()}x the number of players, or after ${initialEventTimeLimit(event) / 60000} minutes total. ${!currentEventEnded && playerByUid.size && playerByUid.has(currentUid) ? `(Current combined score: ${s} / ${arenaPointsThreshold() * playerByUid.size})` : ""}`}
                         <h4>Pairing</h4>
                         <p>Your first duel is randomly matched. Then you'll face opponents with similar rankings. When there's an odd number of players waiting, one player will pair against <em><b>${BOT_NAME}</b></em>, an adventurous Wordle bot.</p>
                         <p>Pairing closes around ${ARENA_PAIRING_STOP_TIME / 1000} seconds before the challenge ends.</p>
@@ -6007,7 +6008,7 @@
             let activePlayers = playerByUid.size - zombies;
             if (currentEvent.mode !== "arena" && playersDone >= Math.max(activePlayers - (currentEvent.mode === "factory"), 1)) {
                 suggestToEndEvent();
-            } else if (!currentEvent.tournament && (currentEvent.mode === "arena" ? totalPlayerScore() >= (numGames() / 3) * playerByUid.size : playersDone >= activePlayers / 2)) {
+            } else if (!currentEvent.tournament && (currentEvent.mode === "arena" ? totalPlayerScore() >= arenaPointsThreshold() * playerByUid.size : playersDone >= activePlayers / 2)) {
                 setEventToEndIn(acceleratedTimeLimit());
             }
             if (Number.isFinite(checkAgainIn)) {
