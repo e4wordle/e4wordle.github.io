@@ -1834,7 +1834,10 @@
             let time = new Date().toISOString().split("T")[1].replace("Z", "");
             let site = new Error().stack.split("\n")[2]?.split(" at ")?.at(1)?.split(/\s/)?.at(0);
             let replacer = (k, v) => (v instanceof Set || v instanceof Map ? [...v] : v);
-            console.log(time, site, "\n", JSON.stringify(args, replacer));
+            let contents = JSON.stringify(args, replacer);
+            console.groupCollapsed(time, site, "\n", contents);
+            console.trace("");
+            console.groupEnd();
         };
         const DEFAULT_NUM_GAMES = 9;
         let numGamesFromURLParam = Math.min(Math.max(parseInt(urlParams.get("games")) || DEFAULT_NUM_GAMES, 1), 36);
@@ -2993,7 +2996,7 @@
                         loadBoardState(currentOpponentBoardState, { boardEl: opponentBoardEl, fastAnimation: gameParams().fastAnimation });
                         if (v === "GGGGG") {
                             currentPlayerDone = true;
-                            room.send({
+                            sendScoreMessage({
                                 type: "score",
                                 eventId: currentEvent.id,
                                 score: structuredClone(currentScore),
@@ -3039,6 +3042,12 @@
                 }
             }
             return undefined;
+        };
+        let pendingScoreMessages = [];
+        let sendScoreMessage = (message) => {
+            message.scoreId = Math.random();
+            pendingScoreMessages.push(message);
+            room.send(message);
         };
         let updateCurrentScore = (verdict, stillHardMode, options = {}) => {
             options = { shouldPlayAudio: true, markAsAuto: false, ...options };
@@ -3141,7 +3150,7 @@
                 });
                 playAudio("score");
             }
-            room.send(message);
+            sendScoreMessage(message);
         };
         const ENTER_KEY = "0";
         const BACKSPACE_KEY = "1";
@@ -3160,11 +3169,6 @@
                 currentPlayerStartTime = Date.now();
             }
             if (key === ENTER_KEY) {
-                if (waitingForRoomReconnection) {
-                    // room._closeHandler turns out to be not so reliable: connection may be lost before that's called and this flag is set, and a guess might still go through (and worse, might solve the Wordle). I guess that's just an edge case we have to live with for now
-                    showAlert("Reconnecting...");
-                    return;
-                }
                 if (currentBoardState.length === gameParams().guessLimit || (currentBoardState.length && currentBoardState.at(-1)[1] === "GGGGG")) {
                     return;
                 }
@@ -3194,7 +3198,7 @@
                 if (currentEvent.mode === "factory") {
                     waitingForScoreAfterGuessInFactoryTimeoutHandle = setTimeout(() => {
                         waitingForScoreAfterGuessInFactoryTimeoutHandle = undefined;
-                        if (!currentEventEnded && verdict !== "GGGGG" && !isBoardAnimating() && factoryGameToShowAfterAnimation && !waitingForScoreAfterGuessInFactory) {
+                        if (!currentEventEnded && verdict !== "GGGGG" && !isBoardAnimating() && !postGameDelayTimeout && factoryGameToShowAfterAnimation && !waitingForScoreAfterGuessInFactory) {
                             loadUnownedFactoryGameState();
                         } else if (currentPlayerDone) {
                             checkEventEndOrAcceleration();
@@ -3289,12 +3293,6 @@
                     }
                     animatingGuessesByBoard.get(boardEl.id).delete(i);
                     updateBanner();
-                    if (currentEvent.mode === "factory" && !isBoardAnimating() && verdict !== "GGGGG" && !waitingForScoreAfterGuessInFactoryTimeoutHandle) {
-                        if (!waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
-                            loadUnownedFactoryGameState();
-                            return;
-                        }
-                    }
 
                     if (!fastAnimation) {
                         colorKeyboard(i + 1, keyboardColorState || state);
@@ -3326,6 +3324,9 @@
                     sortMiniLeaderboard(options.leaderboardOverride);
 
                     if (!gameDone) {
+                        if (currentEvent.mode === "factory" && !waitingForScoreAfterGuessInFactoryTimeoutHandle && !waitingForScoreAfterGuessInFactory && factoryGameToShowAfterAnimation) {
+                            loadUnownedFactoryGameState();
+                        }
                         return;
                     }
                     postGameDelayTimeout = setTimeout(
@@ -3708,8 +3709,7 @@
         document.querySelector("#full-screen-button").addEventListener("click", () => {
             if (isDev) {
                 // As a way to test reconnection. FIXME: Remove this
-                lobby?.close();
-                room?.close();
+                closeConnectionsForTesting();
                 return;
             }
             if (!document.fullscreenElement) {
@@ -3718,6 +3718,10 @@
                 document.exitFullscreen();
             }
         });
+        let closeConnectionsForTesting = () => {
+            lobby?.close();
+            room?.close();
+        };
 
         document.body.classList.add("showing-panel");
         let nicknameInput = document.querySelector("#nickname-input");
@@ -4543,6 +4547,14 @@
                 upcomingEventSuggestedStarted = false;
                 suggestedToKickTeammate = false;
                 suggestedArenaPairing = false;
+                if (waitingForRoomReconnection) {
+                    // In case multiple players in one room disconnected at around the same time, one player will end up initializing this room again, and from their perspective all others should be treated as left since no Leave messages will be sent while disconnected
+                    for (let p of playerIds.keys()) {
+                        if (p !== currentPlayer) {
+                            removePlayer(p);
+                        }
+                    }
+                }
                 playerIds = new Map();
                 playerByUid = new Map();
                 playersOrderedByEntrance = [];
@@ -4648,12 +4660,6 @@
                             return;
                         }
                         uidsWaitingForJoinResponse.delete(uid);
-                        if (playerLeaderboardData.size !== playerByUid.size) {
-                            // FIXME: Find out why this can even happen
-                            console.assert(false, playerLeaderboardData, playerByUid);
-                            location.reload();
-                            return;
-                        }
                         room.send({
                             type: "join-response",
                             to: uid,
@@ -4823,8 +4829,7 @@
                 }
                 representIfOldest();
             });
-            room.on("enter", (data) => {
-                let { uid, date, player, withdraw, eventId, leaderboard } = data;
+            room.on("enter", ({ uid, date, player, withdraw, eventId, leaderboard }) => {
                 if (ignoredUids.has(uid)) {
                     return;
                 }
@@ -4998,8 +5003,9 @@
                 }
                 showOrHidePanel(undefined);
                 if (reconnected) {
-                    // The reconnected player might be done
-                    checkEventEndOrAcceleration();
+                    while (pendingScoreMessages.length) {
+                        room.send(pendingScoreMessages.shift());
+                    }
                 } else {
                     playAudio("event-start");
                     currentBoardState = [];
@@ -5232,9 +5238,12 @@
                 }
                 playersAcknowledgedEventStart.set(playerByUid.get(uid), Date.now());
             });
-            room.on("score", ({ uid, date, eventId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame, auto }) => {
+            room.on("score", ({ uid, date, eventId, scoreId, score, scoreText, verdict, numGuesses, done, game, guess, hard, newUnownedGame, auto }) => {
                 if (ignoredUids.has(uid)) {
                     return;
+                }
+                if (uid === currentUid) {
+                    pendingScoreMessages = pendingScoreMessages.filter((m) => m.scoreId !== scoreId);
                 }
                 if (eventId !== currentEvent.id + (currentEvent.mode === "circuit" && currentGameIndex)) {
                     return;
@@ -5317,7 +5326,7 @@
                 if (!leaderboardDataVoided) {
                     playerLeaderboardData.set(player, { score, scoreText, verdict, numGuesses, done });
                 }
-                if (!playerByUid.has(currentUid) || (uid === currentUid ? !animatingGuessesByBoard.get("player-board").size : !(numGuesses === 1 && currentEvent.opener))) {
+                if (!playerByUid.has(currentUid) || (uid === currentUid ? !isBoardAnimating() : !(numGuesses === 1 && currentEvent.opener))) {
                     populateMiniLeaderboardItem(player, document.querySelector(`#mini-leaderboard-item-${playerIds.get(player)}`));
                 }
                 checkEventEndOrAcceleration();
@@ -5330,7 +5339,7 @@
                         if (uid === currentUid) {
                             waitingForScoreAfterGuessInFactory = undefined;
                             factoryGameToShowAfterAnimation = verdict === "GGGGG" || numGuesses === gameParams().guessLimit ? createUnownedFactoryGame(false) : currentUnownedFactoryGame;
-                            if (!isBoardAnimating()) {
+                            if (!isBoardAnimating() && !postGameDelayTimeout) {
                                 loadUnownedFactoryGameState();
                             }
                         }
@@ -6043,7 +6052,6 @@
             let delta;
             let otherPlayer;
             if (!playerJustEntered && sortedPlayersWithTeamsCombined.length > 1) {
-                console.assert(["circuit", "arena"].includes(currentEvent.mode), currentEvent);
                 if (place === 1) {
                     delta = sortedPlayersWithTeamsCombined[1][1].score[SCORE_KEY[currentEvent.mode].points] - currentScore[SCORE_KEY[currentEvent.mode].points];
                     otherPlayer = sortedPlayersWithTeamsCombined[1][0];
